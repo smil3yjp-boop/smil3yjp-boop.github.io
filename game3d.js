@@ -295,13 +295,18 @@ const SKILLS = {
 };
 
 // ---------------------------------------------------------------- stat upgrades (Soulstone-style tagged cards)
-const RARITY = [   // Soulstone Survivors level-up weights: Common 50, Uncommon 25, Rare 12, Epic 4, Legendary 1
-  { id: 'common', name: 'Common', w: 50, m: 1, c: 'var(--common)' },
-  { id: 'uncommon', name: 'Uncommon', w: 25, m: 1.5, c: 'var(--uncommon)' },
-  { id: 'rare', name: 'Rare', w: 12, m: 2, c: 'var(--rare)' },
-  { id: 'epic', name: 'Epic', w: 4, m: 3, c: 'var(--epic)' },
-  { id: 'legendary', name: 'Legendary', w: 1, m: 4, c: 'var(--legendary)' },
+const RARITY = [   // card rarity odds: Common 50%, Uncommon 25%, Rare 15%, Epic 7.5%, Legendary 2.5%
+  { id: 'common', name: 'Common', w: 50, luck: -1, m: 1, c: 'var(--common)' },
+  { id: 'uncommon', name: 'Uncommon', w: 25, luck: -0.5, m: 1.5, c: 'var(--uncommon)' },
+  { id: 'rare', name: 'Rare', w: 15, luck: 0.5, m: 2, c: 'var(--rare)' },
+  { id: 'epic', name: 'Epic', w: 7.5, luck: 0.2, m: 3, c: 'var(--epic)' },
+  { id: 'legendary', name: 'Legendary', w: 2.5, luck: 0.1, m: 4, c: 'var(--legendary)' },
 ];
+// every 10 luck: legendary +1%, epic +2%, rare +5%, common -10%, uncommon -5% (tower cards from chests only get the bonuses, never the penalties)
+function rarityWeights(tower = false) {
+  const L = G ? G.stats.luck || 0 : 0;
+  return RARITY.map(r => Math.max(0, r.w + (r.luck < 0 && tower ? 0 : r.luck * L)));
+}
 const STAT_CARDS = [
   { id: 'dmg', name: 'Sharper Darts', icon: ['DamageIconLarge'], v: 0.08, fmt: v => `+${pct(v)} damage`, apply: (s, v) => s.dmg += v },
   { id: 'cdr', name: 'Faster Reload', icon: ['QuickHandsIcon'], v: 0.06, fmt: v => `+${pct(v)} attack speed`, apply: (s, v) => s.cdr += v },
@@ -313,7 +318,8 @@ const STAT_CARDS = [
   { id: 'spd', name: 'Monkey Agility', icon: ['HeroicVelocityIcon'], v: 0.05, fmt: v => `+${pct(v)} move speed`, apply: (s, v) => s.speed += v },
   { id: 'magnet', name: 'Soul Magnet', icon: ['BigBunchIcon'], v: 0.9, fmt: v => `+${v.toFixed(1)}m pickup range`, apply: (s, v) => s.magnet += v },
   { id: 'xp', name: 'Monkey Knowledge', icon: ['MonkeyEducationIcon'], v: 0.07, fmt: v => `+${pct(v)} soul gain`, apply: (s, v) => s.xp += v },
-  { id: 'armor', name: 'Reinforced Fur', icon: ['LivesShieldIcon'], v: 2, fmt: v => `+${Math.round(v)} armor`, apply: (s, v) => s.armor += v },
+  { id: 'luck', name: 'Lucky Banana', icon: ['GoldenBloon'], v: 2, fmt: v => `+${Math.round(v)} luck (rarer cards)`, apply: (s, v) => s.luck += Math.round(v) },
+  { id: 'dash', name: 'Extra Dash', icon: ['Dash_Icon'], v: 1, minR: 4, fmt: () => `+1 dash charge (${G.stats.dashes + 1}/3)`, apply: s => { s.dashes = Math.min(3, s.dashes + 1); G.player.dashN = Math.min(s.dashes, (G.player.dashN || 0) + 1); } },
   { id: 'pierce', name: 'Extra Pierce', icon: ['HardTacksIcon'], v: 0.5, fmt: v => `+${Math.max(1, Math.round(v))} pierce (projectiles)`, apply: (s, v) => s.pierce += Math.max(1, Math.round(v)), minR: 2 },
   { id: 'multi', name: 'Multishot', icon: ['ExtraDartsPopIcon'], v: 0.34, fmt: v => `+${Math.max(1, Math.round(v))} projectile`, apply: (s, v) => s.proj += Math.max(1, Math.round(v)), minR: 3 },
   { id: 'dur', name: 'Lingering Magic', icon: ['LingeringMagicIcon'], v: 0.1, fmt: v => `+${pct(v)} effect duration`, apply: (s, v) => s.dur += v },
@@ -563,7 +569,7 @@ async function newGame() {
   const arena = new Arena(mapDef);
   const stats = {
     dmg: 1, cdr: 0, area: 1, proj: 0, pierce: 0, crit: 0.05, critMult: 1.6, speed: 1, maxhp: ch.hp, regen: 0.2,
-    magnet: 3.2, xp: 1, dur: 1, armor: 0, chain: ch.chainBonus || 0, gold: 1, chestDisc: 0, heroDmg: 1, heroExtra: 0,
+    magnet: 3.2, xp: 1, dur: 1, armor: 0, luck: 0, dashes: 1, chain: ch.chainBonus || 0, gold: 1, chestDisc: 0, heroDmg: 1, heroExtra: 0,
     tag: { proj: 1, area: 1, fire: 1, frost: 1, lightning: 1, summon: 1, trap: 1, buff: 1 },
   };
   for (const k in ch.bonus) stats[k] += ch.bonus[k];
@@ -575,7 +581,7 @@ async function newGame() {
     skills: [], level: 1, xp: 0, xpNext: xpFor(1), pendingLevels: 0,
     bloons: [], projs: [], effects: [], pickups: [], texts: [], summons: [], hazards: [], eproj: [],
     hash: new Hash(2.5), flowT: 0, spawnBudget: 0, pops: 0, goal: chaos.goal, elitesSpawned: 0, boss: null, bossDone: false,
-    rerolls: 3, banishes: 2, banished: new Set(), manualAim: false, kills: 0, dmgDealt: 0, chests: 0,
+    towerPos: {}, runStats: {}, rerolls: 3, banishes: 2, banished: new Set(), manualAim: false, kills: 0, dmgDealt: 0, chests: 0,
     toast: null, toastT: 0, freeze: 0,
     gold: 0, goldEarned: 0, chestsOpened: 0, chestT: 35, items: {}, loop: 0, bossKills: 0, goalStart: 0, portals: null, grace: 0, mapIdx: menuSel.map,
   };
@@ -647,6 +653,7 @@ function cdOf(sk, base) {
   return base / as;
 }
 const lvAt = (sk, n) => sk.lv >= n; // has reached level n
+const NO_TOWER = { heli: 1, ace: 1, village: 1, farm: 1 };
 function nearestBloon(x, y, maxd = 22, exclude) {
   let best = null, bd = maxd * maxd;
   for (const b of G.bloons) { if (b.dead || (exclude && exclude.has(b))) continue; const d = (b.x - x) ** 2 + (b.y - y) ** 2; if (d < bd && !(b.camo && d > CAMO_SIGHT * CAMO_SIGHT)) { bd = d; best = b; } }
@@ -695,12 +702,16 @@ function projSprite(sk, kind) {
   let best = null; for (const L of Object.keys(t).map(Number).sort((a, b) => a - b)) if (L <= (sk.lv || 1)) best = t[L];
   return best;
 }
+// run stats per source ('hero' = the player, otherwise a tower skill id): damage, pops, gold, xp, healing
+let SRC = 'hero';
+function rs(src = SRC) { const r = G.runStats || (G.runStats = {}); return r[src] || (r[src] = { dmg: 0, pops: 0, gold: 0, xp: 0, heal: 0 }); }
 function shoot(o) {
   // generic projectile
   const p = Object.assign({ x: G.player.x, y: G.player.y, vx: 0, vy: 0, r: 0.25, dmg: 1, pierce: 1, life: 1.6, tags: ['proj'], hits: new Set(), kind: 'dart', rot: 0, t: 0 }, o);
   if (o.a !== undefined) { p.vx = Math.cos(o.a) * o.speed; p.vy = Math.sin(o.a) * o.speed; p.rot = o.a; }
   const vs = villageSk(); if (vs && lvAt(vs, 4) && !o.onHit) p.pierce += 1;
   if (p.spr === undefined && CUR_SK) p.spr = projSprite(CUR_SK, p.kind);
+  p.src = o.src || SRC;
   G.projs.push(p);
   return p;
 }
@@ -728,7 +739,18 @@ const CAST = {
   hero(sk) {
     const d = sk.def, p = G.player, extra = G.stats.heroExtra, dm = skillDmg(sk) * G.stats.heroDmg;
     let fired = false;
-    if (d.type === 'proj') {
+    if (d.type === 'proj' && d.drones) {
+      // Etienne: two UCAV drones orbit him; each one targets its own nearest bloon and fires from where it is
+      while (G.summons.filter(x => x.kind === 'drone').length < 2) G.summons.push({ kind: 'drone', sk, x: p.x, y: p.y, a: G.summons.length * 3, face: 0 });
+      const per = Math.ceil((1 + extra) / 2);
+      for (const dr of G.summons.filter(x => x.kind === 'drone')) {
+        const t = nearestBloon(dr.x, dr.y, 18); if (!t) continue;
+        const a0 = Math.atan2(t.y - dr.y, t.x - dr.x); dr.face = a0; dr.anim = 'attack';
+        for (let i = 0; i < per; i++) shoot({ x: dr.x, y: dr.y, a: a0 + (i - (per - 1) / 2) * 0.12, speed: d.speed, dmg: dm, pierce: (d.pierce || 1) + G.stats.pierce, kind: d.kind, life: 1.0, tags: d.tags, r: 0.25 });
+        fired = true;
+      }
+      if (!fired) return false;
+    } else if (d.type === 'proj') {
       const aim = aimDir(d.homing ? 16 : 20); if (!aim) return false;
       const n = 1 + extra;
       for (let i = 0; i < n; i++) {
@@ -873,7 +895,7 @@ const CAST = {
     for (let i = 0; i < n; i++) {
       const t = nearestBloon(G.player.x, G.player.y, 14) || G.player;
       const x = t.x + rnd(-3, 3), y = t.y + rnd(-3, 3);
-      G.hazards.push({ kind: 'glue', x, y, r: rad, dmg: dm, tick: 0.5, tt: 0, life: 4 * (lvAt(sk, 6) ? 1.5 : 1) * G.stats.dur, t: 0, tags: sk.def.tags, slow: 0.6 });
+      G.hazards.push({ src: SRC, kind: 'glue', x, y, r: rad, dmg: dm, tick: 0.5, tt: 0, life: 4 * (lvAt(sk, 6) ? 1.5 : 1) * G.stats.dur, t: 0, tags: sk.def.tags, slow: 0.6 });
     }
     sk.cd = cdOf(sk, sk.def.cd);
     return true;
@@ -964,7 +986,7 @@ const CAST = {
       if (t) { x = lerp(G.player.x, t.x, rnd(0.4, 0.9)) + rnd(-1.5, 1.5); y = lerp(G.player.y, t.y, rnd(0.4, 0.9)) + rnd(-1.5, 1.5); }
       else { const a = rnd(TAU); x = G.player.x + Math.cos(a) * 3; y = G.player.y + Math.sin(a) * 3; }
       if (!G.arena.isWalk(x, y)) { x = G.player.x; y = G.player.y; }
-      G.hazards.push({ kind: 'spikes', x, y, r: 0.9 * Math.sqrt(G.stats.area), dmg: dm, pierce: 8 + (lvAt(sk, 3) ? 5 : 0) + (lvAt(sk, 7) ? 10 : 0) + G.stats.pierce * 2, life: lvAt(sk, 7) ? 9999 : 8 * (lvAt(sk, 6) ? 1.5 : 1) * G.stats.dur, t: 0, tags: sk.def.tags, hits: new Map() });
+      G.hazards.push({ src: SRC, kind: 'spikes', x, y, r: 0.9 * Math.sqrt(G.stats.area), dmg: dm, pierce: 8 + (lvAt(sk, 3) ? 5 : 0) + (lvAt(sk, 7) ? 10 : 0) + G.stats.pierce * 2, life: lvAt(sk, 7) ? 9999 : 8 * (lvAt(sk, 6) ? 1.5 : 1) * G.stats.dur, t: 0, tags: sk.def.tags, hits: new Map() });
     }
     // cap piles
     const piles = G.hazards.filter(h => h.kind === 'spikes');
@@ -984,7 +1006,7 @@ const CAST = {
       const t = vis.length ? pick(vis) : G.boss;
       const x = t.x + rnd(-0.8, 0.8), y = t.y + rnd(-0.8, 0.8);
       G.effects.push({ kind: 'target', x, y, r: rad, t: 0, life: 0.55 });
-      G.hazards.push({ kind: 'delayed', x, y, r: rad, dmg: dm, t: 0, life: 0.55, tags: sk.def.tags, stun: lvAt(sk, 7) ? 0.8 : 0 });
+      G.hazards.push({ src: SRC, kind: 'delayed', x, y, r: rad, dmg: dm, t: 0, life: 0.55, tags: sk.def.tags, stun: lvAt(sk, 7) ? 0.8 : 0 });
       any = true;
     }
     if (any) sk.cd = cdOf(sk, sk.def.cd * (lvAt(sk, 6) ? 0.7 : 1));
@@ -1200,6 +1222,7 @@ function damage(b, dmg, tags, opts = {}) {
   if (b.def && b.def.resist) for (const t of tags) if (b.def.resist[t]) d *= b.def.resist[t];
   if ((b.def && b.def.moab) || b.isBoss) d *= (opts.moabMult || 1);
   if (b.isBoss && (b.shield || b.shieldT > 0)) d *= 0.25;
+  rs().dmg += Math.min(d, Math.max(0, b.hp)); if (opts.burn) b.burnSrc = SRC;
   b.hp -= d; b.hitT = 0.08; b.quiet = 0;
   if (!opts.quiet || Math.random() < 0.15) {
     sfxHit(b);
@@ -1240,6 +1263,7 @@ function regrowTick(b, dt) {
 }
 function popBloon(b, overflow) {
   b.dead = true;
+  rs().pops++;
   G.pops++; if (b.def.moab || !b.def.kids.length) G.kills++;
   G.effects.push({ kind: 'pop', x: b.x, y: b.y, r: b.r, t: 0, life: 0.16, color: b.def.color });
   // pops are worth gold (BTD: $1 per layer popped; blimps pay a bounty)
@@ -1251,6 +1275,7 @@ function popBloon(b, overflow) {
   }
   if (b.def.magma) G.hazards.push({ kind: 'magma', x: b.x, y: b.y, r: 1.6, t: 0, life: 3, tick: 0 });
   G.gold += gold; G.goldEarned += gold;
+  { const vm = goldMult() / G.stats.gold; const extra = gold - gold / vm; rs().gold += gold - extra; if (extra > 0) rs('village').gold += extra; }
   if (b.def.moab) {
     shake(0.35);
     G.effects.push({ kind: 'expl', x: b.x, y: b.y, r: b.r * 1.4, t: 0, life: 0.7 });
@@ -1428,12 +1453,13 @@ function killBoss(b) {
 function tryDash() {
   if (!G || G.state !== 'play') return;
   const p = G.player;
-  if (p.dashCd > 0) return;
+  if ((p.dashN ?? 1) < 1 || p.dashT > 0) return;
   let dx = (keys.KeyD || keys.ArrowRight ? 1 : 0) - (keys.KeyA || keys.ArrowLeft ? 1 : 0);
   let dy = (keys.KeyS || keys.ArrowDown ? 1 : 0) - (keys.KeyW || keys.ArrowUp ? 1 : 0);
   if (!dx && !dy) { dx = p.face; }
   const l = Math.hypot(dx, dy); p.dashX = dx / l; p.dashY = dy / l;
-  p.dashT = 0.18; p.dashCd = 2.2; p.inv = Math.max(p.inv, 0.3);
+  p.dashT = 0.18; p.inv = Math.max(p.inv, 0.3);
+  p.dashN = (p.dashN ?? 1) - 1; if (p.dashCd <= 0) p.dashCd = 2.2;
   sfxTone(500, 1400, 0.12, 0.06);
 }
 function moveCircle(o, dx, dy) {
@@ -1476,7 +1502,10 @@ function update(dt) {
   if (mx) p.face = mx > 0 ? 1 : -1;
   if (p.dashT > 0) { p.dashT -= dt; moveCircle(p, p.dashX * 30 * dt, p.dashY * 30 * dt); if (Math.random() < 0.8) G.effects.push({ kind: 'ghost', x: p.x, y: p.y, t: 0, life: 0.25, face: p.face }); }
   else moveCircle(p, p.vx * dt, p.vy * dt);
-  p.inv -= dt; p.dashCd -= dt; p.hurtT -= dt; p.buffT -= dt;
+  p.inv -= dt; p.hurtT -= dt; p.buffT -= dt;
+  if (p.dashN === undefined) p.dashN = s.dashes;
+  if (p.dashN < s.dashes) { p.dashCd -= dt; if (p.dashCd <= 0) { p.dashN++; p.dashCd = p.dashN < s.dashes ? 2.2 : 0; } } else p.dashCd = 0;
+  if (p.hp < s.maxhp) rs('hero').heal += Math.min(s.maxhp - p.hp, s.regen * dt);
   p.hp = Math.min(s.maxhp, p.hp + s.regen * dt);
 
   // flow field
@@ -1504,11 +1533,22 @@ function update(dt) {
     if (pos && G.pickups.filter(q => q.kind === 'chest').length < 4) { G.pickups.push({ kind: 'chest', x: pos[0], y: pos[1], t: 0 }); toast('A chest appeared!', '#ffcf5a'); }
   }
 
+  // tower companions stand in a ring around the hero (towers whose skill is a summon/aura don't need one)
+  { const comps = G.skills.filter(k => !k.hero && !NO_TOWER[k.id]);
+    comps.forEach((k, i) => {
+      const a = i * TAU / comps.length + G.t * 0.25, rr = 2.4 + (comps.length > 4 ? 0.5 : 0);
+      const tx = p.x + Math.cos(a) * rr, ty = p.y + Math.sin(a) * rr, t = G.towerPos[k.id];
+      if (!t) G.towerPos[k.id] = { x: tx, y: ty }; else { const kk = Math.min(1, dt * 4); t.x += (tx - t.x) * kk; t.y += (ty - t.y) * kk; }
+    }); }
   // skills
   for (const sk of G.skills) {
     sk.cd -= dt;
     if (sk.cd <= 0) {
-      CUR_SK = sk; const ok = CAST[sk.id](sk); CUR_SK = null;
+      // tower skills launch from their tower beside the hero, not from the hero
+      const tp = !sk.hero && sk.id !== 'brew' && G.towerPos[sk.id], px = p.x, py = p.y;   // the brew buff stays on the hero
+      if (tp) { p.x = tp.x; p.y = tp.y; }
+      CUR_SK = sk; SRC = sk.hero ? 'hero' : sk.id;
+      let ok; try { ok = CAST[sk.id](sk); } finally { CUR_SK = null; if (tp) { p.x = px; p.y = py; } }
       if (!ok) sk.cd = 0.15; else sk.fired = (sk.fired || 0) + 1;
     }
   }
@@ -1516,14 +1556,14 @@ function update(dt) {
   const fs = hasSkill('fire');
   if (fs && fs.state.phoenix) {
     const ph = fs.state.phoenix; ph.a += dt * 1.6; ph.x = p.x + Math.cos(ph.a) * 4; ph.y = p.y + Math.sin(ph.a) * 4;
-    ph.cd = (ph.cd || 0) - dt;
+    ph.cd = (ph.cd || 0) - dt; SRC = 'fire';
     if (ph.cd <= 0) { ph.cd = 0.2; hitArea(ph.x, ph.y, 1.6, skillDmg(fs, 2), ['area', 'fire'], { burn: 2 }); }
   }
   // glaive lord orbit
   const bs = hasSkill('boomer');
   if (bs && lvAt(bs, 7)) {
     bs.state.oa = (bs.state.oa || 0) + dt * 4;
-    bs.state.ocd = (bs.state.ocd || 0) - dt;
+    bs.state.ocd = (bs.state.ocd || 0) - dt; SRC = 'boomer';
     if (bs.state.ocd <= 0) { bs.state.ocd = 0.15; for (let i = 0; i < 2; i++) { const a = bs.state.oa + i * Math.PI; hitArea(p.x + Math.cos(a) * 2.6, p.y + Math.sin(a) * 2.6, 0.7, skillDmg(bs, 0.7), ['proj'], { quiet: true }); } }
   }
 
@@ -1537,7 +1577,7 @@ function update(dt) {
     if (b.dead) continue;
     b.slowT -= dt; b.frozenT -= dt; b.stunT -= dt; b.hitT -= dt; b.wob += dt * 4;
     regrowTick(b, dt);
-    if (b.burnT > 0) { b.burnT -= dt; b.burnAcc = (b.burnAcc || 0) + dt; if (b.burnAcc > 0.33) { b.burnAcc = 0; damage(b, b.burnD, ['fire'], { quiet: true }); if (b.dead) continue; } }
+    if (b.burnT > 0) { b.burnT -= dt; b.burnAcc = (b.burnAcc || 0) + dt; if (b.burnAcc > 0.33) { b.burnAcc = 0; SRC = b.burnSrc || 'hero'; damage(b, b.burnD, ['fire'], { quiet: true }); if (b.dead) continue; } }
     if (b.def.golden) {   // golden bloons hop away like in BTD6
       if (b.hop > 0) { b.hop -= dt * 2.2; if (b.hop < 0) b.hop = 0; }
       b.hopT -= dt;
@@ -1605,7 +1645,7 @@ function update(dt) {
 
   // projectiles
   for (const pr of G.projs) {
-    pr.t += dt; pr.life -= dt;
+    pr.t += dt; pr.life -= dt; SRC = pr.src || 'hero';
     if (pr.boomer) {
       const back = pr.t > 0.55;
       const a = Math.atan2(pr.vy, pr.vx) + pr.curve * dt;
@@ -1657,7 +1697,7 @@ function update(dt) {
 
   // hazards
   for (const h of G.hazards) {
-    h.t += dt;
+    h.t += dt; SRC = h.src || 'hero';
     if (h.kind === 'slime') { if (Math.hypot(p.x - h.x, p.y - h.y) < h.r) p.slowT = 0.3; }
     else if (h.kind === 'magma') { h.tick -= dt; if (h.tick <= 0 && Math.hypot(p.x - h.x, p.y - h.y) < h.r + p.r * 0.5) { h.tick = 0.5; hurtPlayer(8 * G.chaos.dmg); } }
     else if (h.kind === 'glue') {
@@ -1684,6 +1724,13 @@ function update(dt) {
 
   // summons
   for (const sm of G.summons) {
+    SRC = sm.sk ? (sm.sk.hero ? 'hero' : sm.sk.id) : 'hero';
+    if (sm.kind === 'drone') {
+      const idx = G.summons.filter(x => x.kind === 'drone').indexOf(sm);
+      sm.a = (sm.a || 0) + dt * 1.6; const ang = sm.a + idx * Math.PI;
+      sm.x = lerp(sm.x, p.x + Math.cos(ang) * 1.8, Math.min(1, dt * 6)); sm.y = lerp(sm.y, p.y + Math.sin(ang) * 1.8, Math.min(1, dt * 6));
+      continue;
+    }
     if (sm.kind === 'heli') {
       const idx = G.summons.filter(x => x.kind === 'heli').indexOf(sm);
       sm.a += dt * 1.3; const ang = sm.a + idx * TAU / 3;
@@ -1735,9 +1782,9 @@ function update(dt) {
     if (d < range || pk.vac) { const k = Math.min(1, dt * (pk.vac ? 14 : 10)); pk.x += dx * k; pk.y += dy * k; }
     if (d < (pk.kind === 'chest' ? 1.4 : 0.7)) {
       pk.dead = true;
-      if (pk.kind === 'soul') { gainXp(pk.v); }
-      else if (pk.kind === 'heart') { p.hp = Math.min(s.maxhp, p.hp + s.maxhp * 0.3); toast('+30% health', '#ff7a8a'); }
-      else if (pk.kind === 'banana') { p.hp = Math.min(s.maxhp, p.hp + pk.v); gainXp(pk.xp); G.texts.push({ x: p.x, y: p.y - 1, s: '+' + Math.round(pk.v), t: 0, life: 0.7, heal: true }); }
+      if (pk.kind === 'soul') { gainXp(pk.v); rs('hero').xp += pk.v * G.stats.xp * G.chaos.xp; }
+      else if (pk.kind === 'heart') { rs('hero').heal += Math.min(s.maxhp - p.hp, s.maxhp * 0.3); p.hp = Math.min(s.maxhp, p.hp + s.maxhp * 0.3); toast('+30% health', '#ff7a8a'); }
+      else if (pk.kind === 'banana') { const f = rs('farm'); f.heal += Math.min(s.maxhp - p.hp, pk.v); f.xp += pk.xp * G.stats.xp * G.chaos.xp; p.hp = Math.min(s.maxhp, p.hp + pk.v); gainXp(pk.xp); G.texts.push({ x: p.x, y: p.y - 1, s: '+' + Math.round(pk.v), t: 0, life: 0.7, heal: true }); }
       else if (pk.kind === 'chest') {
         const cost = pk.free ? 0 : chestCost();
         if (G.gold >= cost) {
@@ -2082,10 +2129,11 @@ function drawHUD() {
   const hsk = selectedSkin(G.ch), hic = uiImg('heroes/' + (hsk ? hsk.icon : HERO_ICON[G.ch.id]));
   if (hic) ctx.drawImage(hic, hx - pr * 0.95, hy + hh * 0.5 - pr / 2, pr, pr); else drawSprite(ctx, pickSpr(G.ch.spr), hx - pr * 0.45, hy + hh * 0.5, pr);
   const di = uiImg('Dash_Icon'), ds = 54 * u, dx = hx + hw + 6 * u, dy = hy + hh / 2 - ds / 2;
-  ctx.save(); if (p.dashCd > 0) ctx.globalAlpha = 0.45;
+  ctx.save(); if (p.dashN < 1) ctx.globalAlpha = 0.45;
   if (di) ctx.drawImage(di, dx, dy, ds, ds); else { ctx.fillStyle = '#5ad'; ctx.beginPath(); ctx.arc(dx + ds / 2, dy + ds / 2, ds / 2, 0, TAU); ctx.fill(); }
   ctx.restore();
-  if (p.dashCd > 0) { ctx.fillStyle = 'rgba(0,0,0,.5)'; ctx.beginPath(); ctx.moveTo(dx + ds / 2, dy + ds / 2); ctx.arc(dx + ds / 2, dy + ds / 2, ds / 2, -Math.PI / 2, -Math.PI / 2 + TAU * p.dashCd / 2.2); ctx.fill(); }
+  if (G.stats.dashes > 1) text('x' + p.dashN, dx + ds - 2 * u, dy + 14 * u, 15 * u, '#9fe8ff', 'right');
+  if (p.dashN < 1 && p.dashCd > 0) { ctx.fillStyle = 'rgba(0,0,0,.5)'; ctx.beginPath(); ctx.moveTo(dx + ds / 2, dy + ds / 2); ctx.arc(dx + ds / 2, dy + ds / 2, ds / 2, -Math.PI / 2, -Math.PI / 2 + TAU * p.dashCd / 2.2); ctx.fill(); }
   text('SPACE', dx + ds / 2, dy + ds + 12 * u, 11 * u, '#ccc', 'center');
   // gold (pops = cash)
   const coin = uiImg('btd_Coin'), cs = 34 * u, gx = hx + hw * 0.06, gy = hy - cs + 4 * u;
@@ -2238,20 +2286,26 @@ function toast(s, c) { if (!G) return; G.toast = { s, c }; G.toastT = 2.5; }
 const $ = id => document.getElementById(id);
 function show(id, on) { $(id).classList.toggle('hidden', !on); }
 let banishMode = false, currentOffer = [];
-function rollRarity(minR = 0) {
-  const tot = RARITY.reduce((a, r, i) => a + (i >= minR ? r.w : 0), 0);
+function rollRarity(minR = 0, tower = false) {
+  const W = rarityWeights(tower);
+  const tot = W.reduce((a, w, i) => a + (i >= minR ? w : 0), 0);
   let x = Math.random() * tot;
-  for (let i = minR; i < RARITY.length; i++) { x -= RARITY[i].w; if (x <= 0) return i; }
+  for (let i = minR; i < RARITY.length; i++) { x -= W[i]; if (x <= 0) return i; }
   return RARITY.length - 1;
 }
 // each card lists the lowest rarity it can appear at; the rarity is rolled first, then a card of that rarity is picked
 function buildOffer(chest = false) {
   const pool = [];
-  for (const sk of G.skills) if (!sk.hero && sk.lv < MAXLV && !G.banished.has('up_' + sk.id)) pool.push({ type: 'up', sk, cat: 'up', minR: sk.lv + 1 === MAXLV ? 2 : 0 });
-  if (G.skills.filter(k => !k.hero).length < 6) for (const id in SKILLS) if (!hasSkill(id) && !G.banished.has('new_' + id)) pool.push({ type: 'new', id, cat: 'new', minR: 0 });
+  // tower cards (new towers and tower upgrades) only come from chests; level-ups give attribute cards
+  if (chest) {
+    for (const sk of G.skills) if (!sk.hero && sk.lv < MAXLV && !G.banished.has('up_' + sk.id)) pool.push({ type: 'up', sk, cat: 'up', minR: 0 });
+    if (G.skills.filter(k => !k.hero).length < 6) for (const id in SKILLS) if (!hasSkill(id) && !G.banished.has('new_' + id)) pool.push({ type: 'new', id, cat: 'new', minR: 0 });
+  }
   const ownedTags = new Set(G.skills.flatMap(s => s.def.tags));
   for (const c of STAT_CARDS) {
+    if (chest && pool.length) break;   // chests fall back to attributes only once every tower is maxed
     if (G.banished.has('stat_' + c.id)) continue;
+    if (c.id === 'dash' && G.stats.dashes >= 3) continue;
     if (c.heroExtra && (G.stats.heroExtra >= 5 || (c.id === 'herostrike') !== heroMelee())) continue;
     if (c.tag && !ownedTags.has(c.tag)) continue;
     pool.push({ type: 'stat', c, cat: 'stat', minR: c.minR || 0 });
@@ -2260,7 +2314,8 @@ function buildOffer(chest = false) {
   const n = chest ? 3 : (G.level % 5 === 0 ? 4 : 3);
   const opts = [];
   for (let tries = 0; opts.length < n && pool.length && tries < 60; tries++) {
-    let rar = rollRarity(chest ? 2 : 0);
+    let rar = rollRarity(0, chest);
+    // a card only shows at its own minimum rarity or above; legendary-only cards (Extra Dash) need a legendary roll
     let cand = pool.filter(o => o.minR <= rar);
     while (!cand.length && rar < RARITY.length - 1) { rar++; cand = pool.filter(o => o.minR <= rar); }
     if (!cand.length) break;
@@ -2358,6 +2413,20 @@ function togglePause() {
   if (G.state === 'play') { G.state = 'pause'; renderPause(); show('pause', true); }
   else if (G.state === 'pause') { G.state = 'play'; show('pause', false); }
 }
+// end-of-run table: what the hero and each tower contributed
+function renderBreakdown(el) {
+  const R = G.runStats || {}, k = n => n >= 1e6 ? (n / 1e6).toFixed(1) + 'M' : n >= 1e4 ? (n / 1e3).toFixed(1) + 'k' : Math.round(n).toLocaleString();
+  const rows = [['hero', G.ch.name + ' (you)', G.ch.spr]].concat(G.skills.filter(sk => !sk.hero).map(sk => [sk.id, sk.def.name + ' ' + sk.lv, sk.def.icon]));
+  for (const id in R) if (!rows.some(r => r[0] === id) && SKILLS[id]) rows.push([id, SKILLS[id].name, SKILLS[id].icon]);
+  const tot = rows.reduce((a, r) => a + ((R[r[0]] || {}).dmg || 0), 0) || 1;
+  rows.sort((a, b) => ((R[b[0]] || {}).dmg || 0) - ((R[a[0]] || {}).dmg || 0));
+  const extra = r => [r.gold ? `$${k(r.gold)}` : '', r.xp ? `${k(r.xp)} xp` : '', r.heal ? `${k(r.heal)} hp` : ''].filter(Boolean).join(' · ') || '—';
+  el.innerHTML = `<div class="bh"><span></span><span>Source</span><span>Damage</span><span>Pops</span><span>Generated</span></div>` + rows.map(([id, name, icon]) => {
+    const r = R[id] || { dmg: 0, pops: 0 }, sh = r.dmg / tot;
+    return `<div class="br"><canvas width="40" height="40"></canvas><span>${name}</span><span>${k(r.dmg)} <i style="--w:${Math.round(sh * 100)}%"></i></span><span>${k(r.pops)}</span><span>${extra(r)}</span></div>`;
+  }).join('');
+  el.querySelectorAll('canvas').forEach((c, i) => { const ic = rows[i][2]; if (ic) spriteToCanvas(c, pickSpr(ic), '#a7794a'); });
+}
 function renderStats(el, extra = []) {
   const s = G.stats;
   const rows = [
@@ -2385,6 +2454,7 @@ function endRun(win, quit = false) {
   const mm = Math.round(G.goldEarned / 20 + G.level * 4 + G.bossKills * 150 + G.t / 6);
   PROFILE.mm += mm; saveProfile();
   renderStats($('endstats'), [['Monkey Money earned', '+' + mm + '  (total ' + Math.floor(PROFILE.mm) + ')'], ['Bosses defeated', G.bossKills], ['Gold earned', '$' + Math.round(G.goldEarned).toLocaleString()], ...(rec ? [['Record', rec]] : [])]);
+  renderBreakdown($('endbreak'));
   setTimeout(() => show('end', true), win ? 200 : 900);
 }
 $('again').onclick = () => { show('end', false); G = null; R3.resetRun(); buildMenu(); show('menu', true); startMenuMusic(); };

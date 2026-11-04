@@ -745,6 +745,7 @@ const R3 = (() => {
         sentry: [lvl >= 7 ? 't_SentryChamp' : lvl >= 5 ? 't_SentryBoom' : lvl >= 3 ? 't_SentryEnergy' : 't_Sentry', 1.1, 'height'],
         ace: lvl >= 7 ? ['t_Ace204', 2.2, 'max'] : lvl >= 5 ? ['t_Ace104', 2.0, 'max'] : ['t_MonkeyAce', 1.9, 'max', { hide: /^MonkeyAceBase$/ }],
         beast: BEASTM[sm.sp] && hasRig(BEASTM[sm.sp][0]) ? BEASTM[sm.sp] : ['t_Raptor1', 1.5, 'max'],
+        drone: ['x_drone', 0.9, 'max'],
         village: towerKey('village', lvl) ? [towerKey('village', lvl), 2.6, 'max'] : ['m_MonkeyVillage', 2.6, 'max'], farm: [towerKey('farm', lvl) || 't_BananaFarm', 1.6, 'max'],
       }[sm.kind] || ['t_EngineerMonkey', 1.1, 'height'];
       if (m && m.userData.skey !== SUM[0]) { scene.remove(m); summonModels.delete(sm); m = null; G.effects.push({ kind: 'ring', x: sm.x, y: sm.y, r: 2, t: 0, life: 0.5, color: '#ffe39a' }); }
@@ -752,7 +753,7 @@ const R3 = (() => {
         m = actor(SUM[0], SUM[1], SUM[2], SUM[3]) || actor(sm.kind === 'beast' ? 't_BeastHandler' : sm.kind === 'sentry' ? 't_EngineerMonkey' : 't_MonkeyAce', 1.3, 'max') || new THREE.Object3D(); m.userData.skey = SUM[0]; summonModels.set(sm, m); scene.add(m); m.rotation.order = 'YXZ'; sm.a0 = Math.random() * 7;
         if (m.userData.rig) m.userData.rig.play('place');
       }
-      const fly = sm.kind === 'heli' ? 2.2 + Math.sin(G.t * 3 + (sm.a || 0)) * 0.15 : sm.kind === 'ace' ? 3.2 : sm.bird ? 2.8 - (sm.dive || 0) * 1.9 + Math.sin(G.t * 2.4 + (sm.a0 || 0)) * 0.2 : 0;
+      const fly = sm.kind === 'drone' ? 1.9 + Math.sin(G.t * 4 + (sm.a0 || 0)) * 0.12 : sm.kind === 'heli' ? 2.2 + Math.sin(G.t * 3 + (sm.a || 0)) * 0.15 : sm.kind === 'ace' ? 3.2 : sm.bird ? 2.8 - (sm.dive || 0) * 1.9 + Math.sin(G.t * 2.4 + (sm.a0 || 0)) * 0.2 : 0;
       m.position.copy(w(sm.x, sm.y, fly));
       if (sm.face !== undefined) { let d = faceAngle(sm.face) - m.rotation.y; d = Math.atan2(Math.sin(d), Math.cos(d)); m.rotation.y += d * Math.min(1, dt * 12); }
       if (sm.kind === 'ace') { // banking turn + an occasional barrel roll
@@ -762,12 +763,12 @@ const R3 = (() => {
       if (rg) { if (sm.anim) { rg.play(sm.anim); sm.anim = null; } rg.update(dt); }
       if (sm.kind === 'ace') push('shadow', w(sm.x, sm.y, 0.04), FLATQ, tmpS.set(1.6, 1.6, 1));
       if (sm.kind === 'sentry') m.visible = (sm.life - sm.t) > 1 || Math.floor(G.t * 10) % 2;
-      if (sm.kind === 'heli') push('shadow', w(sm.x, sm.y, 0.04), FLATQ, tmpS.set(1.4, 1.4, 1));
+      if (sm.kind === 'heli' || sm.kind === 'drone') push('shadow', w(sm.x, sm.y, 0.04), FLATQ, tmpS.set(sm.kind === 'drone' ? 0.8 : 1.4, sm.kind === 'drone' ? 0.8 : 1.4, 1));
       if (sm.bird) { push('shadow', w(sm.x, sm.y, 0.04), FLATQ, tmpS.set(1.5, 1.5, 1)); }
     }
     for (const [sm, m] of summonModels) if (!sseen.has(sm)) { scene.remove(m); summonModels.delete(sm); }
     // tower companions: every tower skill without its own summon stands beside the hero, wearing its current upgrade tier
-    const cseen = new Set(), comps = G.skills.filter(sk => TW[sk.id] && !COMP_SKIP[sk.id]);
+    const cseen = new Set(), comps = G.skills.filter(sk => TW[sk.id] && G.towerPos && G.towerPos[sk.id]);
     comps.forEach((sk, i) => {
       const key = towerKey(sk.id, sk.lv); if (!key) return;
       cseen.add(sk);
@@ -779,9 +780,7 @@ const R3 = (() => {
         c = { m, key, x: P.x, y: P.y, fired: sk.fired || 0, face: 0 }; compModels.set(sk, c); scene.add(m);
         if (m.userData.rig) m.userData.rig.play('upgrade') || m.userData.rig.play('place');
       }
-      const a = i * Math.PI * 2 / comps.length + G.t * 0.25, rr = 2.4 + (comps.length > 4 ? 0.5 : 0);
-      const tx = P.x + Math.cos(a) * rr, ty = P.y + Math.sin(a) * rr, k = Math.min(1, dt * 4);
-      c.x += (tx - c.x) * k; c.y += (ty - c.y) * k;
+      c.x = G.towerPos[sk.id].x; c.y = G.towerPos[sk.id].y;   // position is owned by the game (projectiles launch from here)
       let best = null, bd = 196;
       for (const b of G.bloons) { const dx = b.x - c.x, dy = b.y - c.y, d = dx * dx + dy * dy; if (d < bd) { bd = d; best = b; } }
       if (best) c.face = Math.atan2(best.y - c.y, best.x - c.x);
