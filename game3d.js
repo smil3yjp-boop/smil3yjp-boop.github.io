@@ -368,7 +368,7 @@ addEventListener('keydown', e => {
   if (e.code === 'KeyQ' && G.state === 'play') { G.manualAim = !G.manualAim; toast(G.manualAim ? 'Mouse aim ON' : 'Auto aim ON'); }
   if (e.code === 'Space' || e.code === 'ShiftLeft') tryDash();
   if (e.code === 'KeyE' && G.state === 'play') G.useKey = true;
-  if (G.state === 'levelup' && /Digit[1-4]/.test(e.code)) { const b = document.querySelectorAll('.card')[+e.code.slice(5) - 1]; b && b.click(); }
+  if (G.state === 'levelup' && /Digit[1-5]/.test(e.code)) { const b = document.querySelectorAll('.card')[+e.code.slice(5) - 1]; b && b.click(); }
 });
 addEventListener('keyup', e => keys[e.code] = false);
 addEventListener('mousemove', e => { mouse.x = e.clientX * DPR; mouse.y = e.clientY * DPR; });
@@ -2328,6 +2328,13 @@ function buildOffer(chest = false) {
     o.rar = rar;
     opts.push(o);
   }
+  // 15% of level-ups also deal a BONUS card: a tower card, normally only found in chests
+  if (!chest && Math.random() < 0.15) {
+    const tw = [];
+    for (const sk of G.skills) if (!sk.hero && sk.lv < MAXLV && !G.banished.has('up_' + sk.id)) tw.push({ type: 'up', sk, cat: 'up', minR: 0 });
+    if (G.skills.filter(k => !k.hero).length < 6) for (const id in SKILLS) if (!hasSkill(id) && !G.banished.has('new_' + id)) tw.push({ type: 'new', id, cat: 'new', minR: 0 });
+    if (tw.length) { const o = tw[Math.floor(Math.random() * tw.length)]; o.rar = rollRarity(0, true); o.bonus = true; opts.push(o); }
+  }
   return opts;
 }
 function openLevelUp(chest = false) {
@@ -2361,7 +2368,8 @@ function renderCards() {
     const el = document.createElement('div');
     el.className = 'card' + (banishMode ? ' banishing' : '');
     el.style.setProperty('--c', R.c); el.style.setProperty('--frame', `url("${frame}")`);
-    el.innerHTML = `<div class="rar">${R.name}</div><canvas width="128" height="128"></canvas><div class="cn">${info.title}</div><div class="ck">${info.kind}</div><div class="cd">${info.desc}</div><div class="tags">${(info.tags || []).map(t => TAGNAME[t]).join(' · ')} &nbsp; [${i + 1}]</div>`;
+    if (o.bonus) el.classList.add('bonus');
+    el.innerHTML = `${o.bonus ? '<div class="bonustag">BONUS</div>' : ''}<div class="rar">${R.name}</div><canvas width="128" height="128"></canvas><div class="cn">${info.title}</div><div class="ck">${info.kind}</div><div class="cd">${info.desc}</div><div class="tags">${(info.tags || []).map(t => TAGNAME[t]).join(' · ')} &nbsp; [${i + 1}]</div>`;
     const c = el.querySelector('canvas');
     if (o.type === 'stat' && !info.icon.some(n => sprite(n))) drawStatIcon(c, o.c, R);
     else spriteToCanvas(c, pickSpr(info.icon), '#b98');
@@ -2386,7 +2394,7 @@ function chooseCard(o, info) {
     G.banishes--; banishMode = false;
     G.banished.add(o.type === 'up' ? 'up_' + o.sk.id : o.type === 'new' ? 'new_' + o.id : 'stat_' + o.c.id);
     const idx = currentOffer.indexOf(o);
-    const repl = buildOffer(G.offerChest).find(x => !currentOffer.some(y => sameCard(x, y)));
+    const repl = buildOffer(G.offerChest).find(x => !x.bonus && !currentOffer.some(y => sameCard(x, y)));
     if (repl) currentOffer[idx] = repl; else currentOffer.splice(idx, 1);
     $('banishes').textContent = G.banishes; $('banish').disabled = G.banishes <= 0; $('banish').classList.remove('on');
     renderCards(); return;
