@@ -743,7 +743,7 @@ const R3 = (() => {
       const SUM = {
         heli: [towerKey('heli', lvl) || 't_HeliPilot', 1.6, 'max', { hide: /^(Helipad|Lights|HeliPad.*)$/i }],
         sentry: [lvl >= 7 ? 't_SentryChamp' : lvl >= 5 ? 't_SentryBoom' : lvl >= 3 ? 't_SentryEnergy' : 't_Sentry', 1.1, 'height'],
-        ace: lvl >= 7 ? ['t_Ace204', 2.2, 'max'] : lvl >= 5 ? ['t_Ace104', 2.0, 'max'] : ['t_MonkeyAce', 1.9, 'max', { hide: /^MonkeyAceBase$/ }],
+        ace: lvl >= 8 && towerKey('ace', 8) ? [towerKey('ace', 8), 3.6, 'max'] : lvl >= 7 ? ['t_Ace204', 2.2, 'max'] : lvl >= 5 ? ['t_Ace104', 2.0, 'max'] : ['t_MonkeyAce', 1.9, 'max', { hide: /^MonkeyAceBase$/ }],
         beast: BEASTM[sm.sp] && hasRig(BEASTM[sm.sp][0]) ? BEASTM[sm.sp] : ['t_Raptor1', 1.5, 'max'],
         drone: ['x_drone', 0.9, 'max'],
         village: towerKey('village', lvl) ? [towerKey('village', lvl), 2.6, 'max'] : ['m_MonkeyVillage', 2.6, 'max'], farm: [towerKey('farm', lvl) || 't_BananaFarm', 1.6, 'max'],
@@ -831,7 +831,7 @@ const R3 = (() => {
       const k = h.t / h.life;
       if (h.kind === 'slime') { push('disc', w(h.x, h.y, 0.06), FLATQ, tmpS.set(h.r, h.r * 0.9, 1), tmpC.setRGB(0.3, 0.85, 0.15)); }
       else if (h.kind === 'magma') { push('discAdd', w(h.x, h.y, 0.07), FLATQ, tmpS.set(h.r, h.r, 1), tmpC.setRGB(0.9 * (1 - k * 0.6), 0.3 * (1 - k), 0.05)); }
-      else if (h.kind === 'glue') { push('disc', w(h.x, h.y, 0.06), FLATQ, tmpS.set(h.r, h.r * 0.85, 1), tmpC.setRGB(0.66, 0.9, 0.24)); }
+      else if (h.kind === 'glue') { push('disc', w(h.x, h.y, 0.06), FLATQ, tmpS.set(h.r, h.r * 0.85, 1), h.fire ? tmpC.setRGB(1, 0.42, 0.1) : tmpC.setRGB(0.66, 0.9, 0.24)); if (h.fire && Math.random() < 0.3) push('glow', w(h.x + (Math.random() - .5) * h.r * 1.4, h.y + (Math.random() - .5) * h.r * 1.4, 0.5), camQ, tmpS.set(1.2, 1.2, 1), tmpC2.setRGB(1, 0.5, 0.1)); }
       else if (h.kind === 'spikes') { for (let i = 0; i < 6; i++) { const aa = i * 2.4 + h.x, d = (i % 3) * 0.3 * h.r; tmpQ.setFromEuler(new THREE.Euler(-Math.PI / 2, 0, 0)); push('tack', w(h.x + Math.cos(aa) * d, h.y + Math.sin(aa) * d, 0.2), tmpQ, tmpS.set(1.2, 1.2, 1.2)); } }
       else if (h.kind === 'bossSlam' || h.kind === 'delayed') {
         const c = h.kind === 'bossSlam' ? tmpC.setRGB(1, 0.15, 0.15) : tmpC.setRGB(1, 0.65, 0.2);

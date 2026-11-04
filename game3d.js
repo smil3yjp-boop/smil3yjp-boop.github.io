@@ -210,6 +210,11 @@ function heroMelee() { return G && HERO_ATK[G.ch.id].type === 'melee'; }
 // ---------------------------------------------------------------- data: skills
 // Each skill: tags, icon sprite, base cooldown, cast(sk) + level descriptions (lv2..lv7)
 const MAXLV = 7;
+// Paragons (level 8): a maxed tower can be merged into its BTD6 Paragon once you hold three maxed towers
+const PARAGONS = { dart: 'Apex Plasma Master', boomer: 'Glaive Dominus', bomb: 'Ballistic Obliteration Missile Bunker', lightning: 'Root of All Nature', sentry: 'Master Builder',
+  frost: 'Herald of Everfrost', buccaneer: 'Navarch of the Seas', sub: 'Nautic Siege Core', shuriken: 'Ascended Shadow', sniper: 'Sniper Paragon', spike: 'Mega Massive Munitions Factory',
+  tack: 'Cyclone of Fire and Metal', fire: 'Magus Perfectus', ace: 'Goliath Doomship' };
+const paragonReady = sk => !sk.hero && sk.lv === MAXLV && PARAGONS[sk.id] && G.skills.filter(k => !k.hero && k.lv >= MAXLV).length >= 3 && !G.banished.has('para_' + sk.id);
 // Beast Handler: which beasts are out at each skill level, and how hard they hit
 const BEASTS = {
   raptor1: { dmg: 1 }, raptor2: { dmg: 1.3 }, raptor3: { dmg: 1.7 }, trex2: { dmg: 2.4 }, trex3: { dmg: 3 }, giga3: { dmg: 4.2 },
@@ -368,6 +373,7 @@ addEventListener('keydown', e => {
   if (e.code === 'KeyQ' && G.state === 'play') { G.manualAim = !G.manualAim; toast(G.manualAim ? 'Mouse aim ON' : 'Auto aim ON'); }
   if (e.code === 'Space' || e.code === 'ShiftLeft') tryDash();
   if (e.code === 'KeyE' && G.state === 'play') G.useKey = true;
+  if (e.code === 'KeyR') useAbility();
   if (G.state === 'levelup' && /Digit[1-5]/.test(e.code)) { const b = document.querySelectorAll('.card')[+e.code.slice(5) - 1]; b && b.click(); }
 });
 addEventListener('keyup', e => keys[e.code] = false);
@@ -581,7 +587,7 @@ async function newGame() {
     skills: [], level: 1, xp: 0, xpNext: xpFor(1), pendingLevels: 0,
     bloons: [], projs: [], effects: [], pickups: [], texts: [], summons: [], hazards: [], eproj: [],
     hash: new Hash(2.5), flowT: 0, spawnBudget: 0, pops: 0, goal: chaos.goal, elitesSpawned: 0, boss: null, bossDone: false,
-    towerPos: {}, runStats: {}, rerolls: 3, banishes: 2, banished: new Set(), manualAim: false, kills: 0, dmgDealt: 0, chests: 0,
+    towerPos: {}, runStats: {}, buf: { dmg: 0, heroDmg: 0, as: 0, shield: 0 }, abilCd: 8, drainT: 0, blindT: 0, towerStunT: 0, rerolls: 3, banishes: 2, banished: new Set(), manualAim: false, kills: 0, dmgDealt: 0, chests: 0,
     toast: null, toastT: 0, freeze: 0,
     gold: 0, goldEarned: 0, chestsOpened: 0, chestT: 35, items: {}, loop: 0, bossKills: 0, goalStart: 0, portals: null, grace: 0, mapIdx: menuSel.map,
   };
@@ -645,11 +651,16 @@ function skillDmg(sk, mult = 1) {
   const s = G.stats;
   let d = sk.def.dmg * mult * s.dmg * tagMult(sk.def.tags) * (1 + 0.04 * (G.level - 1)) * villageDmg();
   if (G.player.buffT > 0) d *= G.brewPow || 1.35;
+  if (G.buf.dmg > 0) d *= 1.5;                                  // Rallying Roar
+  if (sk.hero && G.buf.heroDmg > 0) d *= 2;                    // Armor Piercing Shells
+  if (G.drainT > 0) d *= 0.65;                                  // drained by the Lych
   return d;
 }
 function cdOf(sk, base) {
   let as = 1 + G.stats.cdr; const vs = villageSk(); if (vs && lvAt(vs, 3)) as += 0.1;
   if (G.player.buffT > 0) as *= G.brewPow || 1.35;
+  if (G.buf.as > 0) as *= 1.6;                                  // Naval Tactics / Kinetic Charge
+  if (G.drainT > 0) as *= 0.75;
   return base / as;
 }
 const lvAt = (sk, n) => sk.lv >= n; // has reached level n
@@ -673,7 +684,7 @@ function aimDir(maxd = 22) {
 }
 // BTD6 projectile art per tower skill, upgrading with the skill level ({kind: {level: sprite}}; '*' = any kind)
 const PROJ_SPR = {
-  dart: { '*': { 1: 'Dart', 3: 'PowerfulDart', 5: 'Arrow', 7: 'MasterArrow' } },
+  dart: { '*': { 1: 'Dart', 3: 'PowerfulDart', 5: 'Arrow', 7: 'MasterArrow', 8: 'PlasmaBlast' } },
   boomer: { '*': { 1: 'Boomerang', 3: 'Glaive', 5: 'HotGlaive', 6: 'GoldenGlaive', 7: 'GlaiveLordGlaive' } },
   bomb: { '*': { 1: 'Bomb', 3: 'BigBomb', 5: 'ReallyBigBomb' } },
   tack: { '*': { 1: 'Tack', 4: 'Blade', 7: 'ParagonBlade' } },
@@ -1191,6 +1202,57 @@ const CAST = {
   },
 };
 
+// ---------------------------------------------------------------- hero abilities (press R)
+function abilDmg(m = 1) { const h = G.skills.find(k => k.hero); return skillDmg(h, m) * G.stats.heroDmg * 4; }
+function abilTarget(maxd = 22) { const b = nearestBloon(G.player.x, G.player.y, maxd); return b ? [b.x, b.y] : [G.player.x + Math.cos(G.player.face > 0 ? 0 : Math.PI) * 5, G.player.y]; }
+function strongest(maxd = 26) { let best = null, bh = -1; const p = G.player; for (const b of G.bloons.concat(G.boss && !G.boss.dead ? [G.boss] : [])) { if (b.dead || (b.x - p.x) ** 2 + (b.y - p.y) ** 2 > maxd * maxd) continue; const h = b.maxhp + (b.isBoss ? 1e9 : b.def.moab ? 1e6 : 0); if (h > bh) { bh = h; best = b; } } return best; }
+const HERO_ABIL = {
+  quincy: { name: 'Storm of Arrows', icon: 'StormOfArrowsAA', cd: 30, desc: 'Rains arrows over the area around the nearest bloons.', fn() {
+    const [tx, ty] = abilTarget(); for (let i = 0; i < 36; i++) setTimeout(() => { if (!G) return; const x = tx + rnd(-4.5, 4.5), y = ty + rnd(-4.5, 4.5); G.effects.push({ kind: 'spark', x, y, r: 0.7, t: 0, life: 0.2, color: '#ffe9a0' }); hitArea(x, y, 1.2, abilDmg(0.35), ['proj'], { quiet: true }); }, i * 55); } },
+  gwen: { name: 'Cocktail of Fire', icon: 'CocktailOfFireAA', cd: 25, desc: 'Lobs a firebomb that leaves a burning pool.', fn() {
+    const [x, y] = abilTarget(); explode(x, y, 3, abilDmg(1), ['area', 'fire'], { burn: 3, color: '#ff7a20' });
+    G.hazards.push({ src: 'hero', kind: 'glue', x, y, r: 3.2, dmg: abilDmg(0.25), tick: 0.4, tt: 0, life: 6, t: 0, tags: ['area', 'fire'], fire: true }); } },
+  striker: { name: 'Concussive Shell', icon: 'ConcussiveShellAA', cd: 25, desc: 'A huge shell that stuns everything it hits.', fn() {
+    const [x, y] = abilTarget(); explode(x, y, 4.5, abilDmg(1.5), ['area'], { stun: 3, color: '#ffd060' }); G.effects.push({ kind: 'expl', x, y, r: 3, t: 0, life: 0.8 }); } },
+  obyn: { name: 'Brambles', icon: 'BramblesAA', cd: 25, desc: 'Grows thorny brambles around you that pop anything passing.', fn() {
+    const p = G.player; for (let i = 0; i < 8; i++) { const a = i * TAU / 8, x = p.x + Math.cos(a) * 4, y = p.y + Math.sin(a) * 4; if (G.arena.isWalk(x, y)) G.hazards.push({ src: 'hero', kind: 'spikes', x, y, r: 1.1, dmg: abilDmg(0.4), pierce: 40, t: 0, life: 14, tags: ['trap'], hits: new Map() }); } } },
+  rosalia: { name: 'Kinetic Charge', icon: 'KineticChargeAA', cd: 40, desc: 'Fires a volley of homing grenades.', fn() {
+    for (let i = 0; i < 12; i++) setTimeout(() => { if (!G) return; const t = nearestBloon(G.player.x, G.player.y, 20); const a = t ? Math.atan2(t.y - G.player.y, t.x - G.player.x) + rnd(-0.5, 0.5) : rnd(TAU);
+      shoot({ a, speed: 16, dmg: abilDmg(0.6), pierce: 1, kind: 'bomb', r: 0.3, life: 1.6, homing: 7, tags: ['area'], src: 'hero', onHit: q => explode(q.x, q.y, 2, abilDmg(0.6), ['area'], { color: '#ff9a40' }) }); }, i * 70); } },
+  churchill: { name: 'Armor Piercing Shells', icon: 'ArmorPiercingShellsAA', cd: 35, desc: 'Double hero damage for 10 seconds.', fn() { G.buf.heroDmg = 10; } },
+  benjamin: { name: 'Syphon Funding', icon: 'SyphonfundsIconAA', cd: 45, desc: 'Hacks nearby bloons down a layer and pockets the cash.', fn() {
+    const p = G.player; let n = 0; for (const b of G.bloons.slice()) { if (b.dead || b.def.moab || (b.x - p.x) ** 2 + (b.y - p.y) ** 2 > 144) continue; damage(b, b.hp + 0.01, ['proj'], { quiet: true }); n++; }
+    const cash = 40 + n * 3; G.gold += cash; G.goldEarned += cash; rs('hero').gold += cash; G.texts.push({ x: p.x, y: p.y - 1.5, s: '+$' + cash, t: 0, life: 1.4, gold: true });
+    G.effects.push({ kind: 'ring', x: p.x, y: p.y, r: 12, t: 0, life: 0.6, color: '#40ff80' }); } },
+  pat: { name: 'Rallying Roar', icon: 'RallyingRoarAA', cd: 40, desc: '+50% damage for you and your towers for 10 seconds.', fn() { G.buf.dmg = 10; G.effects.push({ kind: 'ring', x: G.player.x, y: G.player.y, r: 6, t: 0, life: 0.6, color: '#ff8a3d' }); } },
+  ezili: { name: 'MOAB Hex', icon: 'MoabHexAA', cd: 35, desc: 'Curses the strongest bloon, draining its health.', fn() {
+    const b = strongest(); if (!b) return false; b.hexT = 8; b.hexD = b.isBoss ? b.maxhp * 0.012 : Math.max(abilDmg(0.5), b.maxhp * 0.08); G.effects.push({ kind: 'ring', x: b.x, y: b.y, r: b.r + 2, t: 0, life: 0.6, color: '#c040ff' }); } },
+  adora: { name: 'Ball of Light', icon: 'BallofLightAA', cd: 30, desc: 'A sun orb that burns through everything in its path.', fn() {
+    const [tx, ty] = abilTarget(), p = G.player; shoot({ a: Math.atan2(ty - p.y, tx - p.x), speed: 9, dmg: abilDmg(0.5), pierce: 999, kind: 'sun', r: 1.2, life: 3, rehit: 0.25, tags: ['proj'], src: 'hero', spr: 'BallofLightAA' }); } },
+  brickell: { name: 'Naval Tactics', icon: 'NavalTacticsAA', cd: 40, desc: '+60% attack speed for you and your towers for 10 seconds.', fn() { G.buf.as = 10; G.effects.push({ kind: 'ring', x: G.player.x, y: G.player.y, r: 6, t: 0, life: 0.6, color: '#3d9bff' }); } },
+  etienne: { name: 'UCAV', icon: 'UcavAA', cd: 45, desc: 'Calls in two more drones for 15 seconds.', fn() {
+    const h = G.skills.find(k => k.hero); for (let i = 0; i < 2; i++) G.summons.push({ kind: 'drone', sk: h, x: G.player.x, y: G.player.y, a: i * 3 + 1.5, face: 0, life: 15, t: 0, ucav: true }); } },
+  sauda: { name: 'Leaping Sword', icon: 'LeapingSwordAA', cd: 20, desc: 'Leaps onto the nearest bloons with a huge slash.', fn() {
+    const t = nearestBloon(G.player.x, G.player.y, 14); if (!t) return false; const p = G.player;
+    if (G.arena.isWalk(t.x, t.y)) { p.x = t.x; p.y = t.y; } p.inv = Math.max(p.inv, 0.5);
+    G.effects.push({ kind: 'slash', x: p.x, y: p.y, a: 0, r: 3.5, arc: TAU, t: 0, life: 0.3 }); explode(p.x, p.y, 3.5, abilDmg(1.4), ['area'], { color: '#ffffff' }); } },
+  psi: { name: 'Psychic Blast', icon: 'PsychicBlastAA', cd: 35, desc: 'A psychic shockwave that damages and stuns everything nearby.', fn() {
+    const p = G.player; hitArea(p.x, p.y, 9, abilDmg(1), ['area'], { stun: 2.5 }); G.effects.push({ kind: 'ring', x: p.x, y: p.y, r: 9, t: 0, life: 0.6, color: '#ff4fd8' }); shake(0.3); } },
+  geraldo: { name: 'Shooty Turret', icon: 'GeraldoShopAA', cd: 35, desc: 'Places a turret that shoots for 20 seconds.', fn() {
+    const p = G.player, h = G.skills.find(k => k.hero); G.summons.push({ kind: 'sentry', sk: null, x: p.x + 1, y: p.y + 1, t: 0, life: 20, cd: 0, rate: 0.3, dmg: abilDmg(0.15), face: 0, plasma: false, src: 'hero' }); } },
+  corvus: { name: 'Soul Harvest', icon: 'SoulHarvestAA', cd: 40, desc: 'Rips the souls out of nearby bloons and heals you.', fn() {
+    const p = G.player; let n = 0; G.hash.query(p.x, p.y, 10, _q); for (const b of _q.slice()) if (!b.dead && (b.x - p.x) ** 2 + (b.y - p.y) ** 2 < 100) { damage(b, abilDmg(0.8), ['area'], { quiet: true }); n++; }
+    const heal = Math.min(G.stats.maxhp - p.hp, n * 1.5 + 10); p.hp += heal; rs('hero').heal += heal; G.effects.push({ kind: 'ring', x: p.x, y: p.y, r: 10, t: 0, life: 0.6, color: '#ff3050' }); } },
+  silas: { name: 'Frozen Cascade', icon: 'FrozenCascadeAA', cd: 30, desc: 'Freezes and damages every bloon around you.', fn() {
+    const p = G.player; hitArea(p.x, p.y, 10, abilDmg(0.8), ['area', 'frost'], { freeze: 3, slow: 5 }); G.effects.push({ kind: 'frost', x: p.x, y: p.y, r: 10, t: 0, life: 0.6 }); } },
+};
+function useAbility() {
+  if (!G || G.state !== 'play') return;
+  const A = HERO_ABIL[G.ch.id]; if (!A || G.abilCd > 0) return;
+  SRC = 'hero';
+  if (A.fn() === false) { toast('No target for ' + A.name, '#cbbfa8'); return; }
+  G.abilCd = A.cd; toast(A.name + '!', '#7fd8ff'); voice('Ability'); play('UIClick01', { vol: 0.4 });
+}
 // ---------------------------------------------------------------- bloons
 function hpScale(def) { return G.chaos.hp * (1 + G.t / 240) * (def.moab ? 1 + G.t / 400 : 1) * Math.pow(1.6, G.loop); }
 function spawnBloon(type, pos, parent) {
@@ -1392,6 +1454,7 @@ function bossAI(b, dt) {
   // living Mini-Lychs feed the Lych
   if (b.def.id === 'lych') { const minis = G.bloons.filter(o => !o.dead && o.type === 'lychmini').length; if (minis) b.hp = Math.min(b.maxhp, b.hp + b.maxhp * 0.004 * minis * dt); }
   if (b.hp < b.maxhp * 0.5 && b.phase === 1) { b.phase = 2; toast(`${b.def.name} is ENRAGED!`, '#ff4040'); b.spd *= 1.3; }
+  bossMechanic(b, dt);
   b.atkT -= dt;
   if (b.atkT > 0) return;
   const enr = (b.phase === 2 ? 0.7 : 1) * (1 - 0.18 * (3 - b.skulls.length));   // each skull broken makes it attack faster
@@ -1421,6 +1484,35 @@ function bossAI(b, dt) {
     G.hazards.push({ kind: 'chargeLine', x: b.x, y: b.y, a, len: 14, w: b.r * 1.6, t: 0, life: 0.9 });
     b.atkT = 3.4 * enr;
   }
+}
+// signature boss mechanics: Lych drains your buffs, Phayze blinds you, Vortex shorts out your towers
+function bossMechanic(b, dt) {
+  const p = G.player, id = b.def.id, ph2 = b.phase === 2;
+  b.mechT = (b.mechT ?? 8) - dt;
+  if (b.mechWarn) { b.mechWarn -= dt; if (b.mechWarn > 0) return; b.mechWarn = 0; }
+  if (b.mechT > 0) return;
+  if (id === 'lych') {
+    b.mechT = ph2 ? 10 : 14;
+    const stole = [];
+    if (p.buffT > 0 && p.buffT < 1e8) { p.buffT = 0; stole.push('brew'); }
+    for (const k in G.buf) if (G.buf[k] > 0) { G.buf[k] = 0; stole.push(k); }
+    G.drainT = ph2 ? 8 : 6; b.drainFx = G.drainT;
+    b.hp = Math.min(b.maxhp, b.hp + b.maxhp * (0.03 + 0.01 * stole.length));
+    G.effects.push({ kind: 'ring', x: p.x, y: p.y, r: 3, t: 0, life: 0.6, color: '#a040ff' });
+    play('BossLychEtherealize', { vol: 0.7 }); toast('☠ The Lych drains your power!' + (stole.length ? ' (buffs stolen)' : ''), '#c070ff');
+  } else if (id === 'phayze') {
+    b.mechT = ph2 ? 12 : 16;
+    G.blindT = ph2 ? 5 : 4; G.blindMax = G.blindT;
+    G.effects.push({ kind: 'ring', x: b.x, y: b.y, r: 16, t: 0, life: 0.8, color: '#33ddff' });
+    play('BossPhayzeSummonPortal', { vol: 0.7 }); toast('☠ Phayze warps reality — you are blinded!', '#33ddff');
+  } else if (id === 'vortex') {
+    b.mechT = ph2 ? 10 : 13;
+    G.towerStunT = ph2 ? 4 : 3;
+    for (const t of Object.values(G.towerPos)) G.effects.push({ kind: 'bolt', x: b.x, y: b.y, x2: t.x, y2: t.y, t: 0, life: 0.4 });
+    for (const sm of G.summons) G.effects.push({ kind: 'bolt', x: b.x, y: b.y, x2: sm.x, y2: sm.y, t: 0, life: 0.4 });
+    G.effects.push({ kind: 'ring', x: b.x, y: b.y, r: 18, t: 0, life: 0.7, color: '#9fd6ff' });
+    play('VortexTornado0*', { vol: 0.7 }); toast('☠ Vortex shorts out your towers!', '#9fd6ff');
+  } else b.mechT = 99;
 }
 function killBoss(b) {
   b.dead = true; G.bossDone = true; G.bossKills++;
@@ -1503,6 +1595,7 @@ function update(dt) {
   if (p.dashT > 0) { p.dashT -= dt; moveCircle(p, p.dashX * 30 * dt, p.dashY * 30 * dt); if (Math.random() < 0.8) G.effects.push({ kind: 'ghost', x: p.x, y: p.y, t: 0, life: 0.25, face: p.face }); }
   else moveCircle(p, p.vx * dt, p.vy * dt);
   p.inv -= dt; p.hurtT -= dt; p.buffT -= dt;
+  G.abilCd -= dt; for (const k in G.buf) G.buf[k] -= dt; G.drainT -= dt; G.blindT -= dt; G.towerStunT -= dt;
   if (p.dashN === undefined) p.dashN = s.dashes;
   if (p.dashN < s.dashes) { p.dashCd -= dt; if (p.dashCd <= 0) { p.dashN++; p.dashCd = p.dashN < s.dashes ? 2.2 : 0; } } else p.dashCd = 0;
   if (p.hp < s.maxhp) rs('hero').heal += Math.min(s.maxhp - p.hp, s.regen * dt);
@@ -1542,6 +1635,7 @@ function update(dt) {
     }); }
   // skills
   for (const sk of G.skills) {
+    if (G.towerStunT > 0 && !sk.hero) continue;   // Vortex static storm
     sk.cd -= dt;
     if (sk.cd <= 0) {
       // tower skills launch from their tower beside the hero, not from the hero
@@ -1549,7 +1643,7 @@ function update(dt) {
       if (tp) { p.x = tp.x; p.y = tp.y; }
       CUR_SK = sk; SRC = sk.hero ? 'hero' : sk.id;
       let ok; try { ok = CAST[sk.id](sk); } finally { CUR_SK = null; if (tp) { p.x = px; p.y = py; } }
-      if (!ok) sk.cd = 0.15; else sk.fired = (sk.fired || 0) + 1;
+      if (!ok) sk.cd = 0.15; else { sk.fired = (sk.fired || 0) + 1; if (sk.paragon && sk.cd < 1e8) sk.cd *= 0.6; }
     }
   }
   // phoenix orbit (Dragon's Breath lv7)
@@ -1577,6 +1671,7 @@ function update(dt) {
     if (b.dead) continue;
     b.slowT -= dt; b.frozenT -= dt; b.stunT -= dt; b.hitT -= dt; b.wob += dt * 4;
     regrowTick(b, dt);
+    if (b.hexT > 0) { b.hexT -= dt; b.hexAcc = (b.hexAcc || 0) + dt; if (b.hexAcc > 0.5) { b.hexAcc = 0; SRC = 'hero'; damage(b, b.hexD * 0.5, ['area'], { quiet: true }); if (b.dead) continue; } }
     if (b.burnT > 0) { b.burnT -= dt; b.burnAcc = (b.burnAcc || 0) + dt; if (b.burnAcc > 0.33) { b.burnAcc = 0; SRC = b.burnSrc || 'hero'; damage(b, b.burnD, ['fire'], { quiet: true }); if (b.dead) continue; } }
     if (b.def.golden) {   // golden bloons hop away like in BTD6
       if (b.hop > 0) { b.hop -= dt * 2.2; if (b.hop < 0) b.hop = 0; }
@@ -1627,6 +1722,7 @@ function update(dt) {
   if (B && !B.dead) {
     if (G.bossIntro > 0) G.bossIntro -= dt;
     B.hitT -= dt; B.wob += dt * 2;
+    if (B.hexT > 0) { B.hexT -= dt; B.hexAcc = (B.hexAcc || 0) + dt; if (B.hexAcc > 0.5) { B.hexAcc = 0; SRC = 'hero'; damage(B, B.hexD * 0.5, ['area'], { quiet: true }); } }
     if (B.burnT > 0) { B.burnT -= dt; B.burnAcc = (B.burnAcc || 0) + dt; if (B.burnAcc > 0.33) { B.burnAcc = 0; damage(B, B.burnD, ['fire'], { quiet: true }); } }
     if (B.charge) {
       const c = B.charge; c.t += dt;
@@ -1641,7 +1737,9 @@ function update(dt) {
       }
     }
     if (Math.hypot(p.x - B.x, p.y - B.y) < B.r + p.r) hurtPlayer(30 * G.chaos.dmg);
+    if (G.drainT > 0 && B.def.id === 'lych' && Math.random() < dt * 20) G.effects.push({ kind: 'line', x: B.x, y: B.y, x2: p.x, y2: p.y, t: 0, life: 0.1, color: '#b050ff', w: 0.2 });
   }
+  if (G.towerStunT > 0) for (const t of Object.values(G.towerPos)) if (Math.random() < dt * 6) G.effects.push({ kind: 'spark', x: t.x + rnd(-0.5, 0.5), y: t.y + rnd(-0.5, 0.5), h: 1.2, r: 0.5, t: 0, life: 0.15, color: '#9fd6ff' });
 
   // projectiles
   for (const pr of G.projs) {
@@ -1702,7 +1800,7 @@ function update(dt) {
     else if (h.kind === 'magma') { h.tick -= dt; if (h.tick <= 0 && Math.hypot(p.x - h.x, p.y - h.y) < h.r + p.r * 0.5) { h.tick = 0.5; hurtPlayer(8 * G.chaos.dmg); } }
     else if (h.kind === 'glue') {
       h.tt -= dt;
-      if (h.tt <= 0) { h.tt = h.tick; hitArea(h.x, h.y, h.r, h.dmg, h.tags, { slow: 0.6, quiet: true }); }
+      if (h.tt <= 0) { h.tt = h.tick; hitArea(h.x, h.y, h.r, h.dmg, h.tags, h.fire ? { burn: 1.5, quiet: true } : { slow: 0.6, quiet: true }); }
     } else if (h.kind === 'spikes') {
       G.hash.query(h.x, h.y, h.r + 1, _q);
       for (const b of _q) {
@@ -1723,11 +1821,14 @@ function update(dt) {
   G.hazards = G.hazards.filter(h => h.t < h.life);
 
   // summons
+  G.summons = G.summons.filter(sm => !sm.dead);
   for (const sm of G.summons) {
-    SRC = sm.sk ? (sm.sk.hero ? 'hero' : sm.sk.id) : 'hero';
+    SRC = sm.src || (sm.sk ? (sm.sk.hero ? 'hero' : sm.sk.id) : 'hero');
+    if (sm.life && sm.kind !== 'sentry') { sm.t = (sm.t || 0) + dt; if (sm.t > sm.life) { sm.dead = true; continue; } }
+    if (G.towerStunT > 0 && !(sm.sk && sm.sk.hero) && sm.src !== 'hero') continue;   // Vortex: towers short out
     if (sm.kind === 'drone') {
-      const idx = G.summons.filter(x => x.kind === 'drone').indexOf(sm);
-      sm.a = (sm.a || 0) + dt * 1.6; const ang = sm.a + idx * Math.PI;
+      const drs = G.summons.filter(x => x.kind === 'drone'), idx = drs.indexOf(sm);
+      sm.a = (sm.a || 0) + dt * 1.6; const ang = G.t * 1.6 + idx * TAU / drs.length;
       sm.x = lerp(sm.x, p.x + Math.cos(ang) * 1.8, Math.min(1, dt * 6)); sm.y = lerp(sm.y, p.y + Math.sin(ang) * 1.8, Math.min(1, dt * 6));
       continue;
     }
@@ -2083,6 +2184,14 @@ function uiImg(n) { const i = img('ui/' + n); return i.complete && i.naturalWidt
 function drawHUD() {
   const p = G.player, s = G.stats, u = H / 1080; // ui scale
   ctx.setTransform(1, 0, 0, 1, 0, 0);
+  // Phayze blind: darkness closing in around the hero
+  if (G.blindT > 0) {
+    const q = R3.project(p.x, p.y, 1, W, H) || [W / 2, H / 2], k = Math.min(1, G.blindT / 0.6, (G.blindMax - G.blindT + 0.01) / 0.5);
+    const r0 = H * 0.09, r1 = H * (0.2 + 0.25 * (1 - k));
+    const g = ctx.createRadialGradient(q[0], q[1], r0, q[0], q[1], r1);
+    g.addColorStop(0, 'rgba(0,4,12,0)'); g.addColorStop(1, `rgba(0,4,12,${0.97 * k})`);
+    ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+  }
   ctx.textAlign = 'left';
   // XP bar top
   const xw = Math.min(W * 0.6, 900 * u), xh = 30 * u, xx = (W - xw) / 2, xy = 14 * u;
@@ -2135,6 +2244,18 @@ function drawHUD() {
   if (G.stats.dashes > 1) text('x' + p.dashN, dx + ds - 2 * u, dy + 14 * u, 15 * u, '#9fe8ff', 'right');
   if (p.dashN < 1 && p.dashCd > 0) { ctx.fillStyle = 'rgba(0,0,0,.5)'; ctx.beginPath(); ctx.moveTo(dx + ds / 2, dy + ds / 2); ctx.arc(dx + ds / 2, dy + ds / 2, ds / 2, -Math.PI / 2, -Math.PI / 2 + TAU * p.dashCd / 2.2); ctx.fill(); }
   text('SPACE', dx + ds / 2, dy + ds + 12 * u, 11 * u, '#ccc', 'center');
+  // hero ability (R), right of the dash
+  const HA = HERO_ABIL[G.ch.id];
+  if (HA) {
+    const ai = uiImg('abil/' + HA.icon), as = 58 * u, ax = dx + ds + 12 * u, ay = hy + hh / 2 - as / 2, ready = G.abilCd <= 0;
+    ctx.save(); if (!ready) ctx.globalAlpha = 0.5; if (ai) ctx.drawImage(ai, ax, ay, as, as); ctx.restore();
+    if (!ready) { const k2 = clamp(G.abilCd / HA.cd, 0, 1); ctx.fillStyle = 'rgba(0,0,0,.5)'; ctx.beginPath(); ctx.moveTo(ax + as / 2, ay + as / 2); ctx.arc(ax + as / 2, ay + as / 2, as / 2, -Math.PI / 2, -Math.PI / 2 + TAU * k2); ctx.fill(); text(String(Math.ceil(G.abilCd)), ax + as / 2, ay + as / 2 + 7 * u, 20 * u, '#fff', 'center'); }
+    else { ctx.strokeStyle = 'rgba(127,216,255,' + (0.5 + 0.5 * Math.sin(G.t * 5)) + ')'; ctx.lineWidth = 3 * u; ctx.beginPath(); ctx.arc(ax + as / 2, ay + as / 2, as / 2 + 2 * u, 0, TAU); ctx.stroke(); }
+    text('R', ax + as / 2, ay + as + 12 * u, 11 * u, '#ccc', 'center');
+  }
+  // boss debuffs
+  const deb = [G.drainT > 0 && `DRAINED ${Math.ceil(G.drainT)}s`, G.towerStunT > 0 && `TOWERS STUNNED ${Math.ceil(G.towerStunT)}s`, G.buf.dmg > 0 && `ROAR ${Math.ceil(G.buf.dmg)}s`, G.buf.as > 0 && `HASTE ${Math.ceil(G.buf.as)}s`, G.buf.heroDmg > 0 && `AP SHELLS ${Math.ceil(G.buf.heroDmg)}s`].filter(Boolean);
+  deb.forEach((t, i) => text(t, hx + hw / 2, hy - 46 * u - i * 20 * u, 15 * u, /DRAIN|STUN/.test(t) ? '#c070ff' : '#7fd8ff', 'center'));
   // gold (pops = cash)
   const coin = uiImg('btd_Coin'), cs = 34 * u, gx = hx + hw * 0.06, gy = hy - cs + 4 * u;
   if (coin) ctx.drawImage(coin, gx, gy, cs, cs);
@@ -2156,6 +2277,7 @@ function drawHUD() {
       ctx.fillStyle = 'rgba(0,0,0,.55)'; ctx.beginPath(); ctx.moveTo(x + ss / 2, sy0 + ss / 2); ctx.arc(x + ss / 2, sy0 + ss / 2, ss * 0.48, -Math.PI / 2, -Math.PI / 2 + TAU * k2); ctx.fill();
     }
     const nl = sk.hero ? 5 : MAXLV, cur = sk.hero ? G.stats.heroExtra : sk.lv;
+    if (sk.paragon) { ctx.strokeStyle = '#ffe680'; ctx.lineWidth = 3 * u; roundRect(x - 2 * u, sy0 - 2 * u, ss + 4 * u, ss + 4 * u, 12 * u); ctx.stroke(); text('★', x + ss - 8 * u, sy0 + 16 * u, 16 * u, '#ffe680', 'center'); }
     for (let l = 0; l < nl; l++) { ctx.fillStyle = l < cur ? (sk.hero ? '#7fd8ff' : '#ffd36b') : 'rgba(255,255,255,.2)'; ctx.fillRect(x + 6 * u + l * (ss - 12 * u) / nl, sy0 + ss + 4 * u, (ss - 12 * u) / nl - 2 * u, 5 * u); }
   });
 
@@ -2299,6 +2421,7 @@ function buildOffer(chest = false) {
   // tower cards (new towers and tower upgrades) only come from chests; level-ups give attribute cards
   if (chest) {
     for (const sk of G.skills) if (!sk.hero && sk.lv < MAXLV && !G.banished.has('up_' + sk.id)) pool.push({ type: 'up', sk, cat: 'up', minR: 0 });
+    for (const sk of G.skills) if (paragonReady(sk)) pool.push({ type: 'paragon', sk, cat: 'up', minR: 0, forceR: 4 });
     if (G.skills.filter(k => !k.hero).length < 6) for (const id in SKILLS) if (!hasSkill(id) && !G.banished.has('new_' + id)) pool.push({ type: 'new', id, cat: 'new', minR: 0 });
   }
   const ownedTags = new Set(G.skills.flatMap(s => s.def.tags));
@@ -2323,9 +2446,9 @@ function buildOffer(chest = false) {
     const cats = [...new Set(cand.map(o => o.cat))], tw = cats.reduce((a, c) => a + CATW[c], 0);
     let x = Math.random() * tw, cat = cats[0];
     for (const c of cats) { x -= CATW[c]; if (x <= 0) { cat = c; break; } }
-    const inCat = cand.filter(o => o.cat === cat), o = inCat[Math.floor(Math.random() * inCat.length)];
+    const inCat = cand.filter(o => o.cat === cat), o = inCat.find(x => x.type === 'paragon') || inCat[Math.floor(Math.random() * inCat.length)];
     pool.splice(pool.indexOf(o), 1);
-    o.rar = rar;
+    o.rar = o.forceR ?? rar;
     opts.push(o);
   }
   // 15% of level-ups also deal a BONUS card: a tower card, normally only found in chests
@@ -2357,6 +2480,7 @@ function cardInfo(o) {
     return { title: sk.def.name, kind: `Skill · Level ${sk.lv} → ${sk.lv + 1}`, desc: sk.def.lv[sk.lv - 1] + (o.rar > 0 ? `<br><br><span style="color:var(--gold2)">+${Math.round((mult - 1) * 15)}% skill damage</span>` : ''), icon: sk.def.icon, tags: sk.def.tags };
   }
   if (o.type === 'new') { const d = SKILLS[o.id]; return { title: d.name, kind: 'New Skill', desc: d.desc, icon: d.icon, tags: d.tags }; }
+  if (o.type === 'paragon') return { title: PARAGONS[o.sk.id], kind: `PARAGON · merge ${o.sk.def.name}`, desc: `Your three maxed towers lend their power: ${o.sk.def.name} becomes its Paragon.<br><br><span style="color:var(--gold2)">x3 damage · 40% faster attacks · Paragon model</span>`, icon: o.sk.def.icon, tags: o.sk.def.tags };
   const v = o.c.v * R.m;
   return { title: o.c.name, kind: o.c.tag ? `${TAGNAME[o.c.tag]} Upgrade` : 'Attribute', desc: o.c.fmt(v), icon: o.c.icon || ['UpgradeIcon'], tags: o.c.tag ? [o.c.tag] : [], v };
 }
@@ -2392,7 +2516,7 @@ function chooseCard(o, info) {
   if (banishMode) {
     if (G.banishes <= 0) return;
     G.banishes--; banishMode = false;
-    G.banished.add(o.type === 'up' ? 'up_' + o.sk.id : o.type === 'new' ? 'new_' + o.id : 'stat_' + o.c.id);
+    G.banished.add(o.type === 'paragon' ? 'para_' + o.sk.id : o.type === 'up' ? 'up_' + o.sk.id : o.type === 'new' ? 'new_' + o.id : 'stat_' + o.c.id);
     const idx = currentOffer.indexOf(o);
     const repl = buildOffer(G.offerChest).find(x => !x.bonus && !currentOffer.some(y => sameCard(x, y)));
     if (repl) currentOffer[idx] = repl; else currentOffer.splice(idx, 1);
@@ -2400,7 +2524,13 @@ function chooseCard(o, info) {
     renderCards(); return;
   }
   const R = RARITY[o.rar];
-  if (o.type === 'up') { o.sk.lv++; G.stats.skillBonus = G.stats.skillBonus || {}; o.sk.def = Object.assign({}, o.sk.def, { dmg: o.sk.def.dmg * (1 + (R.m - 1) * 0.15) }); }
+  if (o.type === 'paragon') {
+    const sk = o.sk; sk.lv = 8; sk.paragon = true;
+    sk.def = Object.assign({}, sk.def, { name: PARAGONS[sk.id], dmg: sk.def.dmg * 3, cd: sk.def.cd * 0.6 });
+    const tp = G.towerPos[sk.id] || G.player;
+    G.effects.push({ kind: 'ring', x: tp.x, y: tp.y, r: 6, t: 0, life: 0.8, color: '#ffe680' }, { kind: 'expl', x: tp.x, y: tp.y, r: 2.5, t: 0, life: 0.8 });
+    shake(0.5); toast(`PARAGON: ${PARAGONS[sk.id]}!`, '#ffe680'); play('LegendsItemCollected', { vol: 0.9 });
+  } else if (o.type === 'up') { o.sk.lv++; G.stats.skillBonus = G.stats.skillBonus || {}; o.sk.def = Object.assign({}, o.sk.def, { dmg: o.sk.def.dmg * (1 + (R.m - 1) * 0.15) }); }
   else if (o.type === 'new') addSkill(o.id);
   else { o.c.apply(G.stats, info.v, G); const it = G.items[o.c.id] || (G.items[o.c.id] = { icon: o.c.icon, name: o.c.name, n: 0, card: o.c }); it.n++; it.rar = Math.max(it.rar || 0, o.rar); }
   play('UIClick01', { vol: 0.5 });
@@ -2411,7 +2541,7 @@ function chooseCard(o, info) {
   if ((G.pendingChest || 0) > 0) openLevelUp(true);
   else if (G.pendingLevels > 0) openLevelUp(false);
 }
-const sameCard = (a, b) => a.type === b.type && (a.type === 'up' ? a.sk === b.sk : a.type === 'new' ? a.id === b.id : a.c === b.c);
+const sameCard = (a, b) => a.type === b.type && (a.type === 'up' || a.type === 'paragon' ? a.sk === b.sk : a.type === 'new' ? a.id === b.id : a.c === b.c);
 $('reroll').onclick = () => { if (G.rerolls <= 0) return; G.rerolls--; currentOffer = buildOffer(G.offerChest); banishMode = false; renderCards(); $('rerolls').textContent = G.rerolls; $('reroll').disabled = G.rerolls <= 0; };
 $('banish').onclick = () => { if (G.banishes <= 0) return; banishMode = !banishMode; $('banish').classList.toggle('on', banishMode); renderCards(); };
 
@@ -2422,7 +2552,23 @@ function togglePause() {
   else if (G.state === 'pause') { G.state = 'play'; show('pause', false); }
 }
 // end-of-run table: what the hero and each tower contributed
-function renderBreakdown(el) {
+function breakdownRows() {
+  const R = G.runStats || {};
+  const rows = [['hero', G.ch.name + ' (you)', G.ch.spr]].concat(G.skills.filter(sk => !sk.hero).map(sk => [sk.id, sk.def.name + ' ' + sk.lv, sk.def.icon]));
+  for (const id in R) if (!rows.some(r => r[0] === id) && SKILLS[id]) rows.push([id, SKILLS[id].name, SKILLS[id].icon]);
+  return rows.map(([id, name, icon]) => Object.assign({ id, name, icon }, { dmg: 0, pops: 0, gold: 0, xp: 0, heal: 0 }, R[id] || {})).sort((a, b) => b.dmg - a.dmg);
+}
+function renderBreakdownRows(el, rows) {
+  const k = n => n >= 1e6 ? (n / 1e6).toFixed(1) + 'M' : n >= 1e4 ? (n / 1e3).toFixed(1) + 'k' : Math.round(n).toLocaleString();
+  const tot = rows.reduce((a, r) => a + r.dmg, 0) || 1;
+  const extra = r => [r.gold ? `$${k(r.gold)}` : '', r.xp ? `${k(r.xp)} xp` : '', r.heal ? `${k(r.heal)} hp` : ''].filter(Boolean).join(' · ') || '—';
+  el.innerHTML = `<div class="bh"><span></span><span>Source</span><span>Damage</span><span>Pops</span><span>Generated</span></div>` + rows.map(r =>
+    `<div class="br"><canvas width="40" height="40"></canvas><span>${esc(r.name)}</span><span>${k(r.dmg)} <i style="--w:${Math.round(r.dmg / tot * 100)}%"></i></span><span>${k(r.pops)}</span><span>${extra(r)}</span></div>`).join('');
+  el.querySelectorAll('canvas').forEach((c, i) => { const ic = rows[i].icon; if (ic) spriteToCanvas(c, pickSpr(ic), '#a7794a'); });
+}
+const esc = t => String(t).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+function renderBreakdown(el) { renderBreakdownRows(el, breakdownRows()); }
+function oldRenderBreakdown(el) {
   const R = G.runStats || {}, k = n => n >= 1e6 ? (n / 1e6).toFixed(1) + 'M' : n >= 1e4 ? (n / 1e3).toFixed(1) + 'k' : Math.round(n).toLocaleString();
   const rows = [['hero', G.ch.name + ' (you)', G.ch.spr]].concat(G.skills.filter(sk => !sk.hero).map(sk => [sk.id, sk.def.name + ' ' + sk.lv, sk.def.icon]));
   for (const id in R) if (!rows.some(r => r[0] === id) && SKILLS[id]) rows.push([id, SKILLS[id].name, SKILLS[id].icon]);
@@ -2435,6 +2581,103 @@ function renderBreakdown(el) {
   }).join('');
   el.querySelectorAll('canvas').forEach((c, i) => { const ic = rows[i][2]; if (ic) spriteToCanvas(c, pickSpr(ic), '#a7794a'); });
 }
+// ---------------------------------------------------------------- highscores
+// Saved locally in this browser; set window.HS_CONFIG = { url, key } (highscores_config.js) to share them through Supabase.
+const HS_CATS = [
+  { id: 'damage', name: 'Top Damage', fmt: v => Math.round(v).toLocaleString() },
+  { id: 'pops', name: 'Top Pops', fmt: v => Math.round(v).toLocaleString() },
+  { id: 'cash', name: 'Top Cash Earned', fmt: v => '$' + Math.round(v).toLocaleString() },
+  { id: 'loops', name: 'Total Loops', fmt: v => v },
+  { id: 'level', name: 'Level', fmt: v => v },
+];
+function runRecord(win, quit, mm) {
+  const statRows = [];
+  const s = G.stats;
+  statRows.push(['Time', fmtTime(G.t)], ['Level', G.level], ['Loops', G.loop], ['Bosses defeated', G.bossKills], ['Bloons popped', G.kills], ['Layers popped', G.pops], ['Damage dealt', Math.round(G.dmgDealt).toLocaleString()],
+    ['Gold earned', '$' + Math.round(G.goldEarned).toLocaleString()], ['Damage', '+' + pct(s.dmg - 1)], ['Attack speed', '+' + pct(s.cdr)], ['Area', '+' + pct(s.area - 1)],
+    ['Crit', pct(s.crit) + ' (x' + s.critMult.toFixed(2) + ')'], ['Max HP', Math.round(s.maxhp)], ['Luck', s.luck], ['Dashes', s.dashes], ['Skills', G.skills.map(k => `${k.def.name} ${k.lv}`).join(', ')]);
+  const sk = selectedSkin(G.ch);
+  return { v: 1, date: Date.now(), hero: G.ch.id, heroName: G.ch.name, icon: sk ? sk.icon : HERO_ICON[G.ch.id], map: G.arena.def.name || G.arena.def.id, chaos: CHAOS[G.chaosIdx].n,
+    result: win ? (quit ? 'Run complete' : 'Fallen in glory') : quit ? 'Abandoned' : 'Defeated',
+    damage: Math.round(G.dmgDealt), pops: G.pops, cash: Math.round(G.goldEarned), loops: G.loop, level: G.level, time: Math.round(G.t),
+    stats: statRows, breakdown: breakdownRows().map(r => ({ id: r.id, name: r.name, icon: r.icon, dmg: Math.round(r.dmg), pops: r.pops, gold: Math.round(r.gold), xp: Math.round(r.xp), heal: Math.round(r.heal) })) };
+}
+const HS = {
+  get shared() { return !!(window.HS_CONFIG && HS_CONFIG.url && HS_CONFIG.key); },
+  local() { try { return JSON.parse(localStorage.getItem('bss_scores') || '[]'); } catch (e) { return []; } },
+  saveLocal(list) { try { localStorage.setItem('bss_scores', JSON.stringify(list.slice(-500))); } catch (e) { } },
+  async add(rec) {
+    const L = this.local(); L.push(rec); this.saveLocal(L);
+    if (this.shared) {
+      try {
+        await fetch(HS_CONFIG.url.replace(/\/$/, '') + '/rest/v1/scores', { method: 'POST', headers: { apikey: HS_CONFIG.key, Authorization: 'Bearer ' + HS_CONFIG.key, 'Content-Type': 'application/json', Prefer: 'return=minimal' },
+          body: JSON.stringify({ name: rec.name, hero: rec.hero, damage: rec.damage, pops: rec.pops, cash: rec.cash, loops: rec.loops, level: rec.level, data: rec }) });
+      } catch (e) { console.warn('highscore upload failed', e); }
+    }
+  },
+  async top(cat) {
+    if (this.shared) {
+      try {
+        const r = await fetch(HS_CONFIG.url.replace(/\/$/, '') + `/rest/v1/scores?select=data&order=${cat}.desc,created_at.asc&limit=10`, { headers: { apikey: HS_CONFIG.key, Authorization: 'Bearer ' + HS_CONFIG.key } });
+        if (r.ok) return (await r.json()).map(x => x.data);
+      } catch (e) { console.warn('highscore fetch failed', e); }
+    }
+    return this.local().sort((a, b) => (b[cat] - a[cat]) || (a.date - b.date)).slice(0, 10);
+  },
+};
+function askName(rec) {
+  if (!G || G.state !== 'end') return;
+  $('hsnsum').textContent = `${rec.heroName} · Level ${rec.level} · ${rec.loops} loop${rec.loops === 1 ? '' : 's'} · ${rec.damage.toLocaleString()} damage · ${rec.pops.toLocaleString()} pops · $${rec.cash.toLocaleString()}`;
+  const inp = $('hsninput'); try { inp.value = localStorage.getItem('bss_name') || ''; } catch (e) { }
+  show('hsname', true); setTimeout(() => { inp.focus(); inp.select(); }, 50);
+  const done = async submit => {
+    show('hsname', false); inp.onkeydown = null;
+    if (!submit) return;
+    rec.name = (inp.value.trim() || 'Monkey').slice(0, 16);
+    try { localStorage.setItem('bss_name', rec.name); } catch (e) { }
+    await HS.add(rec); toastDom('Saved to highscores!');
+  };
+  $('hsnok').onclick = () => done(true); $('hsnskip').onclick = () => done(false);
+  inp.onkeydown = e => { e.stopPropagation(); if (e.key === 'Enter') done(true); else if (e.key === 'Escape') done(false); };
+}
+function toastDom(t) { const el = $('endbanner'); if (!el) return; const o = el.textContent; el.textContent = t; setTimeout(() => { el.textContent = o; }, 1600); }
+let hsCat = 'damage';
+async function openScores() {
+  show('scores', true); play('UIClick01', { vol: 0.5 });
+  $('hsmode').textContent = HS.shared ? 'Shared online leaderboard' : 'Scores saved on this computer';
+  const tabs = $('hstabs'); tabs.innerHTML = '';
+  HS_CATS.forEach(c => { const el = document.createElement('div'); el.className = 'chip' + (c.id === hsCat ? ' sel' : ''); el.textContent = c.name; el.onclick = () => { hsCat = c.id; openScores(); }; tabs.appendChild(el); });
+  const box = $('hslist'); box.innerHTML = '<div class="hsempty">Loading…</div>';
+  const cat = HS_CATS.find(c => c.id === hsCat), list = await HS.top(hsCat);
+  if (!list.length) { box.innerHTML = '<div class="hsempty">No runs yet — finish a run and submit your name!</div>'; return; }
+  box.innerHTML = '';
+  list.forEach((r, i) => {
+    const el = document.createElement('div'); el.className = 'hsrow';
+    el.innerHTML = `<div class="rk">${i + 1}</div><img src="${heroIconSrc(r.icon || HERO_ICON[r.hero])}"><div><div class="nm">${esc(r.name || 'Monkey')}</div><div class="meta">${esc(r.heroName || '')} · ${esc(r.map || '')} · Chaos ${esc(r.chaos || '')}</div></div><div class="meta">${new Date(r.date).toLocaleDateString()} · ${esc(r.result || '')}</div><div class="val">${cat.fmt(r[hsCat] || 0)}</div>`;
+    el.querySelector('.nm').onclick = () => openRunView(r);
+    box.appendChild(el);
+  });
+}
+function openRunView(r) {
+  play('UIClick01', { vol: 0.5 });
+  $('rvname').textContent = r.name || 'Monkey';
+  $('rvsub').textContent = `${r.heroName} · ${r.map} · Chaos ${r.chaos} · ${r.result} · ${new Date(r.date).toLocaleString()}`;
+  $('rvstats').innerHTML = (r.stats || []).map(([a, b]) => `<span>${esc(a)}</span><b>${esc(b)}</b>`).join('');
+  renderBreakdownRows($('rvbreak'), r.breakdown || []);
+  show('runview', true);
+}
+$('hsbtn').onclick = openScores;
+$('hsclose').onclick = () => show('scores', false);
+$('rvclose').onclick = () => show('runview', false);
+$('scores').onclick = e => { if (e.target.id === 'scores') show('scores', false); };
+$('runview').onclick = e => { if (e.target.id === 'runview') show('runview', false); };
+$('hsexport').onclick = () => { const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([JSON.stringify(HS.local(), null, 1)], { type: 'application/json' })); a.download = 'bloonstone_highscores.json'; a.click(); };
+$('hsimport').onchange = async e => {
+  const f = e.target.files[0]; if (!f) return;
+  try { const add = JSON.parse(await f.text()); if (!Array.isArray(add)) throw 0; const L = HS.local(), seen = new Set(L.map(x => x.date + x.name));
+    for (const r of add) if (r && r.date && !seen.has(r.date + r.name)) L.push(r); HS.saveLocal(L); openScores(); } catch (err) { alert('That file is not a highscores export.'); }
+  e.target.value = '';
+};
 function renderStats(el, extra = []) {
   const s = G.stats;
   const rows = [
@@ -2463,6 +2706,8 @@ function endRun(win, quit = false) {
   PROFILE.mm += mm; saveProfile();
   renderStats($('endstats'), [['Monkey Money earned', '+' + mm + '  (total ' + Math.floor(PROFILE.mm) + ')'], ['Bosses defeated', G.bossKills], ['Gold earned', '$' + Math.round(G.goldEarned).toLocaleString()], ...(rec ? [['Record', rec]] : [])]);
   renderBreakdown($('endbreak'));
+  const runRec = runRecord(win, quit, mm);
+  setTimeout(() => askName(runRec), win ? 400 : 1100);
   setTimeout(() => show('end', true), win ? 200 : 900);
 }
 $('again').onclick = () => { show('end', false); G = null; R3.resetRun(); buildMenu(); show('menu', true); startMenuMusic(); };

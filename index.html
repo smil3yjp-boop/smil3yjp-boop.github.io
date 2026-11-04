@@ -14,7 +14,8 @@
 <div id="menu" class="overlay menu2">
   <header class="mtop">
     <div class="brand"><div class="logo">BLOONSTONE</div><div class="logo sub">SURVIVORS</div></div>
-    <div class="mm" title="Monkey Money — earned every run, spent on hero skins"><img src="assets/ui/heroes/mm.png" onerror="this.style.display='none'"><span id="mmv">0</span></div>
+    <div class="mtopr"><button id="hsbtn" class="btn hsbtn">🏆 HIGHSCORES</button>
+    <div class="mm" title="Monkey Money — earned every run, spent on hero skins"><img src="assets/ui/heroes/mm.png" onerror="this.style.display='none'"><span id="mmv">0</span></div></div>
   </header>
   <main class="mgrid">
     <section class="mpanel heroes">
@@ -48,7 +49,7 @@
       <button id="start" class="btn big start">BEGIN RUN</button>
     </section>
   </main>
-  <div class="hint">WASD / Arrows move &middot; Space dash &middot; E enter portal &middot; Skills fire automatically &middot; Q toggles mouse-aim &middot; Esc pause &middot; drag the hero to spin</div>
+  <div class="hint">WASD / Arrows move &middot; Space dash &middot; R hero ability &middot; E enter portal &middot; Skills fire automatically &middot; Q toggles mouse-aim &middot; Esc pause &middot; drag the hero to spin</div>
 </div>
 
 <div id="levelup" class="overlay hidden">
@@ -100,6 +101,31 @@
   <div class="row center"><button id="again" class="btn big">Back to Menu</button></div>
 </div>
 
+<div id="hsname" class="overlay hidden">
+  <div class="pcard hscard">
+    <div class="lvtitle small">SUBMIT YOUR RUN</div>
+    <div id="hsnsum" class="psub"></div>
+    <input id="hsninput" maxlength="16" placeholder="Your name" autocomplete="off" spellcheck="false">
+    <div class="bsbtns"><button id="hsnskip" class="btn">SKIP</button><button id="hsnok" class="btn">SUBMIT</button></div>
+  </div>
+</div>
+
+<div id="scores" class="overlay hidden">
+  <div class="pcard hsboard">
+    <div class="hstop"><div class="lvtitle small">HIGHSCORES</div><button id="hsclose" class="btn">✕</button></div>
+    <div id="hstabs" class="chips hstabs"></div>
+    <div id="hslist" class="hslist"></div>
+    <div class="hsfoot"><span id="hsmode" class="psub"></span><span class="sp"></span><button id="hsexport" class="btn small">Export JSON</button><label class="btn small">Import JSON<input id="hsimport" type="file" accept=".json,application/json" hidden></label></div>
+  </div>
+</div>
+
+<div id="runview" class="overlay hidden">
+  <div class="pcard rvcard">
+    <div class="hstop"><div><div id="rvname" class="lvtitle small"></div><div id="rvsub" class="psub"></div></div><button id="rvclose" class="btn">✕</button></div>
+    <div class="endcols"><div id="rvstats" class="stats"></div><div id="rvbreak" class="breakdown"></div></div>
+  </div>
+</div>
+
 <div id="loading" class="overlay"><div class="lvtitle">Inflating bloons…</div></div>
 
 <script src="lib/three.js"></script>
@@ -109,7 +135,7 @@
 <script src="assets/bloon_sprites.js"></script>
 <script src="assets/btd_models.js"></script>
 <script src="assets/btd_rigs.js"></script>
-<script src="assets/btd_fx.js"></script><script src="assets/btd_proj.js"></script><script src="assets/bloon_variants.js"></script><script src="assets/btd_fort.js"></script>
+<script src="highscores_config.js" onerror=""></script><script src="assets/btd_fx.js"></script><script src="assets/btd_proj.js"></script><script src="assets/bloon_variants.js"></script><script src="assets/btd_fort.js"></script>
 <script src="assets/btd_audio.js"></script>
 <script src="assets/music.js"></script>
 <script src="render3d.js"></script>
