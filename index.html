@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Bloonstone Survivors</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<canvas id="gl"></canvas>
+<canvas id="cv"></canvas>
+
+<!-- HUD (drawn on canvas) + DOM overlays for menus -->
+<div id="menu" class="overlay menu2">
+  <header class="mtop">
+    <div class="brand"><div class="logo">BLOONSTONE</div><div class="logo sub">SURVIVORS</div></div>
+    <div class="mm" title="Monkey Money — earned every run, spent on hero skins"><img src="assets/ui/heroes/mm.png" onerror="this.style.display='none'"><span id="mmv">0</span></div>
+  </header>
+  <main class="mgrid">
+    <section class="mpanel heroes">
+      <h3>Heroes</h3>
+      <div id="chars" class="hgrid"></div>
+    </section>
+    <section class="mstage">
+      <div class="stagebg"></div>
+      <canvas id="preview"></canvas>
+      <div class="hinfo">
+        <div id="hname" class="hname"></div>
+        <div id="hskin" class="hskin"></div>
+        <div id="hdesc" class="hdesc"></div>
+        <div class="hstats">
+          <div><span>Health</span><i><b id="hhp"></b></i></div>
+          <div><span>Speed</span><i><b id="hspd"></b></i></div>
+          <div class="htower"><span>Attack</span><canvas id="htower" width="64" height="64"></canvas><em id="htowern"></em></div>
+        </div>
+      </div>
+      <div class="skinbar"><h3>Skins</h3><div id="skins" class="skins"></div></div>
+    </section>
+    <section class="mpanel side">
+      <h3>Arena</h3>
+      <div id="maps" class="mlist"></div>
+      <h3>Chaos Rank</h3>
+      <div id="chaos" class="chips"></div>
+      <h3>Graphics</h3>
+      <div id="gfx" class="chips"></div>
+      <h3>Sound</h3>
+      <div id="aud" class="aud"></div>
+      <button id="start" class="btn big start">BEGIN RUN</button>
+    </section>
+  </main>
+  <div class="hint">WASD / Arrows move &middot; Space dash &middot; E enter portal &middot; Skills fire automatically &middot; Q toggles mouse-aim &middot; Esc pause &middot; drag the hero to spin</div>
+</div>
+
+<div id="levelup" class="overlay hidden">
+  <div class="lvtitle">LEVEL UP</div>
+  <div id="cards" class="cards"></div>
+  <div class="row center">
+    <button id="reroll" class="btn">Reroll (<span id="rerolls">3</span>)</button>
+    <button id="banish" class="btn">Banish (<span id="banishes">2</span>)</button>
+  </div>
+  <div class="hint" id="banishhint"></div>
+</div>
+
+<div id="buyskin" class="overlay hidden">
+  <div class="pcard buycard">
+    <div class="lvtitle small">UNLOCK SKIN?</div>
+    <img id="bsicon" class="bsicon">
+    <div id="bsname" class="bsname"></div>
+    <div id="bshero" class="psub"></div>
+    <div class="bsprice"><img src="assets/ui/heroes/mm.png"><span id="bscost"></span></div>
+    <div id="bsbal" class="psub"></div>
+    <div class="bsbtns"><button id="bscancel" class="btn">CANCEL</button><button id="bsok" class="btn">BUY</button></div>
+  </div>
+</div>
+<div id="pause" class="overlay hidden">
+  <div class="pcard">
+    <div class="ptop">
+      <img id="pportrait" class="pportrait">
+      <div><div class="lvtitle small">PAUSED</div><div id="psub" class="psub"></div></div>
+    </div>
+    <div id="pchips" class="pchips"></div>
+    <div class="pcols">
+      <div class="pcol"><h3>Towers</h3><div id="pskills" class="pskills"></div><h3>Items</h3><div id="pitems" class="pitems"></div></div>
+      <div class="pcol"><h3>Stats</h3><div id="pausestats" class="stats"></div></div>
+    </div>
+    <div class="psettings">
+      <div><h3>Sound</h3><div id="paud" class="aud"></div></div>
+      <div><h3>Graphics</h3><div id="pgfx" class="chips"></div></div>
+    </div>
+    <div class="row center">
+      <button id="resume" class="btn big">Resume</button>
+      <button id="quit" class="btn">Abandon Run</button>
+    </div>
+  </div>
+</div>
+
+<div id="end" class="overlay hidden">
+  <img id="endskull" src="assets/ui/Skull.png" style="width:min(420px,70vw);display:none"><div id="endbanner" class="endbanner"></div>
+  <div id="endstats" class="stats"></div>
+  <div class="row center"><button id="again" class="btn big">Back to Menu</button></div>
+</div>
+
+<div id="loading" class="overlay"><div class="lvtitle">Inflating bloons…</div></div>
+
+<script src="lib/three.js"></script>
+<script src="loader.js"></script>
+<script src="maps.js"></script>
+<script src="assets/sprites.js"></script>
+<script src="assets/bloon_sprites.js"></script>
+<script src="assets/btd_models.js"></script>
+<script src="assets/btd_rigs.js"></script>
+<script src="assets/btd_fx.js"></script><script src="assets/btd_proj.js"></script><script src="assets/bloon_variants.js"></script><script src="assets/btd_fort.js"></script>
+<script src="assets/btd_audio.js"></script>
+<script src="assets/music.js"></script>
+<script src="render3d.js"></script>
+<script src="game3d.js"></script>
+</body>
+</html>
