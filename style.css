@@ -194,3 +194,32 @@ input[type=range]{width:100%;accent-color:#f0a93a}
 .hsempty{color:var(--dim);text-align:center;padding:40px}
 .hsfoot{display:flex;align-items:center;gap:8px}
 .hsfoot .sp{flex:1}
+/* meta pages: knowledge, achievements, settings */
+.metapage{background:rgba(5,3,10,.66);z-index:72}
+.mpcard{width:min(860px,94vw)!important;max-height:90vh;display:flex;flex-direction:column;gap:12px}
+.klist,.achlist,.setlist{overflow:auto;display:flex;flex-direction:column;gap:8px;padding-right:4px}
+.knode{display:grid;grid-template-columns:54px 1fr auto;gap:14px;align-items:center;background:rgba(255,255,255,.04);border:1px solid var(--line);border-radius:12px;padding:8px 12px}
+.knode .kg{width:50px;height:50px;border-radius:12px;background:radial-gradient(#3a2a10,#140a1c);display:flex;align-items:center;justify-content:center;font-size:26px;color:#ffe39a}
+.knode .kg img{width:40px;height:40px}
+.knode .kn{font-weight:900;color:#fff}
+.knode .kd{font-size:12px;color:var(--dim)} .knode .kd span{color:#ffe39a}
+.knode .kpips{display:flex;gap:4px;margin-top:5px} .knode .kpips i{width:22px;height:6px;border-radius:3px;background:rgba(255,255,255,.15)} .knode .kpips i.on{background:var(--gold)}
+.knode button img{width:16px;height:16px;vertical-align:middle;margin-right:3px}
+.knode.maxed{opacity:.75} .knode.cant button{filter:grayscale(1) brightness(.7)}
+.arow{display:grid;grid-template-columns:40px 1fr auto;gap:12px;align-items:center;padding:8px 12px;border-radius:10px;background:rgba(255,255,255,.03);opacity:.6}
+.arow.got{opacity:1;background:linear-gradient(90deg,rgba(255,210,80,.18),rgba(255,255,255,.03))}
+.arow .ai{font-size:24px;text-align:center} .arow .an{font-weight:900;color:#fff} .arow .ad{font-size:12px;color:var(--dim)}
+.arow .am,.achpop .am{display:flex;align-items:center;gap:4px;font-weight:900;color:#ffe39a} .arow .am img,.achpop .am img{width:18px;height:18px}
+.srow{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:8px 12px;border-radius:10px;background:rgba(255,255,255,.03)}
+.srow .sd{font-size:12px;color:var(--dim);max-width:560px}
+.setlist h3{margin:10px 0 2px}
+.btn.tog.on,.btn.key.on{background:linear-gradient(#9ff0ff,#2fa8d8)}
+.btn.key{min-width:120px}
+.htile.locked img{filter:grayscale(1) brightness(.45)}
+.htile .lock{position:absolute;top:6px;right:8px;font-size:16px}
+.card.padsel{outline:4px solid #7fd8ff;outline-offset:4px}
+.psets{font-size:12px;display:flex;flex-direction:column;gap:3px;margin:4px 0 8px}
+.achpop{position:fixed;top:90px;left:50%;transform:translateX(-50%);z-index:200;background:linear-gradient(180deg,rgba(40,24,52,.97),rgba(14,8,20,.97));border:2px solid var(--gold);border-radius:14px;padding:12px 22px;text-align:center;box-shadow:0 10px 40px rgba(0,0,0,.6);animation:achin .35s ease-out}
+.achpop .at{font-size:11px;letter-spacing:3px;color:var(--gold)} .achpop .an{font-size:20px;font-weight:900;color:#fff} .achpop .ad{font-size:12px;color:var(--dim)} .achpop .am{justify-content:center;margin-top:4px}
+.achpop.out{opacity:0;transition:opacity .5s}
+@keyframes achin{from{transform:translate(-50%,-30px);opacity:0}to{transform:translate(-50%,0);opacity:1}}

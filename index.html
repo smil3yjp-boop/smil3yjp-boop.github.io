@@ -14,7 +14,7 @@
 <div id="menu" class="overlay menu2">
   <header class="mtop">
     <div class="brand"><div class="logo">BLOONSTONE</div><div class="logo sub">SURVIVORS</div></div>
-    <div class="mtopr"><button id="hsbtn" class="btn hsbtn">🏆 HIGHSCORES</button>
+    <div class="mtopr"><button id="knowbtn" class="btn hsbtn">🧠 KNOWLEDGE</button><button id="achbtn" class="btn hsbtn">🎖 ACHIEVEMENTS</button><button id="hsbtn" class="btn hsbtn">🏆 HIGHSCORES</button><button id="setbtn" class="btn hsbtn">⚙</button>
     <div class="mm" title="Monkey Money — earned every run, spent on hero skins"><img src="assets/ui/heroes/mm.png" onerror="this.style.display='none'"><span id="mmv">0</span></div></div>
   </header>
   <main class="mgrid">
@@ -49,7 +49,7 @@
       <button id="start" class="btn big start">BEGIN RUN</button>
     </section>
   </main>
-  <div class="hint">WASD / Arrows move &middot; Space dash &middot; R hero ability &middot; E enter portal &middot; Skills fire automatically &middot; Q toggles mouse-aim &middot; Esc pause &middot; drag the hero to spin</div>
+  <div class="hint">WASD / Arrows move &middot; Space dash &middot; R hero ability &middot; E enter portal &middot; gamepad &amp; touch supported &middot; Skills fire automatically &middot; Q toggles mouse-aim &middot; Esc pause &middot; drag the hero to spin</div>
 </div>
 
 <div id="levelup" class="overlay hidden">
@@ -81,7 +81,7 @@
     </div>
     <div id="pchips" class="pchips"></div>
     <div class="pcols">
-      <div class="pcol"><h3>Towers</h3><div id="pskills" class="pskills"></div><h3>Items</h3><div id="pitems" class="pitems"></div></div>
+      <div class="pcol"><h3>Towers</h3><div id="pskills" class="pskills"></div><h3>Relics</h3><div id="prelics" class="pitems"></div><div id="psets" class="psets"></div><h3>Items</h3><div id="pitems" class="pitems"></div></div>
       <div class="pcol"><h3>Stats</h3><div id="pausestats" class="stats"></div></div>
     </div>
     <div class="psettings">
@@ -90,6 +90,7 @@
     </div>
     <div class="row center">
       <button id="resume" class="btn big">Resume</button>
+      <button id="psetbtn" class="btn">Settings</button>
       <button id="quit" class="btn">Abandon Run</button>
     </div>
   </div>
@@ -126,6 +127,16 @@
   </div>
 </div>
 
+<div id="knowpage" class="overlay hidden metapage">
+  <div class="pcard mpcard"><div class="hstop"><div><div class="lvtitle small">MONKEY KNOWLEDGE</div><div class="psub">Permanent upgrades for every run · <img src="assets/ui/heroes/mm.png" style="width:18px;vertical-align:middle"> <b id="kmm"></b></div></div><button class="btn pclose">✕</button></div><div id="klist" class="klist"></div></div>
+</div>
+<div id="achpage" class="overlay hidden metapage">
+  <div class="pcard mpcard"><div class="hstop"><div><div class="lvtitle small">ACHIEVEMENTS</div><div id="achsum" class="psub"></div></div><button class="btn pclose">✕</button></div><div id="achlist" class="achlist"></div></div>
+</div>
+<div id="setpage" class="overlay hidden metapage">
+  <div class="pcard mpcard"><div class="hstop"><div class="lvtitle small">SETTINGS</div><button class="btn pclose">✕</button></div><div id="setlist" class="setlist"></div></div>
+</div>
+
 <div id="loading" class="overlay"><div class="lvtitle">Inflating bloons…</div></div>
 
 <script src="lib/three.js"></script>
@@ -135,10 +146,10 @@
 <script src="assets/bloon_sprites.js"></script>
 <script src="assets/btd_models.js"></script>
 <script src="assets/btd_rigs.js"></script>
-<script src="highscores_config.js" onerror=""></script><script src="assets/btd_fx.js"></script><script src="assets/btd_proj.js"></script><script src="assets/bloon_variants.js"></script><script src="assets/btd_fort.js"></script>
+<script src="highscores_config.js" onerror=""></script><script src="assets/btd_fx.js"></script><script src="assets/btd_proj.js"></script><script src="assets/relic_tex.js"></script><script src="assets/bloon_variants.js"></script><script src="assets/btd_fort.js"></script>
 <script src="assets/btd_audio.js"></script>
 <script src="assets/music.js"></script>
 <script src="render3d.js"></script>
-<script src="game3d.js"></script>
+<script src="game3d.js"></script><script src="meta.js"></script>
 </body>
 </html>

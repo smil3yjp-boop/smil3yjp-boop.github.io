@@ -310,9 +310,15 @@ const R3 = (() => {
   async function loadTower(sid) {
     if (sid in TW) return; TW[sid] = null;
     try { if (!window.BSS_ASSETS || !window.BSS_ASSETS['tw_' + sid]) await loadScript('assets/towers/tw_' + sid + '.js'); await loadRigs('tw_' + sid); } catch (e) { console.warn('tower', sid, e); return; }
-    TW[sid] = Object.keys(RIGS).filter(k => k.startsWith('w_' + sid + '_')).map(k => +k.split('_').pop()).sort((a, b) => a - b);
+    TW[sid] = Object.keys(RIGS).filter(k => k.startsWith('w_' + sid + '_')).map(k => +k.split('_').pop()).filter(n => n > 0).sort((a, b) => a - b);
   }
-  function towerKey(sid, lv) { const ls = TW[sid]; if (!ls) return null; let b = null; for (const L of ls) if (L <= lv) b = L; return b ? 'w_' + sid + '_' + b : null; }
+  const BADRIG = { w_heli_M4: 'w_heli_M3', w_heli_M5: 'w_heli_M3' }; // untextured exports fall back to the tier-3 model
+  function towerKey(sid, lv, sk) {
+    const ls = TW[sid]; if (!ls) return null;
+    // a chosen path (levels 3-7) shows that path's BTD6 model: tier 3 at lv3-4, tier 4 at lv5-6, tier 5 at lv7
+    if (sk && lv < 8) { const L = lv >= 5 && sk.path5 ? sk.path5 : lv >= 3 && sk.path3 ? sk.path3 : ''; if (L) { let k = 'w_' + sid + '_' + L + (lv >= 7 ? 5 : lv >= 5 ? 4 : 3); if (BADRIG[k]) k = BADRIG[k]; if (RIGS[k]) return k; } }
+    let b = null; for (const L of ls) if (L <= lv) b = L; return b ? 'w_' + sid + '_' + b : null;
+  }
   // build a fresh instance (geometry/materials shared). returns holder Group with userData.rig = { mixer, actions, play(tag) }
   function rig(name, size, by = 'height', opts = {}) {
     if (!hasRig(name)) return null;
@@ -722,6 +728,13 @@ const R3 = (() => {
         else { tmpQ.setFromEuler(new THREE.Euler(0, pk.t * 2, 0)); push('soul', pos, tmpQ, tmpS.set(sz, sz, sz), c); push('glow', pos, camQ, tmpS.set(sz * 1.6, sz * 1.6, 1), c); }
       } else if (pk.kind === 'coin') {
         push('spr_CoinSpr', w(pk.x, pk.y, 0.45 + Math.abs(Math.sin(pk.t * 5)) * 0.2), camQ, tmpS.set(0.55, 0.55, 1), white);
+      } else if (pk.kind === 'relic') {   // relic: its BTD6 artifact icon floating in a golden glow
+        const key = 'relic_' + pk.id;
+        if (!pools[key] && window.relicById) { const r = relicById(pk.id); if (r) { const t = new THREE.Texture(); t.colorSpace = THREE.SRGBColorSpace; const im = new Image(); im.onload = () => { t.image = im; t.needsUpdate = true; }; im.src = (window.RELIC_TEX && RELIC_TEX[r.icon]) || ''; const pl = instPool(key, new THREE.PlaneGeometry(1, 1), new THREE.MeshBasicMaterial({ map: t, transparent: true, alphaTest: 0.1, depthWrite: false, toneMapped: false }), 20); scene.add(pl.mesh); } }
+        const h = 0.9 + Math.sin(pk.t * 3) * 0.15;
+        push('glow', w(pk.x, pk.y, h), camQ, tmpS.set(2.6, 2.6, 1), tmpC.setRGB(1, 0.75 + Math.sin(pk.t * 5) * 0.15, 0.3));
+        if (pools[key]) push(key, w(pk.x, pk.y, h), camQ, tmpS.set(1.1, 1.1, 1));
+        push('ring', w(pk.x, pk.y, 0.08), FLATQ, tmpS.set(1 + Math.sin(pk.t * 4) * 0.1, 1 + Math.sin(pk.t * 4) * 0.1, 1), tmpC.setRGB(1, 0.8, 0.3));
       } else if (pk.kind === 'banana') {
         push('spr_Banana', w(pk.x, pk.y, 0.5), camQ, tmpS.set(0.9, 0.9, 1), white);
       } else {
@@ -741,12 +754,12 @@ const R3 = (() => {
       let m = summonModels.get(sm);
       const lvl = sm.sk ? sm.sk.lv : 1;
       const SUM = {
-        heli: [towerKey('heli', lvl) || 't_HeliPilot', 1.6, 'max', { hide: /^(Helipad|Lights|HeliPad.*)$/i }],
+        heli: [towerKey('heli', lvl, sm.sk) || 't_HeliPilot', 1.6, 'max', { hide: /^(Helipad|Lights|HeliPad.*)$/i }],
         sentry: [lvl >= 7 ? 't_SentryChamp' : lvl >= 5 ? 't_SentryBoom' : lvl >= 3 ? 't_SentryEnergy' : 't_Sentry', 1.1, 'height'],
-        ace: lvl >= 8 && towerKey('ace', 8) ? [towerKey('ace', 8), 3.6, 'max'] : lvl >= 7 ? ['t_Ace204', 2.2, 'max'] : lvl >= 5 ? ['t_Ace104', 2.0, 'max'] : ['t_MonkeyAce', 1.9, 'max', { hide: /^MonkeyAceBase$/ }],
+        ace: lvl >= 8 && towerKey('ace', 8) ? [towerKey('ace', 8), 3.6, 'max'] : sm.sk && sm.sk.path3 && towerKey('ace', lvl, sm.sk) !== towerKey('ace', lvl) ? [towerKey('ace', lvl, sm.sk), 2.3, 'max'] : lvl >= 7 ? ['t_Ace204', 2.2, 'max'] : lvl >= 5 ? ['t_Ace104', 2.0, 'max'] : ['t_MonkeyAce', 1.9, 'max', { hide: /^MonkeyAceBase$/ }],
         beast: BEASTM[sm.sp] && hasRig(BEASTM[sm.sp][0]) ? BEASTM[sm.sp] : ['t_Raptor1', 1.5, 'max'],
         drone: ['x_drone', 0.9, 'max'],
-        village: towerKey('village', lvl) ? [towerKey('village', lvl), 2.6, 'max'] : ['m_MonkeyVillage', 2.6, 'max'], farm: [towerKey('farm', lvl) || 't_BananaFarm', 1.6, 'max'],
+        village: towerKey('village', lvl, sm.sk) ? [towerKey('village', lvl, sm.sk), 2.6, 'max'] : ['m_MonkeyVillage', 2.6, 'max'], farm: [towerKey('farm', lvl, sm.sk) || 't_BananaFarm', 1.6, 'max'],
       }[sm.kind] || ['t_EngineerMonkey', 1.1, 'height'];
       if (m && m.userData.skey !== SUM[0]) { scene.remove(m); summonModels.delete(sm); m = null; G.effects.push({ kind: 'ring', x: sm.x, y: sm.y, r: 2, t: 0, life: 0.5, color: '#ffe39a' }); }
       if (!m) {
@@ -770,7 +783,7 @@ const R3 = (() => {
     // tower companions: every tower skill without its own summon stands beside the hero, wearing its current upgrade tier
     const cseen = new Set(), comps = G.skills.filter(sk => TW[sk.id] && G.towerPos && G.towerPos[sk.id]);
     comps.forEach((sk, i) => {
-      const key = towerKey(sk.id, sk.lv); if (!key) return;
+      const key = towerKey(sk.id, sk.lv, sk); if (!key) return;
       cseen.add(sk);
       let c = compModels.get(sk);
       if (c && c.key !== key) { scene.remove(c.m); compModels.delete(sk); c = null; G.effects.push({ kind: 'ring', x: P.x, y: P.y, r: 2.2, t: 0, life: 0.5, color: '#ffe39a' }); }

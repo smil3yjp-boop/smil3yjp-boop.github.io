@@ -210,6 +210,30 @@ function heroMelee() { return G && HERO_ATK[G.ch.id].type === 'melee'; }
 // ---------------------------------------------------------------- data: skills
 // Each skill: tags, icon sprite, base cooldown, cast(sk) + level descriptions (lv2..lv7)
 const MAXLV = 7;
+// tower paths (choose at levels 3 and 5): display names per path [Top, Middle, Bottom] x tiers [3,4,5], plus their BTD6 upgrade icons
+const PATHS = {"dart": [["Spike-o-pult", "Juggernaut", "Ultra-Juggernaut"], ["Triple Shot", "Super Monkey Fan Club", "Plasma Monkey Fan Club"], ["Crossbow", "Sharp Shooter", "Crossbow Master"]], "boomer": [["Glaive Ricochet", "M.O.A.R. Glaives", "Glaive Lord"], ["Bionic Boomerang", "Turbo Charge", "Perma Charge"], ["Kylie Boomerang", "MOAB Press", "MOAB Domination"]], "bomb": [["Really Big Bombs", "Bloon Impact", "Bloon Crush"], ["Cluster Bombs", "Recursive Cluster", "Bomb Blitz"], ["MOAB Mauler", "MOAB Assassin", "MOAB Eliminator"]], "tack": [["Hot Shots", "Ring of Fire", "Inferno Ring"], ["Blade Shooter", "Blade Maelstrom", "Super Maelstrom"], ["Tack Sprayer", "Overdrive", "The Tack Zone"]], "frost": [["Ice Shards", "Embrittlement", "Super Brittle"], ["Arctic Wind", "Snowstorm", "Absolute Zero"], ["Cryo Cannon", "Icicles", "Icicle Impale"]], "glue": [["Bloon Dissolver", "Bloon Liquefier", "The Bloon Solver"], ["Glue Splatter", "Glue Hose", "Glue Storm"], ["MOAB Glue", "Relentless Glue", "Super Glue"]], "sniper": [["Deadly Precision", "Maim MOAB", "Cripple MOAB"], ["Bouncing Bullet", "Supply Drop", "Elite Sniper"], ["Semi-Automatic", "Full Auto Rifle", "Elite Defender"]], "shuriken": [["Double Shot", "Bloonjitsu", "Grandmaster Ninja"], ["Shinobi Tactics", "Bloon Sabotage", "Grand Saboteur"], ["Flash Bomb", "Sticky Bomb", "Master Bomber"]], "fire": [["Arcane Mastery", "Arcane Spike", "Archmage"], ["Dragon's Breath", "Summon Phoenix", "Wizard Lord Phoenix"], ["Shimmer", "Necromancer", "Prince of Darkness"]], "lightning": [["Druid of the Storm", "Ball Lightning", "Superstorm"], ["Druid of the Jungle", "Jungle's Bounty", "Spirit of the Forest"], ["Druid of Wrath", "Poplust", "Avatar of Wrath"]], "spike": [["Spiked Balls", "Spiked Mines", "Super Mines"], ["MOAB SHREDR", "Spike Storm", "Carpet of Spikes"], ["Long Life Spikes", "Deadly Spikes", "Perma-Spike"]], "mortar": [["Shell Shock", "The Big One", "The Biggest One"], ["Heavy Shells", "Artillery Battery", "Pop and Awe"], ["Signal Flare", "Shattering Shells", "Blooncineration"]], "heli": [["Razor Rotors", "Apache Dartship", "Apache Prime"], ["Downdraft", "Support Chinook", "Special Poperations"], ["MOAB Shove", "Comanche Defense", "Comanche Commander"]], "sentry": [["Sprockets", "Sentry Expert", "Sentry Champion"], ["Cleansing Foam", "Overclock", "Ultraboost"], ["Double Gun", "Bloon Trap", "XXXL Trap"]], "plasma": [["Sun Avatar", "Sun Temple", "True Sun God"], ["Robo Monkey", "Tech Terror", "The Anti-Bloon"], ["Dark Knight", "Dark Champion", "Legend of the Night"]], "brew": [["Berserker Brew", "Stronger Stimulant", "Permanent Brew"], ["Unstable Concoction", "Transforming Tonic", "Total Transformation"], ["Lead to Gold", "Rubber to Gold", "Bloon Master Alchemist"]], "farm": [["Banana Plantation", "Banana Research Facility", "Banana Central"], ["Monkey Bank", "IMF Loan", "Monkey-Nomics"], ["Marketplace", "Central Market", "Monkey Wall Street"]], "sub": [["Submerge and Support", "Bloontonium Reactor", "Energizer"], ["Ballistic Missile", "First Strike Capability", "Pre-emptive Strike"], ["Triple Guns", "Armor Piercing Darts", "Sub Commander"]], "buccaneer": [["Destroyer", "Aircraft Carrier", "Carrier Flagship"], ["Cannon Ship", "Monkey Pirates", "Pirate Lord"], ["Merchantman", "Favored Trades", "Trade Empire"]], "ace": [["Fighter Plane", "Operation: Dart Storm", "Sky Shredder"], ["Bomber Ace", "Ground Zero", "Tsar Bomba"], ["Neva-Miss Targeting", "Spectre", "Flying Fortress"]], "dartling": [["Laser Cannon", "Plasma Accelerator", "Ray of Doom"], ["Hydra Rocket Pods", "Rocket Storm", "M.A.D"], ["Buckshot", "Bloon Area Denial System", "Bloon Exclusion Zone"]], "desperado": [["Desperado 3-0-0", "Desperado 4-0-0", "Desperado 5-0-0"], ["Desperado 0-3-0", "Desperado 0-4-0", "Desperado 0-5-0"], ["Desperado 0-0-3", "Desperado 0-0-4", "Desperado 0-0-5"]], "mermonkey": [["Mermonkey 3-0-0", "Mermonkey 4-0-0", "Mermonkey 5-0-0"], ["Mermonkey 0-3-0", "Mermonkey 0-4-0", "Mermonkey 0-5-0"], ["Mermonkey 0-0-3", "Mermonkey 0-0-4", "Mermonkey 0-0-5"]], "village": [["Primary Training", "Primary Mentoring", "Primary Expertise"], ["Monkey Intelligence Bureau", "Call to Arms", "Homeland Defense"], ["Monkey Town", "Monkey City", "Monkeyopolis"]]};
+const PATH_ICON = {"dart_T3": "Spike-o-pultUpgradeIcon", "dart_T4": "JuggernautUpgradeIcon", "dart_T5": "UltraJuggernautUpgradeIcon", "dart_M3": "TripleShotUpgradeIcon", "dart_M4": "SuperMonkeyFanClubUpgradeIcon", "dart_M5": "PlasmaMonkeyFanClubUpgradeIcon", "dart_B3": "CrossBowUpgradeIcon", "dart_B4": "SharpShooterUpgradeIcon", "dart_B5": "CrossBowMasterUpgradeIcon", "boomer_T3": "GlaiveRicochetUpgradeIcon", "boomer_T4": "MoarGlaivesUpgradeIcon", "boomer_T5": "GlaiveLordUpgradeIcon", "boomer_M3": "BionicBoomerangUpgradeIcon", "boomer_M4": "TurbochargeUpgradeIcon", "boomer_M5": "PermaChargeUpgradeIcon", "boomer_B3": "KylieBoomerangUpgradeIcon", "boomer_B4": "MoabPressUpgradeIcon", "boomer_B5": "MoabDominationUpgradeIcon", "bomb_T3": "ReallyBigBombsUpgradeIcon", "bomb_T4": "BloonImpactUpgradeIcon", "bomb_T5": "BloonCrushUpgradeIcon", "bomb_M3": "ClusterBombsUpgradeIcon", "bomb_M4": "RecursiveClusterUpgradeIcon", "bomb_M5": "BombBlitzUpgradeIcon", "bomb_B3": "MoabMaulerUpgradeIcon", "bomb_B4": "MoabAssassinUpgradeIcon", "bomb_B5": "MoabEliminatorUpgradeIcon", "tack_T3": "HotShotsUpgradeIcon", "tack_T4": "RingOfFireUpgradeIcon", "tack_T5": "InfernoRingUpgradeIcon", "tack_M3": "BladeShooterUpgradeIcon", "tack_M4": "BladeMaelstromUpgradeIcon", "tack_M5": "SuperMaelstromUpgradeIcon", "tack_B3": "TackSprayerUpgradeIcon", "tack_B4": "OverdriveUpgradeIcon", "tack_B5": "TheTackZoneUpgradeIcon", "frost_T3": "IceShardsUpgradeIcon", "frost_T4": "EmbrittlementUpgradeIcon", "frost_T5": "SuperBrittleUpgradeIcon", "frost_M3": "ArcticWindUpgradeIcon", "frost_M4": "SnowstormUpgradeIcon", "frost_M5": "AbsoluteZeroUpgradeIcon", "frost_B3": "CryoCannonUpgradeIcon", "frost_B4": "IciclesUpgradeIcon", "frost_B5": "IcicleImpaleUpgradeIcon", "glue_T3": "BloonDissolverUpgradeIcon", "glue_T4": "BloonLiquefierUpgradeIcon", "glue_T5": "TheBloonSolverUpgradeIcon", "glue_M3": "GlueSplatterUpgradeIcon", "glue_M4": "GlueHoseUpgradeIcon", "glue_M5": "GlueStormUpgradeIcon", "glue_B3": "MoabGlueUpgradeIcon", "glue_B4": "RelentlessGlueUpgradeIcon", "glue_B5": "SuperGlueUpgradeIcon", "sniper_T3": "DeadlyPrecisionUpgradeIcon", "sniper_T4": "MaimMoabUpgradeIcon", "sniper_T5": "CrippleMoabUpgradeIcon", "sniper_M3": "BouncingBulletUpgradeIcon", "sniper_M4": "CashDropUpgradeIcon", "sniper_M5": "EliteSniperUpgradeIcon", "sniper_B3": "SemiAutomaticUpgradeIcon", "sniper_B4": "FullAutoRifleUpgradeIcon", "sniper_B5": "EliteDefenderUpgradeIcon", "shuriken_T3": "DoubleShotUpgradeIcon", "shuriken_T4": "BloonjitsuUpgradeIcon", "shuriken_T5": "GrandmasterNinjaUpgradeIcon", "shuriken_M3": "ShinobiTacticsUpgradeIcon", "shuriken_M4": "BloonSabotageUpgradeIcon", "shuriken_M5": "GrandSaboteurUpgradeIcon", "shuriken_B3": "FlashBombUpgradeIcon", "shuriken_B4": "StickyBombUpgradeIcon", "shuriken_B5": "MasterBomberUpgradeIcon", "fire_T3": "ArcaneMasteryUpgradeIcon", "fire_T4": "ArcaneSpikeUpgradeIcon", "fire_T5": "ArchmageUpgradeIcon", "fire_M3": "DragonsBreathUpgradeIcon", "fire_M4": "SummonPhoenixUpgradeIcon", "fire_M5": "WizardLordPhoenixUpgradeIcon", "fire_B3": "ShimmerUpgradeIcon", "fire_B4": "SoulbindUpgradeIcon", "fire_B5": "SoulbindUpgradeIcon", "lightning_T3": "DruidoftheStormUpgradeIcon", "lightning_T4": "BallLightningUpgradeIcon", "lightning_T5": "SuperStormUpgradeIcon", "lightning_M3": "DruidoftheJungleUpgradeIcon", "lightning_M4": "JunglesBountyUpgradeIcon", "lightning_M5": "SpiritoftheForestUpgradeIcon", "lightning_B3": "DruidofWrathUpgradeIcon", "lightning_B4": "PoplustUpgradeIcon", "lightning_B5": "AvatarofWrathUpgradeIcon", "spike_T3": "SpikedBallsUpgradeIcon", "spike_T4": "SpikedMinesUpgradeIcon", "spike_T5": "SuperMinesUpgradeIcon", "spike_M3": "MOABSHREDRUpgradeIcon", "spike_M4": "SpikeStormUpgradeIcon", "spike_M5": "CarpetOfSpikesUpgradeIcon", "spike_B3": "LongLifeSpikesUpgradeIcon", "spike_B4": "DeadlySpikesUpgradeIcon", "spike_B5": "PermaSpikeUpgradeIcon", "mortar_T3": "ShellShockUpgradeIcon", "mortar_T4": "TheBIgOneUpgradeIcon", "mortar_T5": "TheBIggestOneUpgradeIcon", "mortar_M3": "HeavyShellsUpgradeIcon", "mortar_M4": "ArtilleryBatteryUpgradeIcon", "mortar_M5": "PopandAweUpgradeIcon", "mortar_B3": "SignalFlareUpgradeIcon", "mortar_B4": "ShatteringShellsUpgradeIcon", "mortar_B5": "BlooncinerationUpgradeIcon", "heli_T3": "RazorRotorsUpgradeIcon", "heli_T4": "ApacheDartshipUpgradeIcon", "heli_T5": "ApachePrimeUpgradeIcon", "heli_M3": "DowndraftUpgradeIcon", "heli_M4": "SupportChinookUpgradeIcon", "heli_M5": "SpecialPoperationsUpgradeIcon", "heli_B3": "MOABShoveUpgradeIcon", "heli_B4": "ComancheDefenseUpgradeIcon", "heli_B5": "ComancheCommanderUpgradeIcon", "sentry_T3": "SprocketsUpgradeIcon", "sentry_T4": "SentryExpertUpgradeIcon", "sentry_T5": "SentryParagonUpgradeIcon", "sentry_M3": "CleansingFoamUpgradeIcon", "sentry_M4": "OverclockUpgradeIcon", "sentry_M5": "UltraboostUpgradeIcon", "sentry_B3": "DoubleGunUpgradeIcon", "sentry_B4": "BloonTrapUpgradeIcon", "sentry_B5": "XXXLUpgradeIcon", "plasma_T3": "SunAvatarUpgradeIcon", "plasma_T4": "SunTempleUpgradeIcon", "plasma_T5": "TrueSonGodUpgradeIcon", "plasma_M3": "RoboMonkeyUpgradeIcon", "plasma_M4": "TechTerrorUpgradeIcon", "plasma_M5": "TheAntiBloonUpgradeIcon", "plasma_B3": "DarkKnightUpgradeIcon", "plasma_B4": "DarkChampionUpgradeIcon", "plasma_B5": "LegendOfTheNightUpgradeIcon", "brew_T3": "BerserkerBrewUpgradeIcon", "brew_T4": "StrongerStimulantUpgradeIcon", "brew_T5": "PermanentBrewUpgradeIcon", "brew_M3": "UnstableConcoctionUpgradeIcon", "brew_M4": "TransformingTonicUpgradeIcon", "brew_M5": "TotalTransformationUpgradeIcon", "brew_B3": "LeadtoGoldUpgradeIcon", "brew_B4": "RubbertoGoldUpgradeIcon", "brew_B5": "BloonMasterAlchemistUpgradeIcon", "farm_T3": "BananaPlantationUpgradeIcon", "farm_T4": "BananaResearchFacilityUpgradeIcon", "farm_T5": "BananaCentralUpgradeIcon", "farm_M3": "MonkeyBankUpgradeIcon", "farm_M4": "IMFLoanUpgradeIcon", "farm_M5": "MonkeyNomicsUpgradeIcon", "farm_B3": "MarketplaceUpgradeIcon", "farm_B4": "CentralMarketUpgradeIcon", "farm_B5": "MonkeyWallStreetUpgradeIcon", "sub_T3": "SubmergeandSupportUpgradeIcon", "sub_T4": "BloontoniumReactorUpgradeIcon", "sub_T5": "EnergizerUpgradeIcon", "sub_M3": "BallisticMissileUpgradeIcon", "sub_M4": "FirstStrikeCapabilityUpgradeIcon", "sub_M5": "PreEmptiveStrikeUpgradeIcon", "sub_B3": "TripleGunsUpgradeIcon", "sub_B4": "ArmorPiercingDartsUpgradeIcon", "sub_B5": "SubCommanderUpgradeIcon", "buccaneer_T3": "DestroyerUpgradeIcon", "buccaneer_T4": "AircraftCarrierUpgradeIcon", "buccaneer_T5": "CarrierFlagshipUpgradeIcon", "buccaneer_M3": "CannonShipUpgradeIcon", "buccaneer_M4": "MonkeyPiratesUpgradeIcon", "buccaneer_M5": "PirateLordUpgradeIcon", "buccaneer_B3": "MerchantmanUpgradeIcon", "buccaneer_B4": "FavoredTradesUpgradeIcon", "buccaneer_B5": "TradeEmpireUpgradeIcon", "ace_T3": "FighterPlaneUpgradeIcon", "ace_T4": "OperationDartStormUpgradeIcon", "ace_T5": "SkyShredderUpgradeIcon", "ace_M3": "BomberAceUpgradeIcon", "ace_M4": "GroundZeroUpgradeIcon", "ace_M5": "TsarBombaUpgradeIcon", "ace_B3": "NevaMissTargetingUpgradeIcon", "ace_B4": "SpecterUpgradeIcon", "ace_B5": "FlyingFortressUpgradeIcon", "dartling_T3": "LaserCannonUpgradeIcon", "dartling_T4": "PlasmaAcceleratorUpgradeIcon", "dartling_T5": "RayOfDoomUpgradeIcon", "dartling_M3": "HydraRocketsUpgradeIcon", "dartling_M4": "RocketStormUpgradeIcon", "dartling_M5": "MadUpgradeIcon", "dartling_B3": "BuckshotUpgradeIcon", "dartling_B4": "BloonAreaDenialSystemUpgradeIcon", "dartling_B5": "BloonExclusionZoneUpgradeIcon", "desperado_T3": "300UpgradeIcon", "desperado_T4": "400UpgradeIcon", "desperado_T5": "500UpgradeIcon", "desperado_M3": "030UpgradeIcon", "desperado_M4": "040UpgradeIcon", "desperado_M5": "050UpgradeIcon", "desperado_B3": "003UpgradeIcon", "desperado_B4": "004UpgradeIcon", "desperado_B5": "005UpgradeIcon", "village_T3": "PrimaryTrainingUpgradeIcon", "village_T4": "PrimaryMentoringUpgradeIcon", "village_T5": "PrimaryExpertiseUpgradeIcon", "village_M3": "MonkeyIntelligenceBureauUpgradeIcon", "village_M4": "CallToArmsUpgradeIcon", "village_M5": "HomelandDefenseUpgradeIcon", "village_B3": "MonkeyTownUpgradeIcon", "village_B4": "MonkeyCityUpgradeIcon", "village_B5": "MonkeyNomicsUpgradeIcon"};
+const PATH_NAME = { T: 'Top path', M: 'Middle path', B: 'Bottom path' };
+const PATH_BONUS = { T: '+25% damage', M: '+20% attack speed', B: '+1 pierce, +25% vs MOABs & bosses' };
+// which path drives this skill's look right now ('' = base line)
+function curPath(sk) { return sk.lv >= 5 && sk.path5 ? sk.path5 : sk.lv >= 3 && sk.path3 ? sk.path3 : ''; }
+function pathCount(sk, L) { return (sk.path3 === L) + (sk.path5 === L); }
+function pathTier(sk) { return sk.lv >= 7 ? 5 : sk.lv >= 5 ? 4 : 3; }
+// projectile art per path: [lv3-4, lv5-6, lv7]
+const PATH_SPR = {
+  dart: { T: ['SpikedBall_1', 'SpikedBall_1', 'SpikedBall_1'], M: ['TripleDart', 'TripleDart', 'PlasmaBlast'], B: ['Arrow', 'Arrow', 'MasterArrow'] },
+  boomer: { T: ['Glaive', 'HotGlaive', 'GlaiveLordGlaive'], M: ['TurboRang', 'TurboRang', 'PermaChargeGlaive'], B: ['KylieBoomerang', 'KylieBoomerang', 'KylieBoomerang'] },
+  bomb: { T: ['ReallyBigBomb', 'BoomProjectile', 'CrushProjectile'], M: ['ClusterBomb', 'ClusterBomb', 'ClusterBomb'], B: ['BigBomb', 'ReallyBigBomb', 'ReallyBigBomb'] },
+  tack: { T: ['HotTack', 'HotTack', 'HotTack'], M: ['Blade', 'Blade', 'ParagonBlade'], B: ['Tack', 'Tack', 'IcicleTack'] },
+  shuriken: { T: ['SharpShuriken', 'SharpShuriken', 'SharpSeekingShuriken'], M: ['Shuriken', 'SeekingShuriken', 'SharpSeekingShuriken'], B: ['StickyBomb', 'StickyBomb', 'StickyBomb'] },
+  fire: { T: ['PlasmaBlast', 'PlasmaBlast', 'MeteorOrb'], M: ['FireBallStill', 'FireBallStill', 'FireBallStill'], B: ['DarkLightningBall', 'DarkLightningBall', 'DarkLightningBall'] },
+  lightning: { T: ['BallLightning', 'BallLightning', 'BallLightning'], M: ['GlueDrop', 'GlueDrop', 'GlueDrop'], B: ['AvatarOfWrathBolt', 'AvatarOfWrathBolt', 'AvatarOfWrathBolt'] },
+  plasma: { T: ['BlastSunAvatar', 'SunTempleBlast', 'SunTempleBlast'], M: ['PlasmaBullet', 'LaserBlast', 'LaserBlast'], B: ['DarkLightningBall', 'DarkLightningBall', 'DarkLightningBall'] },
+  sub: { M: ['BallisticMissile', 'FirstStrikeMissile', 'PreemptiveStrikeMissile'] },
+  dartling: { T: ['LaserCannon', 'LaserCannon', 'LaserCannon'], M: ['HydraRocketPod', 'RocketStormRocket', 'RocketStormRocket'], B: ['ShotgunBullet', 'ShotgunBullet', 'ShotgunBullet'] },
+  mermonkey: { T: ['Javelin300', 'Javelin400', 'Javelin500'], M: ['Javelin030', 'Javelin040', 'Javelin050'], B: ['Javelin003', 'Javelin004', 'Javelin005'] },
+  ace: { M: ['ComancheBomb', 'MoabBarrageBomb', 'MoabBarrageBomb'], B: ['SpectreDart', 'SpectreDart', 'SpectreDart'] },
+};
 // Paragons (level 8): a maxed tower can be merged into its BTD6 Paragon once you hold three maxed towers
 const PARAGONS = { dart: 'Apex Plasma Master', boomer: 'Glaive Dominus', bomb: 'Ballistic Obliteration Missile Bunker', lightning: 'Root of All Nature', sentry: 'Master Builder',
   frost: 'Herald of Everfrost', buccaneer: 'Navarch of the Seas', sub: 'Nautic Siege Core', shuriken: 'Ascended Shadow', sniper: 'Sniper Paragon', spike: 'Mega Massive Munitions Factory',
@@ -369,11 +393,12 @@ const mouse = { x: 0, y: 0 };
 addEventListener('keydown', e => {
   keys[e.code] = true;
   if (!G) return;
-  if (e.code === 'Escape') togglePause();
-  if (e.code === 'KeyQ' && G.state === 'play') { G.manualAim = !G.manualAim; toast(G.manualAim ? 'Mouse aim ON' : 'Auto aim ON'); }
-  if (e.code === 'Space' || e.code === 'ShiftLeft') tryDash();
-  if (e.code === 'KeyE' && G.state === 'play') G.useKey = true;
-  if (e.code === 'KeyR') useAbility();
+  const K = SETTINGS.keys;
+  if (e.code === K.pause || (e.code === 'Escape' && K.pause !== 'Escape')) togglePause();
+  if (e.code === K.aim && G.state === 'play') { G.manualAim = !G.manualAim; toast(G.manualAim ? 'Mouse aim ON' : 'Auto aim ON'); }
+  if (e.code === K.dash || (K.dash === 'Space' && e.code === 'ShiftLeft')) tryDash();
+  if (e.code === K.interact && G.state === 'play') G.useKey = true;
+  if (e.code === K.ability) useAbility();
   if (G.state === 'levelup' && /Digit[1-5]/.test(e.code)) { const b = document.querySelectorAll('.card')[+e.code.slice(5) - 1]; b && b.click(); }
 });
 addEventListener('keyup', e => keys[e.code] = false);
@@ -591,6 +616,7 @@ async function newGame() {
     toast: null, toastT: 0, freeze: 0,
     gold: 0, goldEarned: 0, chestsOpened: 0, chestT: 35, items: {}, loop: 0, bossKills: 0, goalStart: 0, portals: null, grace: 0, mapIdx: menuSel.map,
   };
+  META.start(stats, G);
   const hsk = { id: 'hero', hero: true, def: Object.assign({ icon: ch.spr, lv: [] }, HERO_ATK[ch.id]), lv: 1, cd: 0.6, t: 0, state: {} };
   G.skills.push(hsk);
   sndInit();
@@ -632,7 +658,7 @@ function xpFor(l) { return Math.floor(6 + l * 5 + Math.pow(l, 1.55) * 2.2); }
 // ---------------------------------------------------------------- skills
 function addSkill(id) {
   const sk = { id, def: SKILLS[id], lv: 1, cd: 0.4, t: 0, state: {} };
-  G.skills.push(sk);
+  G.skills.push(sk); (G.skillOf || (G.skillOf = {}))[id] = sk;
   if (SKILLS[id] && R3.loadTower) R3.loadTower(id);
   return sk;
 }
@@ -651,13 +677,15 @@ function skillDmg(sk, mult = 1) {
   const s = G.stats;
   let d = sk.def.dmg * mult * s.dmg * tagMult(sk.def.tags) * (1 + 0.04 * (G.level - 1)) * villageDmg();
   if (G.player.buffT > 0) d *= G.brewPow || 1.35;
+  if (!sk.hero && sk.lv >= 3) d *= Math.pow(1.25, pathCount(sk, 'T'));
   if (G.buf.dmg > 0) d *= 1.5;                                  // Rallying Roar
   if (sk.hero && G.buf.heroDmg > 0) d *= 2;                    // Armor Piercing Shells
   if (G.drainT > 0) d *= 0.65;                                  // drained by the Lych
   return d;
 }
 function cdOf(sk, base) {
-  let as = 1 + G.stats.cdr; const vs = villageSk(); if (vs && lvAt(vs, 3)) as += 0.1;
+  let as = 1 + G.stats.cdr;
+  if (sk && !sk.hero && sk.lv >= 3) as *= Math.pow(1.2, pathCount(sk, 'M')); const vs = villageSk(); if (vs && lvAt(vs, 3)) as += 0.1;
   if (G.player.buffT > 0) as *= G.brewPow || 1.35;
   if (G.buf.as > 0) as *= 1.6;                                  // Naval Tactics / Kinetic Charge
   if (G.drainT > 0) as *= 0.75;
@@ -709,6 +737,8 @@ const PROJ_SPR = {
 let CUR_SK = null;
 function projSprite(sk, kind) {
   const id = sk.hero ? G.ch.id : sk.id, m = PROJ_SPR[id]; if (!m) return null;
+  const L = !sk.hero && curPath(sk), ps = L && PATH_SPR[id] && PATH_SPR[id][L];
+  if (ps && !(m[kind] && kind !== 'bullet' && kind !== 'dart')) return ps[sk.lv >= 7 ? 2 : sk.lv >= 5 ? 1 : 0];
   const t = m[kind] || m['*']; if (!t) return null;
   let best = null; for (const L of Object.keys(t).map(Number).sort((a, b) => a - b)) if (L <= (sk.lv || 1)) best = t[L];
   return best;
@@ -722,6 +752,7 @@ function shoot(o) {
   if (o.a !== undefined) { p.vx = Math.cos(o.a) * o.speed; p.vy = Math.sin(o.a) * o.speed; p.rot = o.a; }
   const vs = villageSk(); if (vs && lvAt(vs, 4) && !o.onHit) p.pierce += 1;
   if (p.spr === undefined && CUR_SK) p.spr = projSprite(CUR_SK, p.kind);
+  if (CUR_SK && !CUR_SK.hero && CUR_SK.lv >= 3) p.pierce += pathCount(CUR_SK, 'B');
   p.src = o.src || SRC;
   G.projs.push(p);
   return p;
@@ -741,7 +772,7 @@ function hitArea(x, y, r, dmg, tags, opts = {}) {
       damage(b, dmg, tags, opts);
       if (opts.slow) b.slowT = Math.max(b.slowT, opts.slow);
       if (opts.freeze && !b.def.frostImmune && !b.def.moab && !b.isBoss) b.frozenT = Math.max(b.frozenT, opts.freeze);
-      if (opts.stun && !b.isBoss) b.stunT = Math.max(b.stunT, opts.stun);
+      if (opts.stun && !b.isBoss) { if (!(b.stunT > 0) && SETTINGS.dmgNumbers && Math.random() < 0.35) G.texts.push({ x: b.x, y: b.y - b.r - 0.3, s: 'STUN', t: 0, life: 0.7, kind: 'stun' }); b.stunT = Math.max(b.stunT, opts.stun); }
     }
   }
 }
@@ -930,7 +961,7 @@ const CAST = {
       const extra = (lvAt(sk, 3) ? 2 : 0) + G.stats.pierce;
       if (extra) shoot({ x: tgt.x, y: tgt.y, a, speed: 40, dmg: dm * 0.5, pierce: extra, kind: 'bolt', life: 0.4, tags: sk.def.tags, hits: new Set([tgt]) });
     }
-    sfxTone(1200, 300, 0.12, 0.08, 'square');
+    play('AttackSniperRifleHeavy0*', { vol: 0.35, gap: 0.05 });
     sk.cd = cdOf(sk, sk.def.cd * (lvAt(sk, 4) ? 0.7 : 1));
     return true;
   },
@@ -984,7 +1015,7 @@ const CAST = {
         cur = nearestBloon(px, py, 6, hit);
       }
     }
-    sfxTone(900, 120, 0.15, 0.06, 'sawtooth');
+    play('Lightning0*', { vol: 0.3, gap: 0.08 });
     sk.cd = cdOf(sk, sk.def.cd * (lvAt(sk, 6) ? 0.7 : 1));
     return true;
   },
@@ -1034,7 +1065,7 @@ const CAST = {
       const a = Math.atan2(t.y - h.y, t.x - h.x);
       if (lvAt(sk, 7)) { G.effects.push({ kind: 'line', x: h.x, y: h.y, x2: t.x, y2: t.y, t: 0, life: 0.08, color: '#ff4040', w: 0.1 }); damage(t, dm * 1.6, sk.def.tags, { quiet: true }); }
       else shoot({ x: h.x, y: h.y, a: a + rnd(-0.08, 0.08), speed: 30, dmg: dm, pierce: 1 + (lvAt(sk, 5) ? 1 : 0) + G.stats.pierce, kind: 'bullet', life: 0.6, tags: sk.def.tags, r: 0.15 });
-      h.face = a; any = true;
+      h.face = a; h.shotT = G.t; any = true;
     }
     sk.cd = cdOf(sk, sk.def.cd * (lvAt(sk, 2) ? 0.8 : 1));
     return any;
@@ -1068,7 +1099,7 @@ const CAST = {
     G.brewPow = 1.35 + (lvAt(sk, 3) ? 0.1 : 0) + (lvAt(sk, 6) ? 0.1 : 0);
     G.player.buffT = lvAt(sk, 7) ? 1e9 : dur;
     G.effects.push({ kind: 'ring', x: G.player.x, y: G.player.y, r: 2.5, t: 0, life: 0.5, color: '#ff4fd8' });
-    sfxTone(300, 900, 0.3, 0.08);
+    play('PotionBuff0*', { vol: 0.5 });
     sk.cd = lvAt(sk, 7) ? 1e9 : sk.def.cd - (lvAt(sk, 4) ? 1.5 : 0);
     return true;
   },
@@ -1246,12 +1277,14 @@ const HERO_ABIL = {
   silas: { name: 'Frozen Cascade', icon: 'FrozenCascadeAA', cd: 30, desc: 'Freezes and damages every bloon around you.', fn() {
     const p = G.player; hitArea(p.x, p.y, 10, abilDmg(0.8), ['area', 'frost'], { freeze: 3, slow: 5 }); G.effects.push({ kind: 'frost', x: p.x, y: p.y, r: 10, t: 0, life: 0.6 }); } },
 };
+const ABIL_SND = {"quincy": "ActivatedStormOfArrows", "gwen": "ActivatedMolotov", "striker": "ActivatedConcussiveBlast", "obyn": "ActivatedBrambles", "rosalia": ["ActivatedRosaliaKineticChargeNoVO01", "Activated3RosaliaVO01"], "churchill": "ActivatedAPShells", "benjamin": "ActivatedSyphonFunding", "pat": "ActivatedRallyingRoar", "ezili": "ActivatedMoabHex", "adora": "ActivatedBallOfLight", "brickell": "ActivatedNavalTactics", "etienne": "ActivatedUcav", "sauda": "ActivatedLeapingSword", "psi": "ActivatedPsychicBlast", "geraldo": "ActivatedGenericRecharge", "corvus": "Activated7CorvusVO01", "silas": ["ActivatedSilasFrozenBurialNoVO", "Activated10SilasVO01"]};
 function useAbility() {
   if (!G || G.state !== 'play') return;
   const A = HERO_ABIL[G.ch.id]; if (!A || G.abilCd > 0) return;
   SRC = 'hero';
   if (A.fn() === false) { toast('No target for ' + A.name, '#cbbfa8'); return; }
-  G.abilCd = A.cd; toast(A.name + '!', '#7fd8ff'); voice('Ability'); play('UIClick01', { vol: 0.4 });
+  G.abilCd = A.cd * (1 - Math.min(0.6, G.stats.abilCdr || 0)); toast(A.name + '!', '#7fd8ff'); META.ability();
+  for (const k of [].concat(ABIL_SND[G.ch.id] || [])) play(k, { vol: 1, gap: 0, bus: /VO|^Activated(?!.*NoVO)/.test(k) ? 'vo' : undefined });
 }
 // ---------------------------------------------------------------- bloons
 function hpScale(def) { return G.chaos.hp * (1 + G.t / 240) * (def.moab ? 1 + G.t / 400 : 1) * Math.pow(1.6, G.loop); }
@@ -1282,7 +1315,7 @@ function damage(b, dmg, tags, opts = {}) {
   let crit = false;
   if (Math.random() < G.stats.crit + (opts.critBonus || 0)) { d *= G.stats.critMult; crit = true; }
   if (b.def && b.def.resist) for (const t of tags) if (b.def.resist[t]) d *= b.def.resist[t];
-  if ((b.def && b.def.moab) || b.isBoss) d *= (opts.moabMult || 1);
+  if ((b.def && b.def.moab) || b.isBoss) { d *= (opts.moabMult || 1); const ps = G.skillOf && G.skillOf[SRC]; if (ps && ps.lv >= 3) d *= Math.pow(1.25, pathCount(ps, 'B')); }
   if (b.isBoss && (b.shield || b.shieldT > 0)) d *= 0.25;
   rs().dmg += Math.min(d, Math.max(0, b.hp)); if (opts.burn) b.burnSrc = SRC;
   b.hp -= d; b.hitT = 0.08; b.quiet = 0;
@@ -1293,7 +1326,10 @@ function damage(b, dmg, tags, opts = {}) {
   }
   G.dmgDealt += d;
   if (opts.burn) { b.burnT = Math.max(b.burnT, opts.burn); b.burnD = Math.max(b.burnD, d * 0.25); }
-  if ((!opts.quiet && (d >= 3 || Math.random() < 0.3)) || (crit && d >= 3) || Math.random() < 0.04) G.texts.push({ x: b.x + rnd(-0.3, 0.3), y: b.y - b.r, s: crit ? '' + Math.round(d) + '!' : '' + Math.max(1, Math.round(d)), t: 0, life: 0.6, crit });
+  if (SETTINGS.dmgNumbers && ((!opts.quiet && (d >= 3 || Math.random() < 0.3)) || (crit && d >= 3) || (opts.burnTick && Math.random() < 0.3) || Math.random() < 0.04)) {
+    const kind = crit ? 'crit' : opts.burnTick ? 'burn' : (tags || []).includes('frost') ? 'frost' : (tags || []).includes('lightning') ? 'lightning' : 'normal';
+    G.texts.push({ x: b.x + rnd(-0.3, 0.3), y: b.y - b.r, s: crit ? '' + Math.round(d) + '!' : '' + Math.max(1, Math.round(d)), t: 0, life: 0.6, crit, kind });
+  }
   if (b.hp <= 0) b.isBoss ? killBoss(b) : popBloon(b, -b.hp);
 }
 // give a freshly spawned bloon its camo / regrow / fortified properties
@@ -1325,7 +1361,7 @@ function regrowTick(b, dt) {
 }
 function popBloon(b, overflow) {
   b.dead = true;
-  rs().pops++;
+  rs().pops++; META.pop(b);
   G.pops++; if (b.def.moab || !b.def.kids.length) G.kills++;
   G.effects.push({ kind: 'pop', x: b.x, y: b.y, r: b.r, t: 0, life: 0.16, color: b.def.color });
   // pops are worth gold (BTD: $1 per layer popped; blimps pay a bounty)
@@ -1404,7 +1440,7 @@ function spawnBoss() {
   const pos = G.arena.randomCellNear(G.player.x, G.player.y, 12, 18) || [G.player.x + 10, G.player.y];
   const hp = def.hp * G.chaos.hp * (1 + G.t / 600) * Math.pow(1.7, G.loop);
   G.boss = { isBoss: true, def, x: pos[0], y: pos[1], r: def.r, hp, maxhp: hp, spd: def.spd, dead: false, hitT: 0, slowT: 0, frozenT: 0, stunT: 0, burnT: 0, burnD: 0, atkT: 3, phase: 1, wob: 0, kx: 0, ky: 0, shield: false,
-    skulls: [0.75, 0.5, 0.25], blimpSkull: rint(0, 2) };
+    skulls: [0.75, 0.5, 0.25], blimpSkull: rint(0, 2), dashAtSpawn: G.dashesUsed || 0 };
   G.bossIntro = 3;
   play(BOSS_SFX[def.id][0], { vol: 1 });
   shake(0.6);
@@ -1515,7 +1551,7 @@ function bossMechanic(b, dt) {
   } else b.mechT = 99;
 }
 function killBoss(b) {
-  b.dead = true; G.bossDone = true; G.bossKills++;
+  b.dead = true; G.bossDone = true; G.bossKills++; META.bossKill(b);
   shake(1);
   for (let i = 0; i < 30; i++) dropSoul(b.x + rnd(-3, 3), b.y + rnd(-3, 3), 6 * (1 + G.loop));
   G.pickups.push({ kind: 'chest', x: b.x, y: b.y, t: 0, free: true });
@@ -1546,13 +1582,12 @@ function tryDash() {
   if (!G || G.state !== 'play') return;
   const p = G.player;
   if ((p.dashN ?? 1) < 1 || p.dashT > 0) return;
-  let dx = (keys.KeyD || keys.ArrowRight ? 1 : 0) - (keys.KeyA || keys.ArrowLeft ? 1 : 0);
-  let dy = (keys.KeyS || keys.ArrowDown ? 1 : 0) - (keys.KeyW || keys.ArrowUp ? 1 : 0);
+  let [dx, dy] = moveAxis();
   if (!dx && !dy) { dx = p.face; }
   const l = Math.hypot(dx, dy); p.dashX = dx / l; p.dashY = dy / l;
   p.dashT = 0.18; p.inv = Math.max(p.inv, 0.3);
-  p.dashN = (p.dashN ?? 1) - 1; if (p.dashCd <= 0) p.dashCd = 2.2;
-  sfxTone(500, 1400, 0.12, 0.06);
+  p.dashN = (p.dashN ?? 1) - 1; if (p.dashCd <= 0) p.dashCd = 2.2 * (1 - (G.stats.dashCdr || 0)); META.dash();
+  play('UIPropMagicWoosh', { vol: 0.45, gap: 0.05 });
 }
 function moveCircle(o, dx, dy) {
   const A = G.arena;
@@ -1566,7 +1601,7 @@ function hurtPlayer(dmg) {
   p.hp -= d; p.inv = 0.45; p.hurtT = 0.25;
   shake(0.25);
   G.texts.push({ x: p.x, y: p.y - 1, s: '-' + Math.round(d), t: 0, life: 0.7, hurt: true });
-  sfxTone(220, 90, 0.18, 0.12, 'square');
+  play('ShieldDamaged0*', { vol: 0.55, gap: 0.12, key: 'hurt' });
   if (p.hp <= 0) { p.hp = 0; endRun(false); }
 }
 function gainXp(v) {
@@ -1584,12 +1619,11 @@ function update(dt) {
   G.t += dt;
   popBudget = Math.max(0, popBudget - dt * 30);
   // movement
-  let mx = (keys.KeyD || keys.ArrowRight ? 1 : 0) - (keys.KeyA || keys.ArrowLeft ? 1 : 0);
-  let my = (keys.KeyS || keys.ArrowDown ? 1 : 0) - (keys.KeyW || keys.ArrowUp ? 1 : 0);
+  let [mx, my] = moveAxis();
   const ml = Math.hypot(mx, my);
   const spd = G.ch.spd * s.speed * (p.slowT > 0 ? 0.55 : 1);
   p.slowT = (p.slowT || 0) - dt;
-  if (ml) { mx /= ml; my /= ml; }
+  if (ml > 1) { mx /= ml; my /= ml; }
   p.vx = lerp(p.vx, mx * spd, Math.min(1, dt * 14)); p.vy = lerp(p.vy, my * spd, Math.min(1, dt * 14));
   if (mx) p.face = mx > 0 ? 1 : -1;
   if (p.dashT > 0) { p.dashT -= dt; moveCircle(p, p.dashX * 30 * dt, p.dashY * 30 * dt); if (Math.random() < 0.8) G.effects.push({ kind: 'ghost', x: p.x, y: p.y, t: 0, life: 0.25, face: p.face }); }
@@ -1597,7 +1631,8 @@ function update(dt) {
   p.inv -= dt; p.hurtT -= dt; p.buffT -= dt;
   G.abilCd -= dt; for (const k in G.buf) G.buf[k] -= dt; G.drainT -= dt; G.blindT -= dt; G.towerStunT -= dt;
   if (p.dashN === undefined) p.dashN = s.dashes;
-  if (p.dashN < s.dashes) { p.dashCd -= dt; if (p.dashCd <= 0) { p.dashN++; p.dashCd = p.dashN < s.dashes ? 2.2 : 0; } } else p.dashCd = 0;
+  if (p.dashN < s.dashes) { p.dashCd -= dt; if (p.dashCd <= 0) { p.dashN++; p.dashCd = p.dashN < s.dashes ? 2.2 * (1 - (s.dashCdr || 0)) : 0; } } else p.dashCd = 0;
+  META.tick(dt);
   if (p.hp < s.maxhp) rs('hero').heal += Math.min(s.maxhp - p.hp, s.regen * dt);
   p.hp = Math.min(s.maxhp, p.hp + s.regen * dt);
 
@@ -1672,7 +1707,7 @@ function update(dt) {
     b.slowT -= dt; b.frozenT -= dt; b.stunT -= dt; b.hitT -= dt; b.wob += dt * 4;
     regrowTick(b, dt);
     if (b.hexT > 0) { b.hexT -= dt; b.hexAcc = (b.hexAcc || 0) + dt; if (b.hexAcc > 0.5) { b.hexAcc = 0; SRC = 'hero'; damage(b, b.hexD * 0.5, ['area'], { quiet: true }); if (b.dead) continue; } }
-    if (b.burnT > 0) { b.burnT -= dt; b.burnAcc = (b.burnAcc || 0) + dt; if (b.burnAcc > 0.33) { b.burnAcc = 0; SRC = b.burnSrc || 'hero'; damage(b, b.burnD, ['fire'], { quiet: true }); if (b.dead) continue; } }
+    if (b.burnT > 0) { b.burnT -= dt; b.burnAcc = (b.burnAcc || 0) + dt; if (b.burnAcc > 0.33) { b.burnAcc = 0; SRC = b.burnSrc || 'hero'; damage(b, b.burnD, ['fire'], { quiet: true, burnTick: true }); if (b.dead) continue; } }
     if (b.def.golden) {   // golden bloons hop away like in BTD6
       if (b.hop > 0) { b.hop -= dt * 2.2; if (b.hop < 0) b.hop = 0; }
       b.hopT -= dt;
@@ -1835,7 +1870,10 @@ function update(dt) {
     if (sm.kind === 'heli') {
       const idx = G.summons.filter(x => x.kind === 'heli').indexOf(sm);
       sm.a += dt * 1.3; const ang = sm.a + idx * TAU / 3;
+      const ox = sm.x, oy = sm.y;
       sm.x = lerp(sm.x, p.x + Math.cos(ang) * 3.2, Math.min(1, dt * 5)); sm.y = lerp(sm.y, p.y + Math.sin(ang) * 3.2, Math.min(1, dt * 5));
+      // nose follows the flight path unless it just fired at something
+      if (!(G.t - (sm.shotT || -9) < 0.6) && (sm.x - ox) ** 2 + (sm.y - oy) ** 2 > 1e-6) sm.face = Math.atan2(sm.y - oy, sm.x - ox);
     } else if (sm.kind === 'sentry') {
       sm.t += dt; sm.cd -= dt;
       if (sm.cd <= 0) {
@@ -1879,11 +1917,12 @@ function update(dt) {
     pk.t += dt;
     if (pk.vx) { pk.x += pk.vx * dt; pk.y += pk.vy * dt; pk.vx *= 0.9; pk.vy *= 0.9; if (Math.abs(pk.vx) < 0.05) pk.vx = 0; }
     const dx = p.x - pk.x, dy = p.y - pk.y, d = Math.hypot(dx, dy);
-    const range = pk.kind === 'soul' ? mag : pk.kind === 'chest' ? 0 : 1.4;
+    const range = pk.kind === 'soul' ? mag : pk.kind === 'chest' ? 0 : pk.kind === 'relic' ? 2.2 : 1.4;
     if (d < range || pk.vac) { const k = Math.min(1, dt * (pk.vac ? 14 : 10)); pk.x += dx * k; pk.y += dy * k; }
     if (d < (pk.kind === 'chest' ? 1.4 : 0.7)) {
       pk.dead = true;
       if (pk.kind === 'soul') { gainXp(pk.v); rs('hero').xp += pk.v * G.stats.xp * G.chaos.xp; }
+      else if (pk.kind === 'relic') gainRelic(pk.id);
       else if (pk.kind === 'heart') { rs('hero').heal += Math.min(s.maxhp - p.hp, s.maxhp * 0.3); p.hp = Math.min(s.maxhp, p.hp + s.maxhp * 0.3); toast('+30% health', '#ff7a8a'); }
       else if (pk.kind === 'banana') { const f = rs('farm'); f.heal += Math.min(s.maxhp - p.hp, pk.v); f.xp += pk.xp * G.stats.xp * G.chaos.xp; p.hp = Math.min(s.maxhp, p.hp + pk.v); gainXp(pk.xp); G.texts.push({ x: p.x, y: p.y - 1, s: '+' + Math.round(pk.v), t: 0, life: 0.7, heal: true }); }
       else if (pk.kind === 'chest') {
@@ -1892,7 +1931,7 @@ function update(dt) {
           G.gold -= cost; if (!pk.free) G.chestsOpened++; G.chests++;
           G.pendingChest = (G.pendingChest || 0) + 1;
           for (const q of G.pickups) if (q.kind === 'soul') q.vac = true;
-          play('UIChestOpen03', { vol: 0.9 }); play('MoneybagsOpen', { vol: 0.6 });
+          play('UIChestOpen03', { vol: 0.9 }); play('MoneybagsOpen', { vol: 0.6 }); META.chest(pk.x, pk.y);
           if (cost) G.texts.push({ x: p.x, y: p.y - 1, s: '-$' + cost, t: 0, life: 1, gold: true });
           openLevelUp(true);
         } else {
@@ -1923,7 +1962,7 @@ function update(dt) {
   G.cam.shake = Math.max(0, G.cam.shake - dt * 2);
   G.toastT -= dt;
 }
-function shake(v) { G.cam.shake = Math.min(1.2, G.cam.shake + v); }
+function shake(v) { if (!SETTINGS.shake) return; G.cam.shake = Math.min(1.2, G.cam.shake + v); }
 
 // ---------------------------------------------------------------- render
 function render(dt = 0.016) {
@@ -1941,7 +1980,7 @@ function render(dt = 0.016) {
     const fs = (t.crit ? 30 : t.hurt ? 30 : 21) * u;
     ctx.font = `900 ${fs}px "Trebuchet MS", sans-serif`;
     ctx.lineWidth = Math.max(2, fs * 0.16); ctx.strokeStyle = '#000'; ctx.strokeText(t.s, p[0], p[1]);
-    ctx.fillStyle = t.hurt ? '#ff4d5e' : t.heal ? '#7dff8a' : t.gold ? '#ffd84a' : t.crit ? '#ffd23f' : '#fff';
+    ctx.fillStyle = t.hurt ? '#ff4d5e' : t.heal ? '#7dff8a' : t.gold ? '#ffd84a' : DMG_COL[t.kind] || (t.crit ? '#ffd23f' : '#fff');
     ctx.fillText(t.s, p[0], p[1]);
   }
   ctx.globalAlpha = 1;
@@ -2281,8 +2320,10 @@ function drawHUD() {
     for (let l = 0; l < nl; l++) { ctx.fillStyle = l < cur ? (sk.hero ? '#7fd8ff' : '#ffd36b') : 'rgba(255,255,255,.2)'; ctx.fillRect(x + 6 * u + l * (ss - 12 * u) / nl, sy0 + ss + 4 * u, (ss - 12 * u) / nl - 2 * u, 5 * u); }
   });
 
-  // ---- bottom-left: collected items (small icons + count)
+  // ---- bottom-left: relics, then collected items (small icons + count)
   const items = Object.values(G.items);
+  { const is0 = 34 * u, ig0 = 6 * u, rows0 = Math.ceil(items.length / 6); drawRelics(u, items.length ? H - 18 * u - rows0 * (is0 + ig0) - 18 * u : H - 18 * u); }
+  drawCombo(u); drawCbLabels(u); drawTouch(u);
   if (items.length) {
     const is = 34 * u, ig = 6 * u, per = 6, x0 = 18 * u, rows = Math.ceil(items.length / per), y0 = H - 18 * u - rows * (is + ig);
     text('ITEMS', x0, y0 - 8 * u, 12 * u, '#cbbfa8');
@@ -2471,15 +2512,21 @@ function openLevelUp(chest = false) {
   $('reroll').disabled = G.rerolls <= 0; $('banish').disabled = G.banishes <= 0;
   document.querySelector('#levelup .lvtitle').textContent = chest ? 'SOULSTONE CHEST' : 'LEVEL UP';
   show('levelup', true);
-  sfxTone(400, 800, 0.25, 0.08);
+  play(chest ? 'UIChestOpen03' : 'UIStar', { vol: 0.6 });
 }
 function cardInfo(o) {
   const R = RARITY[o.rar];
   if (o.type === 'up') {
     const sk = o.sk, mult = R.m;
+    if ((sk.lv === 2 || sk.lv === 4) && PATHS[sk.id]) return { title: sk.def.name, kind: `Skill · Level ${sk.lv} → ${sk.lv + 1} · PATH CHOICE`, desc: sk.def.lv[sk.lv - 1] + `<br><br><span style="color:#7fd8ff">Choose a top, middle or bottom BTD6 path</span>`, icon: sk.def.icon, tags: sk.def.tags };
     return { title: sk.def.name, kind: `Skill · Level ${sk.lv} → ${sk.lv + 1}`, desc: sk.def.lv[sk.lv - 1] + (o.rar > 0 ? `<br><br><span style="color:var(--gold2)">+${Math.round((mult - 1) * 15)}% skill damage</span>` : ''), icon: sk.def.icon, tags: sk.def.tags };
   }
   if (o.type === 'new') { const d = SKILLS[o.id]; return { title: d.name, kind: 'New Skill', desc: d.desc, icon: d.icon, tags: d.tags }; }
+  if (o.type === 'path') {
+    const names = PATHS[o.sk.id][{ T: 0, M: 1, B: 2 }[o.L]], t = o.tier === 0 ? 0 : 1;
+    const line = names.slice(t).map((n, i) => i ? `<span style="color:var(--dim)">→ ${n}</span>` : `<b>${n}</b>`).join('<br>');
+    return { title: names[t], kind: `${o.sk.def.name} · ${PATH_NAME[o.L]}`, desc: `${line}<br><br><span style="color:var(--gold2)">${PATH_BONUS[o.L]}</span>`, icon: o.sk.def.icon, upg: PATH_ICON[`${o.sk.id}_${o.L}${o.tier === 0 ? 3 : 4}`], tags: o.sk.def.tags };
+  }
   if (o.type === 'paragon') return { title: PARAGONS[o.sk.id], kind: `PARAGON · merge ${o.sk.def.name}`, desc: `Your three maxed towers lend their power: ${o.sk.def.name} becomes its Paragon.<br><br><span style="color:var(--gold2)">x3 damage · 40% faster attacks · Paragon model</span>`, icon: o.sk.def.icon, tags: o.sk.def.tags };
   const v = o.c.v * R.m;
   return { title: o.c.name, kind: o.c.tag ? `${TAGNAME[o.c.tag]} Upgrade` : 'Attribute', desc: o.c.fmt(v), icon: o.c.icon || ['UpgradeIcon'], tags: o.c.tag ? [o.c.tag] : [], v };
@@ -2495,7 +2542,9 @@ function renderCards() {
     if (o.bonus) el.classList.add('bonus');
     el.innerHTML = `${o.bonus ? '<div class="bonustag">BONUS</div>' : ''}<div class="rar">${R.name}</div><canvas width="128" height="128"></canvas><div class="cn">${info.title}</div><div class="ck">${info.kind}</div><div class="cd">${info.desc}</div><div class="tags">${(info.tags || []).map(t => TAGNAME[t]).join(' · ')} &nbsp; [${i + 1}]</div>`;
     const c = el.querySelector('canvas');
-    if (o.type === 'stat' && !info.icon.some(n => sprite(n))) drawStatIcon(c, o.c, R);
+    if (info.upg) { const im = new Image(); im.onload = () => { const g = c.getContext('2d'); g.clearRect(0, 0, c.width, c.height); const k = Math.min(c.width / im.width, c.height / im.height) * 0.9; g.drawImage(im, (c.width - im.width * k) / 2, (c.height - im.height * k) / 2, im.width * k, im.height * k); }; im.src = 'assets/ui/upg/' + info.upg + '.png'; }
+    if (info.upg) { /* drawn on load */ }
+    else if (o.type === 'stat' && !info.icon.some(n => sprite(n))) drawStatIcon(c, o.c, R);
     else spriteToCanvas(c, pickSpr(info.icon), '#b98');
     el.onclick = () => chooseCard(o, info);
     box.appendChild(el);
@@ -2513,6 +2562,7 @@ function drawStatIcon(c, card, R) {
   g.shadowColor = '#000'; g.shadowBlur = 8; g.fillStyle = '#ffe39a'; g.fillText(glyph, w / 2, w / 2 + 4);
 }
 function chooseCard(o, info) {
+  if (banishMode && o.type === 'path') banishMode = false;
   if (banishMode) {
     if (G.banishes <= 0) return;
     G.banishes--; banishMode = false;
@@ -2529,7 +2579,17 @@ function chooseCard(o, info) {
     sk.def = Object.assign({}, sk.def, { name: PARAGONS[sk.id], dmg: sk.def.dmg * 3, cd: sk.def.cd * 0.6 });
     const tp = G.towerPos[sk.id] || G.player;
     G.effects.push({ kind: 'ring', x: tp.x, y: tp.y, r: 6, t: 0, life: 0.8, color: '#ffe680' }, { kind: 'expl', x: tp.x, y: tp.y, r: 2.5, t: 0, life: 0.8 });
-    shake(0.5); toast(`PARAGON: ${PARAGONS[sk.id]}!`, '#ffe680'); play('LegendsItemCollected', { vol: 0.9 });
+    shake(0.5); META.ach('paragon'); toast(`PARAGON: ${PARAGONS[sk.id]}!`, '#ffe680'); play('UpgradeParagonDartMonkey', { vol: 0.9 });
+  } else if (o.type === 'up' && (o.sk.lv === 2 || o.sk.lv === 4) && PATHS[o.sk.id] && !o.pathPicked) {
+    // levels 3 and 5: pick a BTD6 path (top / middle / bottom) before the upgrade lands
+    const tier = o.sk.lv === 2 ? 0 : 1;
+    currentOffer = ['T', 'M', 'B'].map(L => ({ type: 'path', sk: o.sk, L, tier, rar: o.rar, from: o }));
+    G.pathPick = true; renderCards(); $('reroll').disabled = $('banish').disabled = true;
+    document.querySelector('#levelup .lvtitle').textContent = 'CHOOSE A PATH';
+    return;
+  } else if (o.type === 'path') {
+    const sk = o.sk; if (o.tier === 0) sk.path3 = o.L; else sk.path5 = o.L;
+    G.pathPick = false; o.from.pathPicked = true; chooseCard(o.from, cardInfo(o.from)); return;
   } else if (o.type === 'up') { o.sk.lv++; G.stats.skillBonus = G.stats.skillBonus || {}; o.sk.def = Object.assign({}, o.sk.def, { dmg: o.sk.def.dmg * (1 + (R.m - 1) * 0.15) }); }
   else if (o.type === 'new') addSkill(o.id);
   else { o.c.apply(G.stats, info.v, G); const it = G.items[o.c.id] || (G.items[o.c.id] = { icon: o.c.icon, name: o.c.name, n: 0, card: o.c }); it.n++; it.rar = Math.max(it.rar || 0, o.rar); }
@@ -2702,7 +2762,7 @@ function endRun(win, quit = false) {
   $('endskull').style.display = win ? 'none' : 'block';
   eb.textContent = win ? (quit ? 'RUN COMPLETE' : 'FALLEN IN GLORY') : quit ? 'RUN ABANDONED' : 'DEFEATED';
   eb.style.color = win ? '#ffe39a' : '#ff7a7a';
-  const mm = Math.round(G.goldEarned / 20 + G.level * 4 + G.bossKills * 150 + G.t / 6);
+  const mm = Math.round((G.goldEarned / 20 + G.level * 4 + G.bossKills * 150 + G.t / 6) * META.mmMult());
   PROFILE.mm += mm; saveProfile();
   renderStats($('endstats'), [['Monkey Money earned', '+' + mm + '  (total ' + Math.floor(PROFILE.mm) + ')'], ['Bosses defeated', G.bossKills], ['Gold earned', '$' + Math.round(G.goldEarned).toLocaleString()], ...(rec ? [['Record', rec]] : [])]);
   renderBreakdown($('endbreak'));
@@ -2807,13 +2867,17 @@ function buildMenu() {
     const sk = selectedSkin(c);
     const el = document.createElement('div'); el.className = 'htile' + (i === menuSel.char ? ' sel' : '');
     const owned = SKINS.filter(s => s.hero === c.id && PROFILE.owned.includes(s.key)).length, total = SKINS.filter(s => s.hero === c.id).length;
-    el.innerHTML = `<img src="${heroIconSrc(sk ? sk.icon : HERO_ICON[c.id])}"><div class="nm">${c.name}</div>${total ? `<div class="dot">${owned}/${total}</div>` : ''}`;
+    const locked = !heroUnlocked(c.id);
+    if (locked) el.classList.add('locked');
+    el.innerHTML = `<img src="${heroIconSrc(sk ? sk.icon : HERO_ICON[c.id])}"><div class="nm">${c.name}</div>${locked ? '<div class="lock">🔒</div>' : total ? `<div class="dot">${owned}/${total}</div>` : ''}`;
+    el.title = locked ? (nextUnlock() === c.id ? 'Defeat a boss to unlock' : `Unlocks after ${UNLOCK_ORDER.indexOf(c.id) - UNLOCK_ORDER.indexOf(nextUnlock()) + 1} more boss kills`) : c.name;
     el.onclick = () => { menuSel.char = i; saveSel(); play('UIClick01', { vol: 0.5 }); buildMenu(); };
     cbox.appendChild(el);
   });
   // hero details + 3D preview
   const sk = selectedSkin(ch);
-  $('hname').textContent = ch.name;
+  $('hname').textContent = ch.name + (heroUnlocked(ch.id) ? '' : ' 🔒');
+  { const lk = !heroUnlocked(ch.id); $('start').disabled = lk; $('start').textContent = lk ? (nextUnlock() === ch.id ? 'DEFEAT A BOSS TO UNLOCK' : `LOCKED · ${UNLOCK_ORDER.indexOf(ch.id) - UNLOCK_ORDER.indexOf(nextUnlock()) + 1} BOSS KILLS`) : 'BEGIN RUN'; }
   $('hskin').textContent = sk ? sk.name : 'Classic';
   $('hdesc').textContent = ch.desc;
   $('hhp').style.width = Math.min(100, ch.hp / 1.7) + '%';
@@ -2883,6 +2947,9 @@ function renderPause() {
     spriteToCanvas(el.querySelector('canvas'), pickSpr(s.def.icon), '#a7794a');
     ps.appendChild(el);
   }
+  const pr = $('prelics'); pr.innerHTML = (G.relics || []).length ? '' : '<span style="color:var(--dim);font-size:12px">No relics yet — they drop from chests, blimps and bosses</span>';
+  for (const id of G.relics || []) { const r = relicById(id), S = r.set && RELIC_SETS[r.set]; const el = document.createElement('div'); el.className = 'pitem'; el.style.borderColor = S ? S.color : '#ffb02e'; el.title = `${r.name} — ${r.desc}${S ? ' (' + S.name + ' set)' : ''}`; el.innerHTML = `<img src="assets/ui/relic/${r.icon}.png" style="width:100%;height:100%;object-fit:contain">`; pr.appendChild(el); }
+  $('psets').innerHTML = Object.entries(RELIC_SETS).map(([k, S]) => { const n = setCount(k); return n ? `<div style="color:${S.color}"><b>${S.name} ${n}/4</b> · <span style="opacity:${n >= 2 ? 1 : .5}">(2) ${S.b2}</span> · <span style="opacity:${n >= 4 ? 1 : .5}">(4) ${S.b4}</span></div>` : ''; }).join('');
   const pi = $('pitems'); pi.innerHTML = Object.keys(G.items).length ? '' : '<span style="color:var(--dim);font-size:12px">No items yet</span>';
   for (const it of Object.values(G.items)) {
     const el = document.createElement('div'); el.className = 'pitem'; el.title = it.name;
@@ -2928,6 +2995,7 @@ $('start').onclick = () => { audio(); stopMenuMusic(); newGame(); };
 let last = performance.now();
 function frame(now) {
   const dt = Math.min(0.05, (now - last) / 1000); last = now;
+  pollPad();
   if (G && G.state === 'play') update(dt);
   if (G && G.state !== 'loading') {
     renderWorld(G.state === 'play' ? dt : 0);
