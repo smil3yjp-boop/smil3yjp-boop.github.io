@@ -207,7 +207,7 @@ const HERO_ATK = {
   etienne:   { name: 'Drone Darts', type: 'proj', tags: ['proj'], cd: 0.4, dmg: 3.5, kind: 'dart', speed: 26, pierce: 2, drones: true, desc: 'His drones pepper bloons with darts.' },
   sauda:     { name: 'Blade Slashes', type: 'melee', tags: ['area'], cd: 0.45, dmg: 7, range: 2.4, arc: 2.2, desc: 'Lightning-fast sword slashes.' },
   psi:       { name: 'Psychic Focus', type: 'psi', tags: ['area'], cd: 0.9, dmg: 12, aoe: 1.4, color: '#c080ff', desc: 'Crushes bloons with her mind.' },
-  geraldo:   { name: 'Shooty Revolver', type: 'proj', tags: ['proj'], cd: 0.65, dmg: 9, kind: 'bullet', speed: 36, pierce: 2, desc: 'Hard-hitting revolver shots.' },
+  geraldo:   { name: 'Evil Rabbit', type: 'rabbit', tags: ['summon'], cd: 0.55, dmg: 10, speed: 10, range: 13, desc: 'His evil Wererabbit hunts down nearby bloons and bites them.' },
   corvus:    { name: 'Spirit Spear', type: 'proj', tags: ['proj'], cd: 0.8, dmg: 9, kind: 'orb', color: '#ff3050', speed: 24, pierce: 5, desc: 'Dark spears that skewer lines of bloons.' },
   silas:     { name: 'Ice Shards', type: 'proj', tags: ['proj', 'frost'], cd: 0.5, dmg: 4.5, kind: 'orb', color: '#a8e8ff', speed: 22, pierce: 2, slow: 1.5, desc: 'Freezing shards that slow bloons.' },
 };
@@ -240,7 +240,12 @@ const HERO_CARD_SET = {
   etienne: [HC.speed('hc_et1', 'Drone Swarm'), HC.pierce('hc_et2', 'Tungsten Darts', 1)],
   sauda: [HC.size('hc_sa1', 'Sword Mastery', 'slash reach'), HC.speed('hc_sa2', 'Whirlwind Blades')],
   psi: [HC.size('hc_ps1', 'Psionic Wave', 'blast radius'), HC.speed('hc_ps2', 'Mind Over Matter')],
-  geraldo: [HC.dmg('hc_ge1', 'Bigger Bullets'), HC.speed('hc_ge2', 'Fan the Hammer')],
+  geraldo: [
+    { id: 'hc_ge1', name: 'Full Moon Frenzy', v: 0.15, fmt: v => `Evil Rabbit: +${pct(v)} bite damage`, apply: (s, v) => { s.heroDmg += v; } },
+    { id: 'hc_ge2', name: 'Hungry Hare', v: 0.12, fmt: v => `Evil Rabbit: bites ${pct(v)} faster and runs 10% faster`, apply: (s, v) => { const d = HD(); d.cd /= 1 + v; d.speed *= 1.1; } },
+    { id: 'hc_ge3', name: 'Rabid Bite', v: 0.7, fmt: v => `Evil Rabbit: bites splash bloons within ${(((HD().splash || 0) + v)).toFixed(1)}m`, apply: (s, v) => { const d = HD(); d.splash = (d.splash || 0) + v; } },
+    { id: 'hc_ge4', name: 'Keen Nose', v: 0.25, fmt: v => `Evil Rabbit: sniffs out bloons ${pct(v)} farther, +40% damage to MOAB-class`, apply: (s, v) => { const d = HD(); d.range *= 1 + v; d.moab = (d.moab || 1) + 0.4; } },
+  ],
   corvus: [HC.pierce('hc_co1', 'Soul Spear'), HC.dmg('hc_co2', 'Dark Ritual')],
   silas: [HC.slow('hc_si1', 'Permafrost'), HC.speed('hc_si2', 'Ice Storm')],
 };
@@ -248,7 +253,7 @@ const HERO_CARD_MAX = 4;
 function heroCards() {
   const ch = G.ch, A = HERO_ABIL[ch.id], set = (HERO_CARD_SET[ch.id] || []).slice();
   if (A) set.push({ id: 'hc_abil_' + ch.id, name: A.name + ' Mastery', v: 0.3, fmt: v => `${A.name}: +${pct(v)} damage, -8% cooldown`, apply: (s, v) => { s.abilDmg = (s.abilDmg || 1) + v; s.abilCdr = (s.abilCdr || 0) + 0.08; } });
-  for (const c of set) { c.icon = ch.spr; c.heroCard = true; }
+  for (const c of set) { c.icon = ch.spr; c.heroCard = true; if (ch.id === 'geraldo' && c.id.startsWith('hc_ge')) c.upg = 'PetRabbit'; }
   return set;
 }
 
@@ -407,7 +412,7 @@ const STAT_CARDS = [
 ];
 STAT_CARDS.push(
   { id: 'herodmg', name: 'Hero Training', icon: ['HeroFavorsIcon'], v: 0.12, fmt: v => `+${pct(v)} hero attack damage`, apply: (s, v) => s.heroDmg += v },
-  { id: 'heroproj', name: 'Hero Multishot', icon: ['ExtraDartsPopIcon'], v: 1, heroExtra: true, minR: 2, fmt: () => `+1 hero projectile (${G.stats.heroExtra + 1}/5)`, apply: s => s.heroExtra = Math.min(5, s.heroExtra + 1) },
+  { id: 'heroproj', name: 'Hero Multishot', icon: ['ExtraDartsPopIcon'], v: 1, heroExtra: true, minR: 2, fmt: () => G.ch.id === 'geraldo' ? `+1 Evil Rabbit (${G.stats.heroExtra + 1}/5)` : `+1 hero projectile (${G.stats.heroExtra + 1}/5)`, apply: s => s.heroExtra = Math.min(5, s.heroExtra + 1) },
   { id: 'herostrike', name: 'Hero Flurry', icon: ['HeroicReachIcon'], v: 1, heroExtra: true, minR: 2, fmt: () => `+1 extra attack per swing (${G.stats.heroExtra + 1}/5)`, apply: s => s.heroExtra = Math.min(5, s.heroExtra + 1) },
 );
 const pct = v => `${Math.round(v * 100)}%`;
@@ -841,6 +846,12 @@ const CAST = {
   hero(sk) {
     const d = sk.def, p = G.player, extra = G.stats.heroExtra, dm = skillDmg(sk) * G.stats.heroDmg;
     let fired = false;
+    if (d.type === 'rabbit') {
+      // Geraldo: his evil Wererabbits roam on their own (see the summons loop); here we just keep the pack at full size
+      const n = 1 + extra, mine = G.summons.filter(x => x.kind === 'rabbit');
+      for (let i = mine.length; i < n; i++) { const r = { kind: 'rabbit', sk, x: p.x + rnd(-1, 1), y: p.y + rnd(-1, 1), cd: 0.4, face: 0, hop: 0 }; G.summons.push(r); G.effects.push({ kind: 'ring', x: r.x, y: r.y, r: 1.6, t: 0, life: 0.5, color: '#ff5a5a' }); }
+      sk.cd = 0.5; return true;
+    }
     if (d.type === 'proj' && d.drones) {
       // Etienne: two UCAV drones orbit him; each one targets its own nearest bloon and fires from where it is
       while (G.summons.filter(x => x.kind === 'drone').length < 2) G.summons.push({ kind: 'drone', sk, x: p.x, y: p.y, a: G.summons.length * 3, face: 0 });
@@ -1997,6 +2008,32 @@ function update(dt) {
         if ((lvAt(bsk, 4) && B.bird || B.stun) && !tx.isBoss) tx.stunT = Math.max(tx.stunT, 0.5);
         sm.anim = 'attack'; sm.face = Math.atan2(dy, dx);
       }
+    } else if (sm.kind === 'rabbit') {
+      // Evil Rabbit: sniffs out the nearest bloon (each rabbit hunts its own), hops over and bites it
+      if (p.down) continue;
+      const hd = sm.sk.def, spd = hd.speed, reach = hd.range;
+      sm.cd -= dt; sm.hop = (sm.hop || 0) + dt;
+      if (Math.hypot(sm.x - p.x, sm.y - p.y) > reach + 10) { sm.x = p.x + rnd(-1, 1); sm.y = p.y + rnd(-1, 1); sm.tgt = null; G.effects.push({ kind: 'ring', x: sm.x, y: sm.y, r: 1.6, t: 0, life: 0.5, color: '#ff5a5a' }); }
+      let tx = sm.tgt;
+      if (!tx || tx.dead || Math.hypot(tx.x - p.x, tx.y - p.y) > reach + 3) {
+        const taken = new Set(G.summons.filter(o => o !== sm && o.kind === 'rabbit' && o.tgt && !o.tgt.dead).map(o => o.tgt));
+        tx = nearestBloon(sm.x, sm.y, reach + 4, taken) || nearestBloon(sm.x, sm.y, reach + 4);
+        if (tx && Math.hypot(tx.x - p.x, tx.y - p.y) > reach) tx = null;
+        sm.tgt = tx;
+      }
+      const ix = G.summons.filter(o => o.kind === 'rabbit').indexOf(sm), ang = ix * 2.1 + 0.8;
+      const gx = tx ? tx.x : p.x + Math.cos(ang) * 1.6, gy = tx ? tx.y : p.y + Math.sin(ang) * 1.6;
+      const dx = gx - sm.x, dy = gy - sm.y, d = Math.hypot(dx, dy);
+      sm.moving = d > (tx ? tx.r + 0.5 : 0.8);
+      if (sm.moving) { const m = Math.min(d, spd * dt); moveCircle(Object.assign(sm, { r: 0.35 }), dx / d * m, dy / d * m); sm.face = Math.atan2(dy, dx); }
+      if (tx && d < tx.r + 0.9 && sm.cd <= 0) {
+        const dm = skillDmg(sm.sk) * G.stats.heroDmg;
+        sm.cd = cdOf(sm.sk, hd.cd); sm.anim = 'attack'; sm.face = Math.atan2(dy, dx);
+        damage(tx, dm * (tx.def && tx.def.moab || tx.isBoss ? (hd.moab || 1) : 1), hd.tags);
+        if (hd.splash) { G.effects.push({ kind: 'ring', x: tx.x, y: tx.y, r: hd.splash * G.stats.area, t: 0, life: 0.25, color: '#ff4040' }); hitArea(tx.x, tx.y, hd.splash * G.stats.area, dm * 0.5, hd.tags); }
+        G.effects.push({ kind: 'spark', x: tx.x, y: tx.y, r: 0.7, t: 0, life: 0.15, color: '#ff3a3a' });
+        play('HitCeramic0*', { vol: 0.2, gap: 0.06, key: 'bite' });
+      }
     } else if (sm.kind === 'village') {
       const dx = p.x - 2.2 - sm.x, dy = p.y + 1.6 - sm.y;
       sm.x += dx * Math.min(1, dt * 2); sm.y += dy * Math.min(1, dt * 2);
@@ -2661,7 +2698,7 @@ function cardInfo(o) {
   }
   if (o.type === 'paragon') return { title: PARAGONS[o.sk.id], kind: `PARAGON · merge ${o.sk.def.name}`, desc: `Your three maxed towers lend their power: ${o.sk.def.name} becomes its Paragon.<br><br><span style="color:var(--gold2)">x3 damage · 40% faster attacks · Paragon model</span>`, icon: o.sk.def.icon, tags: o.sk.def.tags };
   const v = o.c.v * R.m;
-  return { title: o.c.name, kind: o.c.heroCard ? `${G.ch.name} · Signature${G.items[o.c.id] ? ` (${G.items[o.c.id].n}/${HERO_CARD_MAX})` : ''}` : o.c.tag ? `${TAGNAME[o.c.tag]} Upgrade` : 'Attribute', desc: o.c.fmt(v), icon: o.c.icon || ['UpgradeIcon'], tags: o.c.tag ? [o.c.tag] : [], v };
+  return { title: o.c.name, kind: o.c.heroCard ? `${G.ch.name} · Signature${G.items[o.c.id] ? ` (${G.items[o.c.id].n}/${HERO_CARD_MAX})` : ''}` : o.c.tag ? `${TAGNAME[o.c.tag]} Upgrade` : 'Attribute', desc: o.c.fmt(v), icon: o.c.icon || ['UpgradeIcon'], upg: o.c.upg, tags: o.c.tag ? [o.c.tag] : [], v };
 }
 function renderCards() {
   const box = $('cards'); box.innerHTML = '';

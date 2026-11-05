@@ -163,7 +163,7 @@ const R3 = (() => {
         mat = new THREE.MeshLambertMaterial({ color: col, map: base || red, vertexColors: true });
         patchVCBlend(mat, base || red || green, red, green, [f._Tiling || 10, f._RedTiling || 15, f._GreenTiling || 15]);
       } else {
-        const slot = T.MainTex || T._MainTex || T._BaseMap || T.Main_Texture || T._LeafTex || T._TunkTex || T._Top || T._RedDiffuse;
+        const slot = T.MainTex || T._MainTex || T._BaseMap || T.Main_Texture || T._LeafTex || T._TunkTex || T._Top || T._RedDiffuse || T._Sides;
         const map = slot ? await getTex(slot.t, (slot.s[0] !== 1 || slot.s[1] !== 1) ? slot.s : null) : null;
         const leaf = m.kind === 'leaf' || /leaf|leaves|grass|fern|foliage|bush|plant/i.test(m.name);
         mat = new THREE.MeshLambertMaterial({
@@ -182,6 +182,23 @@ const R3 = (() => {
       if (m.fade) return;
       const foliage = m.kind === 'leaf' || /leaf|leaves|grass|fern|foliage|bush|plant|flower/i.test(m.name);
       const pos = g.attributes.position.array, idx = g.index.array, nt = idx.length / 3;
+      // some source meshes (Deep Cavern's snow floor) have vertex normals pointing into the ground → render black.
+      // Flip any vertex normal that faces away from its triangle.
+      const nrm = g.attributes.normal;
+      if (nrm && !g.userData.nfix) {
+        g.userData.nfix = 1; const na = nrm.array, sc = na instanceof Int8Array ? 1 : 0, acc = new Float32Array(nrm.count * 3);
+        for (let t = 0; t < nt; t++) {
+          let ia = idx[t * 3], ib = idx[t * 3 + 1], ic = idx[t * 3 + 2]; const a = ia * 3, b = ib * 3, c = ic * 3;
+          const ux = pos[b] - pos[a], uy = pos[b + 1] - pos[a + 1], uz = pos[b + 2] - pos[a + 2], vx = pos[c] - pos[a], vy = pos[c + 1] - pos[a + 1], vz = pos[c + 2] - pos[a + 2];
+          let fx = uy * vz - uz * vy, fy = uz * vx - ux * vz, fz = ux * vy - uy * vx;
+          // a mostly-flat triangle wound upside-down: fix its winding so it faces up
+          if (fy < 0 && fy * fy > 0.5 * (fx * fx + fy * fy + fz * fz)) { idx[t * 3 + 1] = ic; idx[t * 3 + 2] = ib; fx = -fx; fy = -fy; fz = -fz; }
+          for (const v of [ia, ib, ic]) { acc[v * 3] += fx; acc[v * 3 + 1] += fy; acc[v * 3 + 2] += fz; }
+        }
+        for (let v = 0; v < nrm.count; v++) if (na[v * 3] * acc[v * 3] + na[v * 3 + 1] * acc[v * 3 + 1] + na[v * 3 + 2] * acc[v * 3 + 2] < 0)
+          for (let k = 0; k < 3; k++) na[v * 3 + k] = sc ? Math.max(-127, -na[v * 3 + k]) : -na[v * 3 + k];
+        nrm.needsUpdate = true; g.index.needsUpdate = true;
+      }
       const tiles = new Map();
       for (let t = 0; t < nt; t++) {
         const a = idx[t * 3] * 3, b = idx[t * 3 + 1] * 3, c = idx[t * 3 + 2] * 3;
@@ -305,6 +322,7 @@ const R3 = (() => {
     return !!RIGS[key];
   }
   function hasRig(name) { return !!RIGS[name]; }
+  let rabbitP = null; function rabbitLoad() { if (!rabbitP) rabbitP = loadSkin('x_rabbit'); }
   // tower upgrade tiers: one lazily loaded pack per tower skill (assets/towers/tw_<id>.js), rigs named w_<id>_<level>
   const TW = {};
   async function loadTower(sid) {
@@ -813,6 +831,7 @@ const R3 = (() => {
     for (const sm of G.summons) {
       sseen.add(sm);
       let m = summonModels.get(sm);
+      if (sm.kind === 'rabbit' && !hasRig('x_wererabbit')) { rabbitLoad(); continue; }
       const lvl = sm.sk ? sm.sk.lv : 1;
       const SUM = {
         heli: [towerKey('heli', lvl, sm.sk) || 't_HeliPilot', 1.6, 'max', { hide: /^(Helipad|Lights|HeliPad.*)$/i }],
@@ -820,6 +839,7 @@ const R3 = (() => {
         ace: lvl >= 8 && towerKey('ace', 8) ? [towerKey('ace', 8), 3.6, 'max'] : sm.sk && sm.sk.path3 && towerKey('ace', lvl, sm.sk) !== towerKey('ace', lvl) ? [towerKey('ace', lvl, sm.sk), 2.3, 'max'] : lvl >= 7 ? ['t_Ace204', 2.2, 'max'] : lvl >= 5 ? ['t_Ace104', 2.0, 'max'] : ['t_MonkeyAce', 1.9, 'max', { hide: /^MonkeyAceBase$/ }],
         beast: BEASTM[sm.sp] && hasRig(BEASTM[sm.sp][0]) ? BEASTM[sm.sp] : ['t_Raptor1', 1.5, 'max'],
         drone: ['x_drone', 0.9, 'max'],
+        rabbit: ['x_wererabbit', 1.05, 'max'],
         village: towerKey('village', lvl, sm.sk) ? [towerKey('village', lvl, sm.sk), 2.6, 'max'] : ['m_MonkeyVillage', 2.6, 'max'], farm: [towerKey('farm', lvl, sm.sk) || 't_BananaFarm', 1.6, 'max'],
       }[sm.kind] || ['t_EngineerMonkey', 1.1, 'height'];
       if (m && m.userData.skey !== SUM[0]) { scene.remove(m); summonModels.delete(sm); m = null; G.effects.push({ kind: 'ring', x: sm.x, y: sm.y, r: 2, t: 0, life: 0.5, color: '#ffe39a' }); }
@@ -827,7 +847,7 @@ const R3 = (() => {
         m = actor(SUM[0], SUM[1], SUM[2], SUM[3]) || actor(sm.kind === 'beast' ? 't_BeastHandler' : sm.kind === 'sentry' ? 't_EngineerMonkey' : 't_MonkeyAce', 1.3, 'max') || new THREE.Object3D(); m.userData.skey = SUM[0]; summonModels.set(sm, m); scene.add(m); m.rotation.order = 'YXZ'; sm.a0 = Math.random() * 7;
         if (m.userData.rig) m.userData.rig.play('place');
       }
-      const fly = sm.kind === 'drone' ? 1.9 + Math.sin(G.t * 4 + (sm.a0 || 0)) * 0.12 : sm.kind === 'heli' ? 2.2 + Math.sin(G.t * 3 + (sm.a || 0)) * 0.15 : sm.kind === 'ace' ? 3.2 : sm.bird ? 2.8 - (sm.dive || 0) * 1.9 + Math.sin(G.t * 2.4 + (sm.a0 || 0)) * 0.2 : 0;
+      const fly = sm.kind === 'rabbit' ? (sm.moving ? Math.abs(Math.sin(G.t * 11 + (sm.a0 || 0))) * 0.35 : 0) : sm.kind === 'drone' ? 1.9 + Math.sin(G.t * 4 + (sm.a0 || 0)) * 0.12 : sm.kind === 'heli' ? 2.2 + Math.sin(G.t * 3 + (sm.a || 0)) * 0.15 : sm.kind === 'ace' ? 3.2 : sm.bird ? 2.8 - (sm.dive || 0) * 1.9 + Math.sin(G.t * 2.4 + (sm.a0 || 0)) * 0.2 : 0;
       m.position.copy(w(sm.x, sm.y, fly));
       if (sm.face !== undefined) { let d = faceAngle(sm.face) - m.rotation.y; d = Math.atan2(Math.sin(d), Math.cos(d)); m.rotation.y += d * Math.min(1, dt * 12); }
       if (sm.kind === 'ace') { // banking turn + an occasional barrel roll
@@ -994,5 +1014,5 @@ const R3 = (() => {
   }
   function viewRadius() { return 22; }
   function renderIdle() { if (renderer && scene) renderer.render(scene, camera); }
-  return { get renderer() { return renderer; }, setQuality, getQuality, stats, init, buildArena, loadModels, setPlayerModel, resetRun, frame, project, screenToGame, viewRadius, renderIdle, model, rig, actor, hasRig, loadRigs, loadSkin, loadTower, previewInit, setPreview, renderPreview, playerAnim, playerBusy, get camera() { return camera; }, get scene() { return scene; } };
+  return { get renderer() { return renderer; }, setQuality, getQuality, stats, init, buildArena, loadModels, setPlayerModel, resetRun, frame, project, screenToGame, viewRadius, renderIdle, model, rig, actor, hasRig, loadRigs, loadSkin, loadTower, previewInit, setPreview, renderPreview, playerAnim, playerBusy, get camera() { return camera; }, get scene() { return scene; }, get nav() { return nav; } };
 })();
