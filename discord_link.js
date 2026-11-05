@@ -37,7 +37,7 @@
   // ---- bot API ----
   const api = (p, opt = {}) => fetch(CFG.api + p, Object.assign({}, opt, {
     headers: Object.assign({ 'Content-Type': 'application/json' }, CLOUD.token ? { Authorization: 'Bearer ' + CLOUD.token } : {}, opt.headers || {}),
-  })).then(async r => { if (!r.ok) throw new Error(p + ' ' + r.status); return r.json(); });
+  })).then(async r => { if (!r.ok) { let d = ''; try { const j = await r.json(); d = [j.error, j.detail, j.desc].filter(Boolean).join(': '); } catch (e) { } throw new Error(p.split('?')[0] + ' ' + r.status + (d ? ' ' + d : '')); } return r.json(); });
 
   let pushTimer = null, pushing = false;
   function push() {
@@ -77,12 +77,17 @@
 
   // ---- sign in ----
   (async () => {
+    let step = 'connecting to Discord';
     try {
       await ready;
+      step = 'authorizing';
       const { code } = await cmd('AUTHORIZE', { client_id: CFG.clientId, response_type: 'code', state: '', prompt: 'none', scope: ['identify'] });
+      step = 'logging in (token)';
       const { access_token } = await api('/token', { method: 'POST', body: JSON.stringify({ code }) });
       CLOUD.token = access_token;
+      step = 'authenticating';
       await cmd('AUTHENTICATE', { access_token });
+      step = 'loading your save';
       const res = await api('/save');
       CLOUD.user = res.user; CLOUD.active = true;
       if (res.profile) {
@@ -94,12 +99,13 @@
         push();   // first time on this account: upload whatever this browser already had
       }
       try { localStorage.setItem('bss_name', CLOUD.user.name); } catch (e) { }
-      if (typeof buildMenu === 'function' && !G) buildMenu();
-      if (window.NET) NET.connect();
+      try { if (typeof buildMenu === 'function' && !G) buildMenu(); } catch (e) { console.warn('menu refresh failed', e); }
+      try { if (window.NET) NET.connect(); } catch (e) { console.warn('co-op connect failed', e); }
       note('🎈 SIGNED IN', `${CLOUD.user.name} — progress saves to your Discord account`);
     } catch (e) {
       console.warn('Discord sign-in failed; saving locally only', e);
-      note('⚠ OFFLINE', 'Discord sign-in failed — progress is only saved on this device');
+      const why = (e && (e.message || e.code)) || String(e);
+      note('⚠ OFFLINE', `Sign-in failed while ${step} (${why}). Progress is only saved on this device.`);
     }
   })();
 })();

@@ -241,3 +241,16 @@ input[type=range]{width:100%;accent-color:#f0a93a}
 .cpl b{display:block;font-size:13px}.cpl span{font-size:11px;color:var(--dim)}
 .cdim{font-size:11px;color:var(--dim)}
 .crow.locked{cursor:default;opacity:.75}.crow.locked.sel{opacity:1}
+/* co-op results */
+.coopcards{display:flex;gap:14px;justify-content:center;flex-wrap:wrap;margin:6px 0 12px;max-width:min(1200px,96vw)}
+.ccard{position:relative;width:230px;padding:14px 14px 10px;border-radius:14px;background:rgba(20,12,30,.88);border:2px solid rgba(232,194,122,.45);text-align:center}
+.ccard.me{border-color:#ffe39a;box-shadow:0 0 16px rgba(255,227,154,.35)}
+.ccard.wait{opacity:.6;display:flex;flex-direction:column;justify-content:center}
+.ccard .mvp{position:absolute;top:-10px;right:-8px;background:#ffb02e;color:#1a0f0c;font-weight:900;font-size:12px;padding:3px 8px;border-radius:8px;box-shadow:0 2px 6px rgba(0,0,0,.5)}
+.cav{position:relative;width:76px;height:76px;margin:0 auto 6px}
+.cav img{width:76px;height:76px;border-radius:50%;object-fit:cover;border:3px solid #e8c27a;background:#2a1d14}
+.cav .chero{position:absolute;right:-10px;bottom:-6px;width:34px;height:34px;border-radius:8px;border-width:2px}
+.cname{font-weight:900;font-size:17px;color:#fff}
+.chn{font-size:12px;color:var(--dim);margin-bottom:8px}
+.crows div{display:flex;justify-content:space-between;font-size:12.5px;padding:3px 2px;border-top:1px solid rgba(255,255,255,.07)}
+.crows span{color:var(--dim)}.crows b{color:#ffe39a}

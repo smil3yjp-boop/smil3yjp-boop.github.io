@@ -7,7 +7,13 @@ const DEFAULT_KEYS = { up: 'KeyW', down: 'KeyS', left: 'KeyA', right: 'KeyD', da
 const KEY_LABEL = { up: 'Move up', down: 'Move down', left: 'Move left', right: 'Move right', dash: 'Dash', ability: 'Hero ability', interact: 'Enter portal', aim: 'Toggle mouse aim', pause: 'Pause' };
 let SETTINGS = { shake: true, cbLabels: false, dmgNumbers: true, keys: Object.assign({}, DEFAULT_KEYS) };
 try { const s = JSON.parse(localStorage.getItem('bss_settings') || '{}'); SETTINGS = Object.assign(SETTINGS, s); SETTINGS.keys = Object.assign({}, DEFAULT_KEYS, s.keys || {}); } catch (e) { }
-function saveSettings() { try { localStorage.setItem('bss_settings', JSON.stringify(SETTINGS)); } catch (e) { } }
+function saveSettings() { try { localStorage.setItem('bss_settings', JSON.stringify(SETTINGS)); } catch (e) { } updateHint(); }
+// the controls line under the menu follows your key bindings
+function updateHint() {
+  const k = SETTINGS.keys, n = a => keyName(k[a]), el = document.getElementById('hint'); if (!el) return;
+  el.textContent = `${n('up')}${n('left')}${n('down')}${n('right')} / Arrows move · ${n('dash')} dash · ${n('ability')} hero ability · ${n('interact')} enter portal · gamepad & touch supported · Skills fire automatically · ${n('aim')} toggles mouse-aim · ${n('pause')} pause · drag the hero to spin`;
+}
+setTimeout(updateHint, 0);
 const keyName = c => c.replace(/^Key/, '').replace(/^Digit/, '').replace('Arrow', '↑').replace('Escape', 'Esc').replace('Space', 'Space').replace('ShiftLeft', 'L-Shift').replace('ShiftRight', 'R-Shift');
 // held state for an action (keyboard, arrows for movement, gamepad and touch all feed in)
 function held(action) {

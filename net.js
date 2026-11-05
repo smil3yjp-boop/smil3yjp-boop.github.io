@@ -93,6 +93,7 @@ const NET = (() => {
       case 'd': if (N.host && N.runIds.has(from)) applyDamage(from, m.d); break;
       case 'xp': if (N.host && N.runIds.has(from)) gainXp(m.v / Math.max(0.01, G.stats.xp)); break;
       case 'portal': if (N.host && N.runIds.has(from)) usePortal(m.k); break;
+      case 'final': if (m.card && (N.runIds.has(from) || N.finals.has(from) || N.inRun)) { N.finals.set(from, m.card); renderFinals(); } break;
     }
   }
 
@@ -105,6 +106,7 @@ const NET = (() => {
     N.inRun = ids.length > 1; N.role = N.inRun ? 'host' : null;
     N.runIds = new Set(ids.filter(id => id !== N.me.id)); N.peers.clear();
     for (const id of N.runIds) N.peers.set(id, newPeer(id));
+    N.finals = new Map();
     if (N.inRun) send('*', { t: 'start', map, chaos: menuSel.chaos, ids });
     return N.inRun;
   };
@@ -114,12 +116,12 @@ const NET = (() => {
     if (G) { show('end', false); G = null; R3.resetRun(); }
     show('hsname', false);
     menuSel.chaos = m.chaos;
-    N.inRun = true; N.role = 'guest'; N.world = null; N.paused = [];
+    N.inRun = true; N.role = 'guest'; N.world = null; N.paused = []; N.finals = new Map();
     N.runIds = new Set(m.ids.filter(id => id !== N.me.id)); N.peers.clear();
     for (const id of N.runIds) N.peers.set(id, newPeer(id));
     stopMenuMusic(); newGame({ map: m.map });
   }
-  N.leaveRun = () => { N.inRun = false; N.role = null; N.peers.clear(); N.runIds.clear(); N.world = null; N.paused = []; dmgQ.length = 0; owed.clear(); netBloons.clear(); lastLobby = ''; setTimeout(() => { N.sayHi(true); hostLobby(); }, 50); };
+  N.leaveRun = () => { N.inRun = false; N.role = null; N.peers.clear(); N.runIds.clear(); N.world = null; N.paused = []; dmgQ.length = 0; owed.clear(); netBloons.clear(); lastLobby = ''; N.finals = new Map(); renderFinals(); setTimeout(() => { N.sayHi(true); hostLobby(); }, 50); };
   function usePortal(k) {
     if (!G || !G.portals) return;
     if (k === 'continue') N.hostContinue(); else { G.portals = null; send('*', { t: 'end', win: true, quit: true }); endRun(true, true); }
@@ -149,6 +151,7 @@ const NET = (() => {
     const P = pe.player, first = !pe.seen;
     pe.seen = performance.now();
     pe.tx = m.x; pe.ty = m.y; if (first || Math.hypot(P.x - m.x, P.y - m.y) > 8) { P.x = m.x; P.y = m.y; }
+    if (P.down && !m.dn && G && !G.player.down && Math.hypot(G.player.x - P.x, G.player.y - P.y) < 2.5) G.revives = (G.revives || 0) + 1;   // I helped revive them
     P.vx = m.vx; P.vy = m.vy; P.faceA = m.fa; P.dashT = m.dt; P.inv = m.iv; P.hurtT = m.ht; P.buffT = m.bt; P.down = !!m.dn; P.rev = m.rv || 0; P.hp = m.hp; P.mhp = m.mh;
     pe.st = m.st; pe.gold = m.g; pe.cc = m.cc; pe.xm = m.xm; pe.mg = m.mg;
     if (m.sk && m.sk !== pe.skin) { pe.skin = m.sk; if (!R3.hasRig(m.sk)) R3.loadSkin(m.sk).catch(() => { }); }
@@ -475,7 +478,7 @@ const NET = (() => {
     if (G.boss) G.boss.dead = true;
     shake(1); play(BOSS_SFX[def.id][1], { vol: 1 });
     G.effects.push({ kind: 'expl', x: m.x, y: m.y, r: 4, t: 0, life: 0.9, net: true });
-    setTimeout(() => G && toast(`${def.name} DEFEATED!  Stand in a portal and press E`, '#ffe39a'), 600);
+    setTimeout(() => G && toast(`${def.name} DEFEATED!  Stand in a portal and press ${keyName(SETTINGS.keys.interact)}`, '#ffe39a'), 600);
   }
 
   // ------------------------------------------------------------------ host takes over
@@ -521,6 +524,36 @@ const NET = (() => {
     p.rev = near ? (p.rev || 0) + dt : Math.max(0, (p.rev || 0) - dt * 0.5);
     if (p.rev >= 3) { p.down = false; p.rev = 0; p.hp = G.stats.maxhp * 0.4; p.inv = 2; toast('Revived!', '#7dff8a'); play('UIStar', { vol: 0.7 }); G.effects.push({ kind: 'ring', x: p.x, y: p.y, r: 2.5, t: 0, life: 0.6, color: '#7dff8a' }); }
   };
+
+  // ------------------------------------------------------------------ co-op results: one card per player
+  N.finals = new Map();
+  function avatarUrl(id, hash) {
+    let n = 0; try { n = Number((BigInt(id) >> 22n) % 6n); } catch (e) { }
+    const path = hash ? `avatars/${id}/${hash}.png?size=128` : `embed/avatars/${n}.png`;
+    return (window.CLOUD && CLOUD.inDiscord ? '/.proxy/discordcdn/' : 'https://cdn.discordapp.com/') + path;
+  }
+  N.shareFinal = card => {
+    if (!N.me) return;
+    card = Object.assign({ name: N.me.name, avatar: window.CLOUD && CLOUD.user ? CLOUD.user.avatar || null : null }, card);
+    N.finals.set(N.me.id, card); send('*', { t: 'final', card }); renderFinals();
+  };
+  const esc = v => String(v).replace(/[<>&"]/g, c => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;', '"': '&quot;' })[c]);
+  function renderFinals() {
+    const box = $('coopcards'); if (!box) return;
+    if (!N.finals.size) { box.classList.add('hidden'); $('endstats').style.display = ''; return; }
+    box.classList.remove('hidden'); $('endstats').style.display = 'none';
+    const list = [...N.finals.entries()], top = Math.max(...list.map(([, c]) => c.dmg || 0));
+    // teammates still playing get a placeholder until their card arrives
+    const waiting = [...N.runIds].filter(id => !N.finals.has(id)).map(id => N.peers.get(id)).filter(Boolean);
+    box.innerHTML = list.map(([id, c]) => `
+      <div class="ccard${id === (N.me && N.me.id) ? ' me' : ''}">
+        ${list.length > 1 && c.dmg === top && top > 0 ? '<div class="mvp">MVP</div>' : ''}
+        <div class="cav"><img src="${avatarUrl(id, c.avatar)}" onerror="this.onerror=null;this.src='${heroIconSrc(c.icon)}'"><img class="chero" src="${heroIconSrc(c.icon)}"></div>
+        <div class="cname">${esc(c.name)}</div><div class="chn">${esc(c.hero)}</div>
+        <div class="crows">${c.rows.map(([k, v]) => `<div><span>${esc(k)}</span><b>${esc(v)}</b></div>`).join('')}</div>
+      </div>`).join('') + waiting.map(pe => `<div class="ccard wait"><div class="cname">${esc(pe.name)}</div><div class="chn">still playing…</div></div>`).join('');
+  }
+  N.renderFinals = renderFinals;
 
   // hero for the lobby tiles
   N.heroOf = id => { const l = N.lobby[id]; return l ? CHARS.find(c => c.id === l.hero) : null; };

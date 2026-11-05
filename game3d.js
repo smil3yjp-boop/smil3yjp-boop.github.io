@@ -1422,7 +1422,7 @@ function popBloon(b, overflow) {
 function dropSoul(x, y, v) { G.pickups.push({ kind: 'soul', x, y, v, t: 0, vx: rnd(-2, 2), vy: rnd(-2, 2) }); }
 
 function spawnDirector(dt) {
-  if (G.boss && !G.boss.dead) { G.spawnBudget += dt * 0.5; } // trickle during boss
+  if (G.boss && !G.boss.dead) { G.spawnBudget = 0; return; }   // boss fight: no new bloons (the boss still summons its own); leftovers must still be popped
   const t = G.t;
   const rate = (1.6 + t / 22 + Math.pow(t / 100, 1.6)) * G.chaos.rate * (1 + 0.3 * G.loop) * (1 + 0.35 * ((G.coopN || 1) - 1));
   G.spawnBudget += rate * dt;
@@ -1585,7 +1585,7 @@ function killBoss(b) {
   for (const o of G.bloons) if (!o.dead) { o.dead = true; G.effects.push({ kind: 'pop', x: o.x, y: o.y, r: o.r, t: 0, life: 0.16, color: o.def.color }); }
   G.eproj.length = 0; G.hazards = G.hazards.filter(h => h.kind === 'spikes' || h.kind === 'glue');
   for (const q of G.pickups) if (q.kind === 'soul') q.vac = true;
-  setTimeout(() => G && toast(`${b.def.name} DEFEATED!  Stand in a portal and press E`, '#ffe39a'), 600);
+  setTimeout(() => G && toast(`${b.def.name} DEFEATED!  Stand in a portal and press ${keyName(SETTINGS.keys.interact)}`, '#ffe39a'), 600);
   setTimeout(() => {
     if (!G) return;
     const P = G.player, spots = [[-3.5, -2], [3.5, -2], [-4, 2], [4, 2], [0, -4], [0, 4]].map(([dx, dy]) => [P.x + dx, P.y + dy]).filter(([x, y]) => G.arena.free(x, y, 1));
@@ -1628,7 +1628,7 @@ function hurtPlayer(dmg) {
   if (p.hp <= 0) {
     p.hp = 0;
     if (!NET.on) return endRun(false);
-    p.down = true; p.rev = 0; p.vx = p.vy = 0; G.player.dashT = 0;
+    p.down = true; p.rev = 0; p.vx = p.vy = 0; G.player.dashT = 0; G.downs = (G.downs || 0) + 1;
     toast('You are DOWN — a teammate can revive you by standing next to you', '#ff7a7a'); play('LivesLost', { vol: 0.6 }) || play('ShieldDamaged0*', { vol: 0.8 });
   }
 }
@@ -2071,7 +2071,7 @@ function render(dt = 0.016) {
     const q = R3.project(pt.x, pt.y, 3.6, W, H); if (!q) continue;
     text(pt.kind === 'continue' ? 'CONTINUE' : 'END RUN', q[0], q[1], 22 * u, pt.kind === 'continue' ? '#7fd8ff' : '#ff8a7a', 'center');
     text(pt.kind === 'continue' ? `New arena · Loop ${G.loop + 2} · stronger bloons` : 'Finish with your score', q[0], q[1] + 20 * u, 13 * u, '#e8e0d0', 'center');
-    if (pt.near) text(`Press E to ${pt.kind === 'continue' ? 'enter' : 'end the run'}`, q[0], q[1] + 42 * u, 17 * u + Math.sin(G.t * 6) * u, '#ffe39a', 'center');
+    if (pt.near) text(`Press ${keyName(SETTINGS.keys.interact)} to ${pt.kind === 'continue' ? 'enter' : 'end the run'}`, q[0], q[1] + 42 * u, 17 * u + Math.sin(G.t * 6) * u, '#ffe39a', 'center');
   }
   if (G.grace > 0 && G.state === 'play') {
     text('GET READY', W / 2, H * 0.36, 34 * u, '#ffe39a', 'center');
@@ -2348,7 +2348,7 @@ function drawHUD() {
   ctx.restore();
   if (G.stats.dashes > 1) text('x' + p.dashN, dx + ds - 2 * u, dy + 14 * u, 15 * u, '#9fe8ff', 'right');
   if (p.dashN < 1 && p.dashCd > 0) { ctx.fillStyle = 'rgba(0,0,0,.5)'; ctx.beginPath(); ctx.moveTo(dx + ds / 2, dy + ds / 2); ctx.arc(dx + ds / 2, dy + ds / 2, ds / 2, -Math.PI / 2, -Math.PI / 2 + TAU * p.dashCd / 2.2); ctx.fill(); }
-  text('SPACE', dx + ds / 2, dy + ds + 12 * u, 11 * u, '#ccc', 'center');
+  text(keyName(SETTINGS.keys.dash).toUpperCase(), dx + ds / 2, dy + ds + 12 * u, 11 * u, '#ccc', 'center');
   // hero ability (R), right of the dash
   const HA = HERO_ABIL[G.ch.id];
   if (HA) {
@@ -2356,7 +2356,7 @@ function drawHUD() {
     ctx.save(); if (!ready) ctx.globalAlpha = 0.5; if (ai) ctx.drawImage(ai, ax, ay, as, as); ctx.restore();
     if (!ready) { const k2 = clamp(G.abilCd / HA.cd, 0, 1); ctx.fillStyle = 'rgba(0,0,0,.5)'; ctx.beginPath(); ctx.moveTo(ax + as / 2, ay + as / 2); ctx.arc(ax + as / 2, ay + as / 2, as / 2, -Math.PI / 2, -Math.PI / 2 + TAU * k2); ctx.fill(); text(String(Math.ceil(G.abilCd)), ax + as / 2, ay + as / 2 + 7 * u, 20 * u, '#fff', 'center'); }
     else { ctx.strokeStyle = 'rgba(127,216,255,' + (0.5 + 0.5 * Math.sin(G.t * 5)) + ')'; ctx.lineWidth = 3 * u; ctx.beginPath(); ctx.arc(ax + as / 2, ay + as / 2, as / 2 + 2 * u, 0, TAU); ctx.stroke(); }
-    text('R', ax + as / 2, ay + as + 12 * u, 11 * u, '#ccc', 'center');
+    text(keyName(SETTINGS.keys.ability).toUpperCase(), ax + as / 2, ay + as + 12 * u, 11 * u, '#ccc', 'center');
   }
   // boss debuffs
   const deb = [G.drainT > 0 && `DRAINED ${Math.ceil(G.drainT)}s`, G.towerStunT > 0 && `TOWERS STUNNED ${Math.ceil(G.towerStunT)}s`, G.buf.dmg > 0 && `ROAR ${Math.ceil(G.buf.dmg)}s`, G.buf.as > 0 && `HASTE ${Math.ceil(G.buf.as)}s`, G.buf.heroDmg > 0 && `AP SHELLS ${Math.ceil(G.buf.heroDmg)}s`].filter(Boolean);
@@ -2407,7 +2407,7 @@ function drawHUD() {
   // top-left info
   text(`${G.arena.def.name}`, 22 * u, 34 * u, 18 * u, '#ffe39a');
   text(`Chaos ${G.chaos.n}  ·  Popped ${G.kills}`, 22 * u, 58 * u, 14 * u, '#cbbfa8');
-  text(G.manualAim ? 'Aim: MOUSE (Q)' : 'Aim: AUTO (Q)', 22 * u, 80 * u, 13 * u, '#9b8f7a');
+  text((G.manualAim ? 'Aim: MOUSE (' : 'Aim: AUTO (') + keyName(SETTINGS.keys.aim) + ')', 22 * u, 80 * u, 13 * u, '#9b8f7a');
   const fps = R3.stats();
   text(`${fps.fps} FPS · ${fps.quality} · ${Math.round(fps.scale * 100)}% res`, 22 * u, 100 * u, 13 * u, fps.fps < 40 ? '#ff8a6a' : '#7fdc8a');
   drawMinimap(u);
@@ -2559,7 +2559,7 @@ function buildOffer(chest = false) {
     opts.push(o);
   }
   // 15% of level-ups also deal a BONUS card: a tower card, normally only found in chests
-  if (!chest && Math.random() < 0.15) {
+  if (!chest && Math.random() < 0.25) {
     const tw = [];
     for (const sk of G.skills) if (!sk.hero && sk.lv < MAXLV && !G.banished.has('up_' + sk.id)) tw.push({ type: 'up', sk, cat: 'up', minR: 0 });
     if (G.skills.filter(k => !k.hero).length < 6) for (const id in SKILLS) if (!hasSkill(id) && !G.banished.has('new_' + id)) tw.push({ type: 'new', id, cat: 'new', minR: 0 });
@@ -2833,7 +2833,8 @@ function endRun(win, quit = false) {
   renderStats($('endstats'), [['Monkey Money earned', '+' + mm + '  (total ' + Math.floor(PROFILE.mm) + ')'], ['Bosses defeated', G.bossKills], ['Gold earned', '$' + Math.round(G.goldEarned).toLocaleString()], ...(rec ? [['Record', rec]] : [])]);
   renderBreakdown($('endbreak'));
   const runRec = runRecord(win, quit, mm);
-  setTimeout(() => askName(runRec), win ? 400 : 1100);
+  if (NET.on) NET.shareFinal({ hero: G.ch.name, icon: (selectedSkin(G.ch) || {}).icon || HERO_ICON[G.ch.id], rows: [['Level', G.level], ['Damage dealt', Math.round(G.dmgDealt).toLocaleString()], ['Bloons popped', Object.values(G.runStats || {}).reduce((a, r) => a + (r.pops || 0), 0).toLocaleString()], ['Gold earned', '$' + Math.round(G.goldEarned).toLocaleString()], ['Chests opened', G.chests], ['Relics', (G.relics || []).length], ['Times downed', G.downs || 0], ['Revived teammates', G.revives || 0], ['Monkey Money', '+' + mm]], dmg: Math.round(G.dmgDealt), result: eb.textContent });
+  else setTimeout(() => askName(runRec), win ? 400 : 1100);
   setTimeout(() => show('end', true), win ? 200 : 900);
 }
 $('again').onclick = () => { show('end', false); G = null; R3.resetRun(); if (NET.inRun) NET.leaveRun(); buildMenu(); show('menu', true); startMenuMusic(); };
