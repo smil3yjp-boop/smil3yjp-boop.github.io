@@ -346,7 +346,7 @@ const SKILLS = {
     desc: 'Periodically empowers you: +35% damage & attack speed for 4s.' },
   farm: { name: 'Banana Farm', icon: ['BananaFarmIcon'], tags: ['buff'], cd: 6, dmg: 0,
     lv: ['Increased Production: +1 banana', 'Greater Production: +30% healing', 'Banana Plantation: -1s cooldown', 'Banana Research Facility: +1 banana', 'Valuable Bananas: +30% healing', 'Monkey Wall Street: bananas give big XP'],
-    desc: 'Grows bananas nearby that heal you and grant souls.' },
+    desc: 'Grows bananas nearby that heal you and grant XP.' },
   sub: { name: 'Monkey Sub', icon: ['MonkeySubIcon'], tags: ['proj', 'area'], cd: 2.2, dmg: 9,
     lv: ['Longer Range: +1 torpedo', 'Advanced Intel: +30% radius', 'Barbed Darts: +30% damage', 'Twin Guns: +1 torpedo', 'Ballistic Missile: +30% attack speed', 'Pre-emptive Strike: missiles hit the strongest bloons'],
     desc: 'Fires straight torpedoes that explode on impact.' },
@@ -395,8 +395,8 @@ const STAT_CARDS = [
   { id: 'hp', name: 'Thick Skin', icon: ['LivesIcon'], v: 12, fmt: v => `+${Math.round(v)} max health`, apply: (s, v, g) => { s.maxhp += v; g.player.hp += v; } },
   { id: 'regen', name: 'Banana Diet', icon: ['HealthyBananasIcon'], v: 0.35, fmt: v => `+${v.toFixed(1)} health / sec`, apply: (s, v) => s.regen += v },
   { id: 'spd', name: 'Monkey Agility', icon: ['HeroicVelocityIcon'], v: 0.05, fmt: v => `+${pct(v)} move speed`, apply: (s, v) => s.speed += v },
-  { id: 'magnet', name: 'Soul Magnet', icon: ['BigBunchIcon'], v: 0.9, fmt: v => `+${v.toFixed(1)}m pickup range`, apply: (s, v) => s.magnet += v },
-  { id: 'xp', name: 'Monkey Knowledge', icon: ['MonkeyEducationIcon'], v: 0.07, fmt: v => `+${pct(v)} soul gain`, apply: (s, v) => s.xp += v },
+  { id: 'magnet', name: 'XP Magnet', icon: ['BigBunchIcon'], v: 0.9, fmt: v => `+${v.toFixed(1)}m pickup range`, apply: (s, v) => s.magnet += v },
+  { id: 'xp', name: 'Monkey Knowledge', icon: ['MonkeyEducationIcon'], v: 0.07, fmt: v => `+${pct(v)} XP gain`, apply: (s, v) => s.xp += v },
   { id: 'luck', name: 'Lucky Banana', icon: ['GoldenBloon'], v: 2, fmt: v => `+${Math.round(v)} luck (rarer cards)`, apply: (s, v) => s.luck += Math.round(v) },
   { id: 'dash', name: 'Extra Dash', icon: ['Dash_Icon'], v: 1, minR: 4, fmt: () => `+1 dash charge (${G.stats.dashes + 1}/3)`, apply: s => { s.dashes = Math.min(3, s.dashes + 1); G.player.dashN = Math.min(s.dashes, (G.player.dashN || 0) + 1); } },
   { id: 'pierce', name: 'Extra Pierce', icon: ['HardTacksIcon'], v: 0.5, fmt: v => `+${Math.max(1, Math.round(v))} pierce (projectiles)`, apply: (s, v) => s.pierce += Math.max(1, Math.round(v)), minR: 2 },
@@ -659,7 +659,7 @@ async function newGame(opts = {}) {
   for (const k in ch.bonus) stats[k] += ch.bonus[k];
   for (const k in (ch.tagBonus || {})) stats.tag[k] += ch.tagBonus[k];
   G = {
-    state: 'play', t: 0, ch, chaos, chaosIdx: menuSel.chaos, arena, stats,
+    state: 'play', t: 0, ch, chaos, chaosIdx: menuSel.chaos, arena, stats, mapId: mapDef.id,
     player: { x: mapDef.spawn[0], y: mapDef.spawn[1], r: 0.6, hp: stats.maxhp, face: 1, vx: 0, vy: 0, inv: 0, dashCd: 0, dashT: 0, dashX: 0, dashY: 0, hurtT: 0, buffT: 0 },
     cam: { x: mapDef.spawn[0], y: mapDef.spawn[1], shake: 0 },
     skills: [], level: 1, xp: 0, xpNext: xpFor(1), pendingLevels: 0,
@@ -2679,7 +2679,7 @@ function openLevelUp(chest = false) {
   renderCards();
   $('rerolls').textContent = G.rerolls; $('banishes').textContent = G.banishes;
   $('reroll').disabled = G.rerolls <= 0; $('banish').disabled = G.banishes <= 0;
-  document.querySelector('#levelup .lvtitle').textContent = chest ? 'SOULSTONE CHEST' : 'LEVEL UP';
+  document.querySelector('#levelup .lvtitle').textContent = chest ? 'TREASURE CHEST' : 'LEVEL UP';
   show('levelup', true);
   play(chest ? 'UIChestOpen03' : 'UIStar', { vol: 0.6 });
 }
@@ -2826,7 +2826,7 @@ function runRecord(win, quit, mm) {
     ['Gold earned', '$' + Math.round(G.goldEarned).toLocaleString()], ['Damage', '+' + pct(s.dmg - 1)], ['Attack speed', '+' + pct(s.cdr)], ['Area', '+' + pct(s.area - 1)],
     ['Crit', pct(s.crit) + ' (x' + s.critMult.toFixed(2) + ')'], ['Max HP', Math.round(s.maxhp)], ['Luck', s.luck], ['Dashes', s.dashes], ['Skills', G.skills.map(k => `${k.def.name} ${k.lv}`).join(', ')]);
   const sk = selectedSkin(G.ch);
-  return { v: 1, date: Date.now(), hero: G.ch.id, heroName: G.ch.name, icon: sk ? sk.icon : HERO_ICON[G.ch.id], map: G.arena.def.name || G.arena.def.id, chaos: CHAOS[G.chaosIdx].n,
+  return { v: 1, ver: typeof GAME_VERSION !== 'undefined' ? GAME_VERSION : '', date: Date.now(), hero: G.ch.id, heroName: G.ch.name, icon: sk ? sk.icon : HERO_ICON[G.ch.id], map: G.arena.def.name || G.arena.def.id, chaos: CHAOS[G.chaosIdx].n,
     result: win ? (quit ? 'Run complete' : 'Fallen in glory') : quit ? 'Abandoned' : 'Defeated',
     damage: Math.round(G.dmgDealt), pops: G.pops, cash: Math.round(G.goldEarned), loops: G.loop, level: G.level, time: Math.round(G.t),
     stats: statRows, breakdown: breakdownRows().map(r => ({ id: r.id, name: r.name, icon: r.icon, dmg: Math.round(r.dmg), pops: r.pops, gold: Math.round(r.gold), xp: Math.round(r.xp), heal: Math.round(r.heal) })) };
@@ -2893,6 +2893,7 @@ function openRunView(r) {
   $('rvsub').textContent = `${r.heroName} · ${r.map} · Chaos ${r.chaos} · ${r.result} · ${new Date(r.date).toLocaleString()}`;
   $('rvstats').innerHTML = (r.stats || []).map(([a, b]) => `<span>${esc(a)}</span><b>${esc(b)}</b>`).join('');
   renderBreakdownRows($('rvbreak'), r.breakdown || []);
+  $('rvver').textContent = r.ver ? 'Played on ' + r.ver : 'Played on v0.3.1 or earlier';
   show('runview', true);
 }
 $('hsbtn').onclick = openScores;
@@ -2987,15 +2988,47 @@ try { PROFILE = Object.assign(PROFILE, JSON.parse(localStorage.getItem('bss_prof
 function saveProfile() { try { localStorage.setItem('bss_profile', JSON.stringify(PROFILE)); } catch (e) { } }
 const heroIconSrc = n => 'assets/ui/heroes/' + n + '.png';
 function selectedSkin(ch) { const k = PROFILE.skin[ch.id]; return k && PROFILE.owned.includes(k) ? SKINS.find(s => s.key === k) : null; }
-// ---------------------------------------------------------------- sound settings (master / music / sfx / voice) + Soulstone menu music
+// ---------------------------------------------------------------- sound settings (master / music / sfx / voice) + menu music + BTD6 run music
 let AUDIOSET = { master: 70, music: 60, sfx: 80, voice: 80 };
 try { AUDIOSET = Object.assign(AUDIOSET, JSON.parse(localStorage.getItem('bss_audio') || '{}')); } catch (e) { }
 const AUDIO_ROWS = [['master', 'Master'], ['music', 'Music'], ['sfx', 'Effects'], ['voice', 'Voices']];
 let MUSIC = null;
+const RUNMUS = []; let runTrack = null;
 function applyAudio() {
   const m = AUDIOSET.master / 100;
   if (SND.master) { SND.master.gain.value = 0.8 * m; SND.sfxG.gain.value = AUDIOSET.sfx / 100; SND.voG.gain.value = AUDIOSET.voice / 100; }
   if (MUSIC) MUSIC.volume = Math.min(1, 0.6 * m * AUDIOSET.music / 100 * (MUSIC.fade ?? 1));
+  for (const a of RUNMUS) a.volume = Math.min(1, 0.55 * m * AUDIOSET.music / 100 * a.fade);
+}
+// ---- Bloons TD 6 music in runs: each map has its own track, each boss has its own theme while it's alive
+const MAP_MUSIC = {
+  20: 'MusicTribesJaloonMix', 22: 'MusicTropicalOctopusMix', 13: 'MusicSunshineFiestaMix', 19: 'MusicTropicalClassyBrassMix', 15: 'MusicSunset64Mix',
+  16: 'MusicFiestaHeliumHeightsMix', 24: 'MusicWinterTonkMix', 26: 'MusicWinterChilledMix', 14: 'MusicLegendsFrontierMain', 9: 'MusicLegendsRogueMain',
+};
+const BOSS_MUSIC = {
+  bloonarius: 'MusicBossBloonarius', lych: 'MusicHaunted', vortex: 'MusicBossOnslaught', dreadbloon: 'MusicBossOnslaught',
+  phayze: 'MusicBossOnslaughtGlitch', blastapopoulos: 'MusicBossOnslaughtGlitch',
+};
+function runMusicTick(dt) {
+  const want = !G || G.state === 'loading' || G.state === 'end' ? null
+    : (G.boss && !G.boss.dead && BOSS_MUSIC[G.boss.def.id]) || MAP_MUSIC[G.mapId] || 'MusicLegendsRogueMain';
+  if (want !== runTrack) {
+    runTrack = want;
+    for (const a of RUNMUS) a.target = 0;
+    if (want) {
+      let a = RUNMUS.find(x => x.track === want);
+      if (!a) { a = new Audio('assets/music/' + want + '.ogg'); a.loop = true; a.track = want; a.fade = 0; RUNMUS.push(a); }
+      else if (a.target === 0 && a.fade < 0.05) a.currentTime = 0;   // a boss theme starts from the top each time
+      a.target = 1; if (a.paused) a.play().catch(() => { });
+    }
+  }
+  let ch = false;
+  for (const a of RUNMUS) {
+    const f = a.target ? Math.min(1, a.fade + dt / 1.2) : Math.max(0, a.fade - dt / 1.5);
+    if (f !== a.fade) { a.fade = f; ch = true; }
+    if (!a.target && f <= 0 && !a.paused) a.pause();
+  }
+  if (ch) applyAudio();
 }
 function buildAudioUI(box) {
   box.innerHTML = '';
@@ -3003,7 +3036,7 @@ function buildAudioUI(box) {
     const row = document.createElement('label'); row.className = 'arow';
     row.innerHTML = `<span>${label}</span><input type="range" min="0" max="100" value="${AUDIOSET[k]}"><b>${AUDIOSET[k]}</b>`;
     const inp = row.querySelector('input'), val = row.querySelector('b');
-    inp.oninput = () => { audio(); sndInit(); AUDIOSET[k] = +inp.value; val.textContent = inp.value; applyAudio(); try { localStorage.setItem('bss_audio', JSON.stringify(AUDIOSET)); } catch (e) { } if (k === 'music') startMenuMusic(); };
+    inp.oninput = () => { audio(); sndInit(); AUDIOSET[k] = +inp.value; val.textContent = inp.value; applyAudio(); try { localStorage.setItem('bss_audio', JSON.stringify(AUDIOSET)); } catch (e) { } if (k === 'music' && !G) startMenuMusic(); };
     inp.onchange = () => { if (k === 'sfx') play('Pop0*', { vol: 0.8, gap: 0 }); if (k === 'voice') play('SelectQuincy0*', { vol: 1.2, gap: 0, bus: 'vo' }); };
     box.appendChild(row);
   }
@@ -3191,6 +3224,7 @@ function frame(now) {
     ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.clearRect(0, 0, W, H);
   }
   if (!$('menu').classList.contains('hidden')) R3.renderPreview(dt);
+  runMusicTick(dt);
   requestAnimationFrame(frame);
 }
 function renderWorld(dt) { render(dt); }

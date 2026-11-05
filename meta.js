@@ -271,8 +271,8 @@ const KNOWLEDGE = [
   { id: 'luck', name: 'Lucky Monkey', icon: null, glyph: '☘', costs: [250, 500, 900], desc: l => `+${l * 2} luck`, apply: (l, s) => { s.luck += l * 2; } },
   { id: 'hp', name: 'Thick Fur', icon: null, glyph: '❤', costs: [150, 300, 600], desc: l => `+${l * 8}% max health`, apply: (l, s) => { s.maxhp *= 1 + l * 0.08; } },
   { id: 'dmg', name: 'Sharp Minds', icon: null, glyph: '⚔', costs: [200, 450, 900], desc: l => `+${l * 5}% damage`, apply: (l, s) => { s.dmg += l * 0.05; } },
-  { id: 'xp', name: 'Monkey Education', icon: null, glyph: '✧', costs: [150, 350, 700], desc: l => `+${l * 8}% soul gain`, apply: (l, s) => { s.xp += l * 0.08; } },
-  { id: 'magnet', name: 'Soul Attraction', icon: null, glyph: '◉', costs: [120, 300], desc: l => `+${l * 0.8}m pickup range`, apply: (l, s) => { s.magnet += l * 0.8; } },
+  { id: 'xp', name: 'Monkey Education', icon: null, glyph: '✧', costs: [150, 350, 700], desc: l => `+${l * 8}% XP gain`, apply: (l, s) => { s.xp += l * 0.08; } },
+  { id: 'magnet', name: 'XP Attraction', icon: null, glyph: '◉', costs: [120, 300], desc: l => `+${l * 0.8}m pickup range`, apply: (l, s) => { s.magnet += l * 0.8; } },
   { id: 'chest', name: 'Bargain Hunter', icon: null, glyph: '%', costs: [250, 600], desc: l => `Chests cost ${l * 8}% less`, apply: (l, s) => { s.chestDisc += l * 0.08; } },
   { id: 'relic', name: 'Relic Hunter', icon: null, glyph: '◆', costs: [400, 900], desc: l => `+${l * 50}% relic drop chance`, apply: (l, s) => { s.relicFind = 1 + l * 0.5; } },
   { id: 'ability', name: 'Heroic Discipline', icon: null, glyph: '⚡', costs: [300, 700], desc: l => `Hero ability cooldown -${l * 10}%`, apply: (l, s) => { s.abilCdr = (s.abilCdr || 0) + l * 0.1; } },
@@ -454,3 +454,29 @@ $('achbtn').onclick = () => { renderAch(); openPage('achpage'); };
 $('setbtn').onclick = () => { renderSettings(); openPage('setpage'); };
 $('psetbtn').onclick = () => { renderSettings(); openPage('setpage'); };
 for (const id of ['knowpage', 'achpage', 'setpage']) { $(id).onclick = e => { if (e.target.id === id) show(id, false); }; $(id).querySelector('.pclose').onclick = () => { rebinding = null; show(id, false); }; }
+
+// ================================================================ patch notes (patchnotes.txt; "vX.Y.Z | date" headers, "- " bullets)
+const GAME_VERSION = 'v0.3.2';
+(() => {
+  const $p = id => document.getElementById(id);
+  if ($p('pnver')) $p('pnver').textContent = GAME_VERSION;
+  let loaded = false;
+  async function load() {
+    if (loaded) return; const box = $p('pnlist');
+    try {
+      const txt = await (await fetch('patchnotes.txt?' + GAME_VERSION)).text(); loaded = true;
+      box.innerHTML = '';
+      let cur = null;
+      for (const raw of txt.split(/\r?\n/)) {
+        const l = raw.trim(); if (!l) continue;
+        if (l.startsWith('- ')) { if (!cur) continue; const li = document.createElement('li'); li.textContent = l.slice(2); cur.appendChild(li); continue; }
+        const [ver, date] = l.split('|').map(x => x.trim());
+        const sec = document.createElement('div'); sec.className = 'pnv';
+        const h = document.createElement('h4'); h.textContent = ver; if (date) { const sp = document.createElement('span'); sp.textContent = date; h.appendChild(sp); }
+        cur = document.createElement('ul'); sec.append(h, cur); box.appendChild(sec);
+      }
+    } catch (e) { box.textContent = 'Could not load patch notes.'; }
+  }
+  if ($p('pnbtn')) $p('pnbtn').onclick = () => { load(); show('pnpage', true); try { play('UIClick01', { vol: 0.5 }); } catch (e) { } };
+  if ($p('pnpage')) $p('pnpage').onclick = e => { if (e.target.id === 'pnpage' || e.target.classList.contains('pclose')) show('pnpage', false); };
+})();

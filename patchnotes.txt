@@ -1,0 +1,45 @@
+v0.3.2 | Nov 5, 2026
+- Added a Patch Notes button at the bottom of the main menu
+- Removed the controls/tutorial text from the bottom of the main menu
+- Clicking a name on the leaderboard now shows which version that run was played on
+
+v0.3.1 | Nov 5, 2026
+- Souls are now called XP everywhere (XP gain, XP Magnet, XP Attraction, Codex, Ascension)
+- Soulstone Chest renamed to Treasure Chest
+- Added Bloons TD 6 music during runs: every map has its own track
+- Every boss now has its own theme that starts when it spawns and fades back to the map track when it dies
+
+v0.2.9 | Nov 5, 2026
+- Geraldo's attack is now his Evil Rabbit (Wererabbit) that hunts down nearby bloons and bites them
+- Hero Multishot gives Geraldo an extra Evil Rabbit instead of an extra bullet
+- New Geraldo signature cards: Full Moon Frenzy, Hungry Hare, Rabid Bite, Keen Nose
+- Fixed missing collisions on all maps: rocks, trees, walls, buildings, pillars and statues now block movement
+- Sunken Temple's play area is now limited to the town, causeway and coliseum
+- Fixed the large black areas on Deep Cavern's floor
+- Fixed Phayze's texture
+
+v0.2.8 | Nov 4, 2026
+- Lych heals less when absorbing its bloons
+- Hero level XP needed doubles from level 50 onward
+- Added a Skill Effects slider in Settings and the pause menu (boss attacks and blimps always stay visible)
+- Fixed blimps whose whole propeller assembly was spinning
+- Added tooltips for items and relics on the HUD, in the pause menu, and on hero level perks
+- New BTD6 icons for the Knowledge, Achievements, Highscores, Codex, History and Settings buttons
+
+Earlier updates
+- Hero levels with perks, Ascension (prestige), Codex page and Run History
+- Spectating co-op runs and a Team leaderboard
+- Signed-in players (and everyone else in the Activity) shown on the main menu with Discord name and avatar
+- Co-op for up to 4 players in the Discord Activity: shared XP, downed/revive, everyone picks a hero, host picks Chaos rank and starts
+- Co-op end-of-run screen with each player's Discord name, avatar and stats
+- Co-op runs don't count toward highscores
+- Discord sign-in: progress and highscores save to your Discord account
+- Tower upgrade cards appear 30% of the time
+- Hero signature upgrade cards on level up
+- Skins can only be unlocked for heroes you own
+- More achievements
+- Keybind changes show up in on-screen prompts
+- When the boss spawns, normal bloons stop spawning (bosses can still summon theirs)
+- Sound and graphics settings moved under the cogwheel
+- Runs start on a random map; Chaos ranks now have descriptions
+- Removed JSON export/import from Highscores

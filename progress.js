@@ -84,7 +84,7 @@ var PROG = (() => {
   function renderAscend() {
     const box = $('kasc'); if (!box) return;
     const n = pres(), ready = knowMaxed();
-    box.innerHTML = `<div class="kat"><b>ASCENSION ${'★'.repeat(Math.min(n, 10)) || '—'}</b><span>${n ? `Rank ${n}: +${Math.round(n * PRES.dmg * 100)}% damage · +${Math.round(n * PRES.xp * 100)}% soul gain · +${Math.round(n * PRES.mm * 100)}% Monkey Money (permanent)` : 'Max out every Knowledge upgrade to Ascend'}</span></div>` +
+    box.innerHTML = `<div class="kat"><b>ASCENSION ${'★'.repeat(Math.min(n, 10)) || '—'}</b><span>${n ? `Rank ${n}: +${Math.round(n * PRES.dmg * 100)}% damage · +${Math.round(n * PRES.xp * 100)}% XP gain · +${Math.round(n * PRES.mm * 100)}% Monkey Money (permanent)` : 'Max out every Knowledge upgrade to Ascend'}</span></div>` +
       `<button class="btn small" id="ascbtn" ${ready ? '' : 'disabled'}>${ascArm ? 'CLICK AGAIN TO RESET KNOWLEDGE' : `ASCEND → +${Math.round(PRES.dmg * 100)}% dmg · +${Math.round(PRES.xp * 100)}% xp · +${Math.round(PRES.mm * 100)}% MM`}</button>`;
     const b = $('ascbtn');
     b.onclick = () => {
@@ -103,7 +103,7 @@ var PROG = (() => {
   function codexEntries(cat) {
     const c = (PROFILE.codex || {})[cat] || {};
     if (cat === 'b') return Object.entries(BLOONS).map(([k, d]) => ({ id: k, got: !!c[k], name: k === 'lychmini' ? 'Mini-Lych' : k.toUpperCase(), spr: d.spr,
-      rows: [['Health', d.hp.toLocaleString()], ['Speed', d.sm ? `${Math.round(d.sm * 100)}% of yours` : (d.spd || '—')], ['Contact damage', d.dmg], ['Souls', d.xp], ['Layers', d.kids.length ? d.kids.map(q => q[0]).join(', ') : d.moab ? 'blimp' : 'last layer']] }));
+      rows: [['Health', d.hp.toLocaleString()], ['Speed', d.sm ? `${Math.round(d.sm * 100)}% of yours` : (d.spd || '—')], ['Contact damage', d.dmg], ['XP', d.xp], ['Layers', d.kids.length ? d.kids.map(q => q[0]).join(', ') : d.moab ? 'blimp' : 'last layer']] }));
     if (cat === 't') return Object.entries(SKILLS).map(([k, d]) => ({ id: k, got: !!c[k], name: d.name, sprs: d.icon, desc: d.desc,
       rows: [['Damage', d.dmg], ['Cooldown', d.cd + 's'], ['Tags', (d.tags || []).map(t => TAGNAME[t] || t).join(', ')], ...(PATHS[k] ? [['Paths', PATHS[k].map(p => p[2]).join(' · ')]] : [])] }));
     if (cat === 'r') return RELICS.concat(Object.values(ESSENCE)).map(r => ({ id: r.id, got: !!c[r.id], name: r.name, png: `assets/ui/relic/${r.icon}.png`, desc: r.desc, rows: r.set ? [['Set', RELIC_SETS[r.set].name]] : [['Type', 'Boss essence']] }));
