@@ -18,7 +18,8 @@ var NET = (() => {
     paused: [],                                        // names of players holding the world paused
     get on() { return this.inRun; },
     get host() { return this.inRun && this.role === 'host'; },
-    get guest() { return this.inRun && this.role === 'guest'; },
+    get guest() { return this.inRun && (this.role === 'guest' || this.role === 'spec'); },   // spectators mirror the world like guests
+    get spec() { return this.inRun && this.role === 'spec'; },
     get amHost() { return !!this.me && this.hostId === this.me.id; },
     get others() { return this.roster.filter(p => !this.me || p.id !== this.me.id); },
   };
@@ -52,12 +53,12 @@ var NET = (() => {
   // ------------------------------------------------------------------ lobby
   function myLobby() {
     const ch = CHARS[menuSel.char], sk = selectedSkin(ch);
-    return { t: 'hi', hero: ch.id, skin: sk ? sk.key : null, icon: sk ? sk.icon : HERO_ICON[ch.id], avatar: window.CLOUD && CLOUD.user ? CLOUD.user.avatar || null : null, st: G ? (G.state === 'end' ? 'end' : 'run') : 'menu', name: N.me ? N.me.name : '' };
+    return { t: 'hi', hero: ch.id, skin: sk ? sk.key : null, icon: sk ? sk.icon : HERO_ICON[ch.id], avatar: window.CLOUD && CLOUD.user ? CLOUD.user.avatar || null : null, st: G ? (G.spec ? 'spec' : G.state === 'end' ? 'end' : 'run') : 'menu', name: N.me ? N.me.name : '' };
   }
   let lastHi = '';
   N.sayHi = (force) => { const m = JSON.stringify(myLobby()); if (!force && m === lastHi) return; lastHi = m; send('*', JSON.parse(m)); };
   let lastLobby = '';
-  function hostLobby() { if (!N.amHost) return; const m = { t: 'lobby', chaos: menuSel.chaos, running: !!(G && N.inRun) }, k = JSON.stringify(m); if (k === lastLobby) return; lastLobby = k; send('*', m); }
+  function hostLobby() { if (!N.amHost) return; const m = { t: 'lobby', chaos: menuSel.chaos, running: !!(G && N.inRun && G.state !== 'end') }, k = JSON.stringify(m); if (k === lastLobby) return; lastLobby = k; send('*', m); }
   N.hostLobby = hostLobby;
   function refreshLobby() { renderPlayers(); if (typeof buildMenu === 'function' && (!G) && !$('menu').classList.contains('hidden')) buildMenu(); }
 
@@ -69,6 +70,8 @@ var NET = (() => {
     for (const id of [...N.peers.keys()]) if (!m.players.some(p => p.id === id)) { const pe = N.peers.get(id); N.peers.delete(id); N.runIds.delete(id); if (G && N.inRun) toast(`${pe.name} left the run`, '#cbbfa8'); }
     // host migration: the longest-connected player takes over the world
     if (N.inRun && prevHost && prevHost !== m.host && m.host === N.me.id && N.role === 'guest') promote();
+    if (N.host && G && G.state !== 'end') for (const p of m.players) if (p.id !== N.me.id && !N.runIds.has(p.id) && !specSent.has(p.id)) { specSent.add(p.id); send(p.id, { t: 'spec', map: G.mapIdx, chaos: G.chaosIdx, ids: [N.me.id, ...N.runIds] }); }
+    for (const id of [...specSent]) if (!m.players.some(p => p.id === id)) specSent.delete(id);
     N.sayHi(true); lastLobby = ''; hostLobby(); refreshLobby();
   }
 
@@ -82,19 +85,49 @@ var NET = (() => {
     switch (m.t) {
       case 'hi': N.lobby[from] = Object.assign(N.lobby[from] || {}, m); refreshLobby(); break;
       case 'lobby': if (from === N.hostId) { N.hostChaos = m.chaos; N.hostRunning = m.running; if (!G) { menuSel.chaos = m.chaos; } refreshLobby(); } break;
-      case 'start': if (from === N.hostId) onStart(m); break;
+      case 'start': if (from === N.hostId) whenLoaded(() => onStart(m)); break;
       case 'p': onPeer(from, m); break;
       case 'w': if (N.guest && from === N.hostId) applyWorld(m); break;
       case 'e': if (N.guest && from === N.hostId) onEvents(m); break;
       case 'mech': if (N.guest && from === N.hostId) onMech(m); break;
       case 'bk': if (N.guest && from === N.hostId) onBossKill(m); break;
       case 'cont': if (N.guest && from === N.hostId) continueRun(m.map); break;
-      case 'end': if (N.inRun && from === N.hostId && G) { endRun(m.win, m.quit); } break;
+      case 'end': if (N.inRun && from === N.hostId && G) { if (N.spec) stopSpectating('The run is over — you can join the next one!'); else endRun(m.win, m.quit); } break;
+      case 'spec': if (from === N.hostId) whenLoaded(() => { if (!G && !N.inRun) startSpectating(m); }); break;
       case 'd': if (N.host && N.runIds.has(from)) applyDamage(from, m.d); break;
       case 'xp': if (N.host && N.runIds.has(from)) gainXp(m.v / Math.max(0.01, G.stats.xp)); break;
       case 'portal': if (N.host && N.runIds.has(from)) usePortal(m.k); break;
       case 'final': if (m.card && (N.runIds.has(from) || N.finals.has(from) || N.inRun)) { N.finals.set(from, m.card); renderFinals(); } break;
     }
+  }
+
+  // the 3D models must be loaded before a run can start on this computer
+  function whenLoaded(fn) { if ($('loading').classList.contains('hidden') && R3.hasRig('h_Quincy')) fn(); else setTimeout(() => whenLoaded(fn), 500); }
+
+  // ------------------------------------------------------------------ spectating (joined while a run was going)
+  const specSent = new Set();
+  let specIdx = 0;
+  function startSpectating(m) {
+    menuSel.chaos = m.chaos;
+    N.inRun = true; N.role = 'spec'; N.world = null; N.paused = []; N.finals = new Map();
+    N.runIds = new Set(m.ids.filter(id => id !== N.me.id)); N.peers.clear();
+    for (const id of N.runIds) N.peers.set(id, newPeer(id));
+    stopMenuMusic();
+    newGame({ map: m.map, spectate: true });
+  }
+  function stopSpectating(msg) {
+    if (!G) return;
+    G = null; R3.resetRun(); N.leaveRun();
+    show('pause', false); show('levelup', false); show('menu', true); buildMenu(); startMenuMusic();
+    if (msg) { const el = document.createElement('div'); el.className = 'achpop'; el.innerHTML = `<div class="at">👀 SPECTATING</div><div class="ad">${msg}</div>`; document.body.appendChild(el); setTimeout(() => el.classList.add('out'), 3800); setTimeout(() => el.remove(), 4400); }
+  }
+  N.stopSpectating = stopSpectating;
+  function specTarget() { const list = [...N.peers.values()].filter(pe => pe.seen && pe.st !== 'end'); return list.length ? list[((specIdx % list.length) + list.length) % list.length] : null; }
+  N.specCycle = () => { specIdx++; play('UIClick01', { vol: 0.4 }); };
+  N.specName = () => { const t = specTarget(); return t ? t.name : '…'; };
+  function specFollow() {
+    const t = specTarget(), P = G.player; if (!t) return;
+    P.x = t.player.x; P.y = t.player.y; P.vx = P.vy = 0; P.inv = 1e9; P.hidden = true;
   }
 
   // ------------------------------------------------------------------ run start / end
@@ -315,7 +348,8 @@ var NET = (() => {
     const now = performance.now();
     N.world = w; N.paused = w.pz || [];
     // shared progress
-    if (w.lv > G.level) {
+    if (N.spec) G.level = w.lv;
+    else if (w.lv > G.level) {
       const n = w.lv - G.level; G.pendingLevels += n; G.level = w.lv;
       play('TowerUpgrade', { vol: 0.7, gap: 0.3 }); R3.playerAnim('upgrade'); if (G.level % 3 === 0) voice('Upgrade');
       if (G.state === 'play') openLevelUp();
@@ -328,7 +362,7 @@ var NET = (() => {
       const id = B[i], type = BT[B[i + 1]]; if (!type) continue;
       seen.add(id);
       let b = netBloons.get(id);
-      if (!b) { b = makeBloon(id, type); b.x = B[i + 2]; b.y = B[i + 3]; netBloons.set(id, b); }
+      if (!b) { b = makeBloon(id, type); b.x = B[i + 2]; b.y = B[i + 3]; netBloons.set(id, b); PROG.seen('b', type); }
       if (b.type !== type) {                              // lost a layer
         if (!b.dead) popFx(b);
         const def = BLOONS[type]; b.type = type; b.def = def; b.r = def.r; b.spd = bloonSpd(def); b.pend = []; b.dead = false;
@@ -356,7 +390,7 @@ var NET = (() => {
         const def = BOSSES.find(d => d.id === id);
         b = G.boss = { isBoss: true, net: true, nid: -1, def, x, y, r, hp, maxhp: mhp, spd, dead: false, hitT: 0, slowT: 0, frozenT: 0, stunT: 0, burnT: 0, burnD: 0, atkT, phase, wob: 0, kx: 0, ky: 0, shield: false,
           skulls: [0.75, 0.5, 0.25].slice(3 - sk), blimpSkull, dashAtSpawn: G.dashesUsed || 0, pend: [] };
-        G.bossIntro = intro; play(BOSS_SFX[id][0], { vol: 1 }); shake(0.6);
+        G.bossIntro = intro; play(BOSS_SFX[id][0], { vol: 1 }); shake(0.6); PROG.seen('x', id);
       }
       b.tx = x; b.ty = y; b.r = r; b.maxhp = mhp; b.hp = hp - pendSum(b, now); b.shieldT = sh ? 0.2 : 0; b.phase = phase; b.spd = spd; b.atkT = atkT; b.mechT = mechT;
       while (b.skulls.length > sk) b.skulls.shift();
@@ -500,6 +534,7 @@ var NET = (() => {
   N.tick = dt => {
     if (!N.inRun || !G) return;
     stepPeers(dt);
+    if (N.spec) { specFollow(); return; }
     if (G.state === 'loading') return;
     sendT -= dt; worldT -= dt;
     if (sendT <= 0) { sendT = 1 / 12; const pk = myPeerPacket(); if (N.guest) { const d = flushDamage(); if (d.length) pk.d = d; } send('*', pk); }
@@ -536,6 +571,19 @@ var NET = (() => {
     if (!N.me) return;
     card = Object.assign({ name: N.me.name, avatar: window.CLOUD && CLOUD.user ? CLOUD.user.avatar || null : null }, card);
     N.finals.set(N.me.id, card); send('*', { t: 'final', card }); renderFinals();
+    // the host records the party's run on the team leaderboard once everyone's card is in (or after a few seconds)
+    if (N.host && window.CLOUD && CLOUD.api && G) {
+      const info = { chaos: G.chaos.n, map: G.arena.def.name, loops: G.loop, level: G.level, time: Math.round(G.t), bosses: G.bossKills };
+      const ids = [N.me.id, ...N.runIds];
+      let sent = false;
+      const submit = () => {
+        if (sent) return; sent = true; clearInterval(iv);
+        const party = ids.map(id => { const c = N.finals.get(id), pe = N.peers.get(id); return { id, name: c ? c.name : pe ? pe.name : 'Monkey', hero: c ? c.hero : '', dmg: c ? c.dmg || 0 : 0 }; });
+        CLOUD.api('/team', { method: 'POST', body: JSON.stringify(Object.assign({ party, damage: party.reduce((a, p) => a + p.dmg, 0) }, info)) }).catch(e => console.warn('team score failed', e));
+      };
+      const iv = setInterval(() => { if (ids.every(id => N.finals.has(id))) submit(); }, 500);
+      setTimeout(submit, 6000);
+    }
   };
   const esc = v => String(v).replace(/[<>&"]/g, c => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;', '"': '&quot;' })[c]);
   function renderFinals() {

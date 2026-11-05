@@ -183,6 +183,7 @@ function dropRelic(x, y, id) {
 function setCount(set) { return G.relics.filter(i => (relicById(i) || {}).set === set).length; }
 function gainRelic(id) {
   const r = relicById(id); if (!r || G.relics.includes(id)) return;
+  if (window.PROG) PROG.seen('r', id);
   G.relics.push(id); r.a(G.stats, G);
   const S = r.set && RELIC_SETS[r.set], n = r.set ? setCount(r.set) : 0;
   toast(`RELIC: ${r.name} — ${r.desc}`, S ? S.color : '#ffd84a');
@@ -271,6 +272,8 @@ const ACH = [
   { id: 'coop1', name: 'Better Together', desc: 'Finish a co-op run with friends', mm: 200 },
   { id: 'revive3', name: 'Medic!', desc: 'Revive teammates 3 times in one run', mm: 250 },
   { id: 'mvp', name: 'Most Valuable Monkey', desc: 'Be the MVP of a co-op run', mm: 300 },
+  { id: 'ascend', name: 'Ascended', desc: 'Ascend your Monkey Knowledge', mm: 1000 },
+  { id: 'hero10', name: 'Master of One', desc: 'Get a hero to level 10', mm: 600 },
 ];
 
 // ================================================================ META facade used by game3d.js
@@ -280,6 +283,7 @@ const META = {
     for (const k of KNOWLEDGE) { const l = kLv(k.id); if (l) k.apply(l, stats, g); }
     g.player.hp = stats.maxhp;
     g.relics = []; g.combo = 0; g.comboT = 0; g.dashesUsed = 0; g.bossDash = 0; g.abilUses = 0;
+    if (window.PROG) PROG.start(stats, g);
   },
   tick(dt) {
     if (!G) return;
@@ -333,7 +337,7 @@ const META = {
   },
   dash() { if (G) G.dashesUsed = (G.dashesUsed || 0) + 1; },
   ability() { if (G) { G.abilUses = (G.abilUses || 0) + 1; if (G.abilUses >= 20) META.ach('abil20'); } },
-  mmMult() { return 1 + kLv('mm') * 0.15; },
+  mmMult() { return (1 + kLv('mm') * 0.15) * (window.PROG ? PROG.mmMult() : 1); },
   ach(id) {
     PROFILE.ach = PROFILE.ach || {};
     if (PROFILE.ach[id]) return;
@@ -353,6 +357,7 @@ function achPopup(a) {
 function openPage(id) { for (const p of ['knowpage', 'achpage', 'setpage']) show(p, p === id); play('UIClick01', { vol: 0.5 }); }
 function renderKnowledge() {
   $('kmm').textContent = Math.floor(PROFILE.mm).toLocaleString();
+  if (window.PROG) PROG.renderAscend();
   const box = $('klist'); box.innerHTML = '';
   for (const k of KNOWLEDGE) {
     const l = kLv(k.id), max = k.costs.length, cost = k.costs[l];

@@ -51,6 +51,7 @@
     }, 800);
   }
   CLOUD.push = push;
+  CLOUD.api = api;
   function note(title, text) {
     const el = document.createElement('div'); el.className = 'achpop';
     el.innerHTML = `<div class="at">${title}</div><div class="ad"></div>`; el.querySelector('.ad').textContent = text;

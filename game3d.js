@@ -2,6 +2,8 @@
    Personal fan project; art is extracted locally from the player's own game installs. */
 'use strict';
 
+// long-term progression lives in progress.js; stand-in so a stale cache can't break a run
+var PROG = window.PROG || { seen() { }, start() { }, mmMult() { return 1; }, finish() { return []; }, renderHeroLevel() { }, renderAscend() { }, levelOf() { return 1; } };
 // co-op lives in net.js; this stand-in keeps the game running if that file is missing or stale
 var NET = window.NET || { renderPlayers() { }, on: false, host: false, guest: false, inRun: false, ready: false, amHost: false, full: false, others: [], runIds: new Set(), peers: new Map(), me: null,
   worldHeld() { return false; }, held() { return false; }, tick() { }, alivePeers() { return []; }, sayHi() { }, hostLobby() { }, lobbyPlayers() { return []; }, connect() { }, leaveRun() { } };
@@ -146,7 +148,7 @@ const BLOONS = {
   golden:  { spr: 'GoldenBloon', hp: 140, spd: 5.2, r: 0.58, dmg: 0, xp: 50, color: '#ffd700', kids: [], golden: true, frostImmune: true },
   rock:    { spr: 'DreadRockBloonStandard', ds: 'DreadRockBloonStandardDS', hp: 360, spd: 2.6, r: 0.8, dmg: 18, xp: 8, color: '#c08030', kids: [], resist: { proj: 0.7 }, frostImmune: true },
   magma:   { spr: 'DreadRockBloonElite', ds: 'DreadRockBloonEliteDS', hp: 300, spd: 3.0, r: 0.8, dmg: 20, xp: 8, color: '#ff6a30', kids: [], resist: { fire: 0.2 }, magma: true },
-  lychmini:{ spr: 'MoabIcon', rig: 'b_lychmini', hp: 1400, spd: 2.3, r: 1.3, dmg: 22, xp: 40, color: '#7a2fd0', kids: [], moab: true },
+  lychmini:{ spr: 'MoabIcon', rig: 'b_lychmini', hp: 700, spd: 2.3, r: 1.3, dmg: 22, xp: 40, color: '#7a2fd0', kids: [], moab: true },
   zomg:    { spr: 'ZomgIcon',    hp: 9000, spd: 1.1, r: 2.6,  dmg: 60, xp: 200, color: '#2c2',   kids: [['bfb', 2]], moab: true, elite: true },
 };
 // bloon speed as a fraction of the hero's base run speed (red is half as fast as you, pink slightly faster)
@@ -665,6 +667,7 @@ async function newGame(opts = {}) {
   };
   META.start(stats, G);
   coopSpread(G.player);
+  if (opts.spectate) { G.spec = true; G.player.hidden = true; G.player.inv = 1e9; show('menu', false); toast('Spectating — you\'ll join the next run', '#7fd8ff'); return; }
   const hsk = { id: 'hero', hero: true, def: Object.assign({ icon: ch.spr, lv: [] }, HERO_ATK[ch.id]), lv: 1, cd: 0.6, t: 0, state: {} };
   G.skills.push(hsk);
   sndInit();
@@ -715,7 +718,7 @@ function xpFor(l) { return Math.floor(6 + l * 5 + Math.pow(l, 1.55) * 2.2); }
 // ---------------------------------------------------------------- skills
 function addSkill(id) {
   const sk = { id, def: SKILLS[id], lv: 1, cd: 0.4, t: 0, state: {} };
-  G.skills.push(sk); (G.skillOf || (G.skillOf = {}))[id] = sk;
+  G.skills.push(sk); (G.skillOf || (G.skillOf = {}))[id] = sk; PROG.seen('t', id);
   if (SKILLS[id] && R3.loadTower) R3.loadTower(id);
   return sk;
 }
@@ -1336,11 +1339,12 @@ const HERO_ABIL = {
 };
 const ABIL_SND = {"quincy": "ActivatedStormOfArrows", "gwen": "ActivatedMolotov", "striker": "ActivatedConcussiveBlast", "obyn": "ActivatedBrambles", "rosalia": ["ActivatedRosaliaKineticChargeNoVO01", "Activated3RosaliaVO01"], "churchill": "ActivatedAPShells", "benjamin": "ActivatedSyphonFunding", "pat": "ActivatedRallyingRoar", "ezili": "ActivatedMoabHex", "adora": "ActivatedBallOfLight", "brickell": "ActivatedNavalTactics", "etienne": "ActivatedUcav", "sauda": "ActivatedLeapingSword", "psi": "ActivatedPsychicBlast", "geraldo": "ActivatedGenericRecharge", "corvus": "Activated7CorvusVO01", "silas": ["ActivatedSilasFrozenBurialNoVO", "Activated10SilasVO01"]};
 function useAbility() {
-  if (!G || G.state !== 'play' || G.player.down) return;
+  if (!G || G.state !== 'play' || G.player.down || G.spec) return;
   const A = HERO_ABIL[G.ch.id]; if (!A || G.abilCd > 0) return;
   SRC = 'hero';
   if (A.fn() === false) { toast('No target for ' + A.name, '#cbbfa8'); return; }
   G.abilCd = A.cd * (1 - Math.min(0.6, G.stats.abilCdr || 0)); toast(A.name + '!', '#7fd8ff'); META.ability();
+  if (G.surge) G.buf.as = Math.max(G.buf.as, 6);
   for (const k of [].concat(ABIL_SND[G.ch.id] || [])) play(k, { vol: 1, gap: 0, bus: /VO|^Activated(?!.*NoVO)/.test(k) ? 'vo' : undefined });
 }
 // ---------------------------------------------------------------- bloons
@@ -1365,7 +1369,7 @@ function spawnBloon(type, pos, parent) {
     Object.assign(b, { type: 'golden', def: gd, r: gd.r, hp, maxhp: hp, spd: gd.spd, hopT: 1.5, hop: 0, camo: false, regrow: false, fort: false });
     toast('A GOLDEN BLOON appeared!', '#ffd700'); play('LegendsItemCollected', { vol: 0.7 });
   }
-  G.bloons.push(b);
+  G.bloons.push(b); PROG.seen('b', b.type);
   return b;
 }
 function damage(b, dmg, tags, opts = {}) {
@@ -1505,7 +1509,7 @@ function spawnBoss() {
   const hp = def.hp * G.chaos.hp * (1 + G.t / 600) * Math.pow(1.7, G.loop) * (1 + 0.6 * ((G.coopN || 1) - 1));
   G.boss = { isBoss: true, def, x: pos[0], y: pos[1], r: def.r, hp, maxhp: hp, spd: def.spd, dead: false, hitT: 0, slowT: 0, frozenT: 0, stunT: 0, burnT: 0, burnD: 0, atkT: 3, phase: 1, wob: 0, kx: 0, ky: 0, shield: false,
     skulls: [0.75, 0.5, 0.25], blimpSkull: rint(0, 2), dashAtSpawn: G.dashesUsed || 0 };
-  G.bossIntro = 3;
+  G.bossIntro = 3; PROG.seen('x', def.id);
   play(BOSS_SFX[def.id][0], { vol: 1 });
   shake(0.6);
 }
@@ -1541,7 +1545,7 @@ function bossSkull(b, idx) {
   }
   if (idx === b.blimpSkull) {
     const types = G.loop >= 2 ? ['bfb', 'zomg', 'ddt'] : G.loop >= 1 ? ['bfb', 'ddt', 'moab'] : ['moab', 'moab', 'ddt'];
-    ring(3, b.r + 4, (x, y) => { const m = spawnBloon(pick(types), [x, y], b); if (m) m.minion = true; });
+    ring(3, b.r + 4, (x, y) => { const m = spawnBloon(pick(types), [x, y], b); if (m) { m.minion = true; if (id === 'lych') { m.hp *= 0.5; m.maxhp *= 0.5; } } });
     what += '  + 3 blimps!';
     voice('MoabWarning');
   }
@@ -1646,6 +1650,7 @@ function killBoss(b) {
 // ---------------------------------------------------------------- player
 function tryDash() {
   if (!G || G.state !== 'play') return;
+  if (G.spec) return NET.specCycle();
   const p = G.player; if (p.down) return;
   if ((p.dashN ?? 1) < 1 || p.dashT > 0) return;
   let [dx, dy] = moveAxis();
@@ -1721,6 +1726,7 @@ function update(dt) {
       // walking in no longer triggers it: press E while standing in the portal
       if (pt.near && G.useKey) {
         G.useKey = false;
+        if (G.spec) break;
         if (NET.guest) { NET.send(NET.hostId, { t: 'portal', k: pt.kind }); toast('Asked the host to ' + (pt.kind === 'continue' ? 'continue' : 'end the run'), '#ffe39a'); break; }
         if (NET.host) { NET.usePortal(pt.kind); return; }
         if (pt.kind === 'continue') { continueRun(); return; }
@@ -2102,7 +2108,7 @@ function render(dt = 0.016) {
       }
     };
     for (const pe of NET.renderPeers()) tag(pe.player, pe.name, pe.player.mhp, false);
-    tag(G.player, '', G.stats.maxhp, true);
+    if (!G.spec) tag(G.player, '', G.stats.maxhp, true);
     const wait = NET.host ? (NET.worldHeld() ? [...NET.peers.values()].filter(pe => pe.st === 'levelup' || pe.st === 'pause' || pe.st === 'loading').map(pe => pe.name) : []) : NET.held() ? NET.paused.filter(n => n !== NET.me.name) : [];
     if (wait.length && G.state === 'play') {
       ctx.fillStyle = 'rgba(0,0,0,.55)'; roundRect(W / 2 - 260 * u, H * 0.22 - 26 * u, 520 * u, 44 * u, 12 * u); ctx.fill();
@@ -2140,6 +2146,12 @@ function render(dt = 0.016) {
     ctx.globalAlpha = G.player.hp / G.stats.maxhp < 0.3 ? 0.35 + Math.sin(G.t * 6) * 0.15 : clamp(G.player.hurtT * 2, 0, 0.45);
     if (ui.complete && ui.naturalWidth) ctx.drawImage(ui, 0, 0, W, H);
     ctx.globalAlpha = 1;
+  }
+  if (G.spec) {
+    ctx.fillStyle = 'rgba(0,0,0,.6)'; roundRect(W / 2 - 330 * u, H - 92 * u, 660 * u, 64 * u, 14 * u); ctx.fill();
+    text(`👀 SPECTATING ${NET.specName()}`, W / 2, H - 62 * u, 24 * u, '#7fd8ff', 'center');
+    text(`Press ${keyName(SETTINGS.keys.dash)} to switch player · ${keyName(SETTINGS.keys.pause)} to leave · you'll join the next run`, W / 2, H - 38 * u, 14 * u, '#e8e0d0', 'center');
+    return;
   }
   drawHUD();
 }
@@ -2603,7 +2615,7 @@ function buildOffer(chest = false) {
     opts.push(o);
   }
   // 15% of level-ups also deal a BONUS card: a tower card, normally only found in chests
-  if (!chest && Math.random() < 0.25) {
+  if (!chest && Math.random() < 0.30) {
     const tw = [];
     for (const sk of G.skills) if (!sk.hero && sk.lv < MAXLV && !G.banished.has('up_' + sk.id)) tw.push({ type: 'up', sk, cat: 'up', minR: 0 });
     if (G.skills.filter(k => !k.hero).length < 6) for (const id in SKILLS) if (!hasSkill(id) && !G.banished.has('new_' + id)) tw.push({ type: 'new', id, cat: 'new', minR: 0 });
@@ -2855,6 +2867,8 @@ $('resume').onclick = togglePause;
 $('quit').onclick = () => { show('pause', false); if (NET.host) NET.send('*', { t: 'end', win: false, quit: true }); endRun(false, true); };
 function endRun(win, quit = false) {
   if (G.state === 'end') return;
+  if (G.spec) return NET.stopSpectating();
+  setTimeout(() => NET.hostLobby && NET.hostLobby(), 50);
   G.state = 'end';
   const key = `${G.arena.def.id}_${G.chaosIdx}`;
   let rec = '';
@@ -2866,8 +2880,8 @@ function endRun(win, quit = false) {
   eb.textContent = win ? (quit ? 'RUN COMPLETE' : 'FALLEN IN GLORY') : quit ? 'RUN ABANDONED' : 'DEFEATED';
   eb.style.color = win ? '#ffe39a' : '#ff7a7a';
   const mm = Math.round((G.goldEarned / 20 + G.level * 4 + G.bossKills * 150 + G.t / 6) * META.mmMult());
-  PROFILE.mm += mm; saveProfile();
-  renderStats($('endstats'), [['Monkey Money earned', '+' + mm + '  (total ' + Math.floor(PROFILE.mm) + ')'], ['Bosses defeated', G.bossKills], ['Gold earned', '$' + Math.round(G.goldEarned).toLocaleString()], ...(rec ? [['Record', rec]] : [])]);
+  PROFILE.mm += mm; const hxRows = PROG.finish(win, quit); if (PROG.levelOf(G.ch.id) >= 10) META.ach('hero10'); saveProfile();
+  renderStats($('endstats'), [['Monkey Money earned', '+' + mm + '  (total ' + Math.floor(PROFILE.mm) + ')'], ...hxRows, ['Bosses defeated', G.bossKills], ['Gold earned', '$' + Math.round(G.goldEarned).toLocaleString()], ...(rec ? [['Record', rec]] : [])]);
   renderBreakdown($('endbreak'));
   const runRec = runRecord(win, quit, mm);
   if (NET.on) META.ach('coop1');
@@ -2986,6 +3000,7 @@ function buildMenu() {
   { const lk = !heroUnlocked(ch.id); $('start').disabled = lk; $('start').textContent = lk ? (nextUnlock() === ch.id ? 'DEFEAT A BOSS TO UNLOCK' : `LOCKED · ${UNLOCK_ORDER.indexOf(ch.id) - UNLOCK_ORDER.indexOf(nextUnlock()) + 1} BOSS KILLS`) : 'BEGIN RUN'; }
   $('hskin').textContent = sk ? sk.name : 'Classic';
   $('hdesc').textContent = ch.desc;
+  PROG.renderHeroLevel(ch);
   $('hhp').style.width = Math.min(100, ch.hp / 1.7) + '%';
   $('hspd').style.width = Math.min(100, (ch.spd - 5) / 2.2 * 100) + '%';
   spriteToCanvas($('htower'), pickSpr(ch.spr), '#a7794a');

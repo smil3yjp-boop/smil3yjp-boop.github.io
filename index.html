@@ -5,7 +5,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Bloonstone SurvivorS</title>
-<link rel="stylesheet" href="style.css?v=25">
+<link rel="stylesheet" href="style.css?v=27">
 </head>
 <body>
 <canvas id="gl"></canvas>
@@ -15,7 +15,7 @@
 <div id="menu" class="overlay menu2">
   <header class="mtop">
     <div class="brand"><div class="logo">BLOONSTONE</div><div class="logo sub">SURVIVORS</div></div>
-    <div class="mtopr"><div id="pbar" class="pbar hidden"></div><button id="knowbtn" class="btn hsbtn">🧠 KNOWLEDGE</button><button id="achbtn" class="btn hsbtn">🎖 ACHIEVEMENTS</button><button id="hsbtn" class="btn hsbtn">🏆 HIGHSCORES</button><button id="setbtn" class="btn hsbtn">⚙</button>
+    <div class="mtopr"><div id="pbar" class="pbar hidden"></div><button id="knowbtn" class="btn hsbtn">🧠 KNOWLEDGE</button><button id="achbtn" class="btn hsbtn">🎖 ACHIEVEMENTS</button><button id="hsbtn" class="btn hsbtn">🏆 HIGHSCORES</button><button id="codexbtn" class="btn hsbtn" title="Codex">📖</button><button id="histbtn" class="btn hsbtn" title="Run history">📜</button><button id="setbtn" class="btn hsbtn">⚙</button>
     <div class="mm" title="Monkey Money — earned every run, spent on hero skins"><img src="assets/ui/heroes/mm.png" onerror="this.style.display='none'"><span id="mmv">0</span></div></div>
   </header>
   <main class="mgrid">
@@ -30,6 +30,7 @@
         <div id="hname" class="hname"></div>
         <div id="hskin" class="hskin"></div>
         <div id="hdesc" class="hdesc"></div>
+        <div id="hlevel" class="hlevel"></div>
         <div class="hstats">
           <div><span>Health</span><i><b id="hhp"></b></i></div>
           <div><span>Speed</span><i><b id="hspd"></b></i></div>
@@ -121,10 +122,16 @@
 </div>
 
 <div id="knowpage" class="overlay hidden metapage">
-  <div class="pcard mpcard"><div class="hstop"><div><div class="lvtitle small">MONKEY KNOWLEDGE</div><div class="psub">Permanent upgrades for every run · <img src="assets/ui/heroes/mm.png" style="width:18px;vertical-align:middle"> <b id="kmm"></b></div></div><button class="btn pclose">✕</button></div><div id="klist" class="klist"></div></div>
+  <div class="pcard mpcard"><div class="hstop"><div><div class="lvtitle small">MONKEY KNOWLEDGE</div><div class="psub">Permanent upgrades for every run · <img src="assets/ui/heroes/mm.png" style="width:18px;vertical-align:middle"> <b id="kmm"></b></div></div><button class="btn pclose">✕</button></div><div id="kasc" class="kasc"></div><div id="klist" class="klist"></div></div>
 </div>
 <div id="achpage" class="overlay hidden metapage">
   <div class="pcard mpcard"><div class="hstop"><div><div class="lvtitle small">ACHIEVEMENTS</div><div id="achsum" class="psub"></div></div><button class="btn pclose">✕</button></div><div id="achlist" class="achlist"></div></div>
+</div>
+<div id="codexpage" class="overlay hidden metapage">
+  <div class="pcard mpcard"><div class="hstop"><div><div class="lvtitle small">CODEX</div><div class="psub">Everything you've met in your runs</div></div><button class="btn pclose">✕</button></div><div id="cxtabs" class="cxtabs"></div><div id="cxlist" class="cxlist"></div></div>
+</div>
+<div id="histpage" class="overlay hidden metapage">
+  <div class="pcard mpcard"><div class="hstop"><div><div class="lvtitle small">RUN HISTORY</div><div class="psub">Your last 20 runs · click one to see its build</div></div><button class="btn pclose">✕</button></div><div id="hilist" class="hilist"></div></div>
 </div>
 <div id="setpage" class="overlay hidden metapage">
   <div class="pcard mpcard"><div class="hstop"><div class="lvtitle small">SETTINGS</div><button class="btn pclose">✕</button></div><div id="setlist" class="setlist"></div></div>
@@ -132,17 +139,17 @@
 
 <div id="loading" class="overlay"><div class="lvtitle">Inflating bloons…</div></div>
 
-<script src="lib/three.js?v=25"></script>
-<script src="loader.js?v=25"></script>
-<script src="maps.js?v=25"></script>
-<script src="assets/sprites.js?v=25"></script>
-<script src="assets/bloon_sprites.js?v=25"></script>
-<script src="assets/btd_models.js?v=25"></script>
-<script src="assets/btd_rigs.js?v=25"></script>
-<script src="highscores_config.js?v=25" onerror=""></script><script src="assets/btd_fx.js?v=25"></script><script src="assets/btd_proj.js?v=25"></script><script src="assets/relic_tex.js?v=25"></script><script src="assets/bloon_variants.js?v=25"></script><script src="assets/btd_fort.js?v=25"></script>
-<script src="assets/btd_audio.js?v=25"></script>
-<script src="assets/music.js?v=25"></script>
-<script src="render3d.js?v=25"></script>
-<script src="game3d.js?v=25"></script><script src="meta.js?v=25"></script><script src="discord_config.js?v=25"></script><script src="discord_link.js?v=25"></script><script src="net.js?v=25"></script>
+<script src="lib/three.js?v=27"></script>
+<script src="loader.js?v=27"></script>
+<script src="maps.js?v=27"></script>
+<script src="assets/sprites.js?v=27"></script>
+<script src="assets/bloon_sprites.js?v=27"></script>
+<script src="assets/btd_models.js?v=27"></script>
+<script src="assets/btd_rigs.js?v=27"></script>
+<script src="highscores_config.js?v=27" onerror=""></script><script src="assets/btd_fx.js?v=27"></script><script src="assets/btd_proj.js?v=27"></script><script src="assets/relic_tex.js?v=27"></script><script src="assets/bloon_variants.js?v=27"></script><script src="assets/btd_fort.js?v=27"></script>
+<script src="assets/btd_audio.js?v=27"></script>
+<script src="assets/music.js?v=27"></script>
+<script src="render3d.js?v=27"></script>
+<script src="game3d.js?v=27"></script><script src="meta.js?v=27"></script><script src="progress.js?v=27"></script><script src="discord_config.js?v=27"></script><script src="discord_link.js?v=27"></script><script src="net.js?v=27"></script>
 </body>
 </html>

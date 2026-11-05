@@ -698,13 +698,14 @@ const R3 = (() => {
       player.rotation.y += d * Math.min(1, dt * 14);
       player.rotation.z = moving ? Math.sin(G.t * 12) * 0.06 : 0;
       if (player.userData.rig) player.userData.rig.update(dt);
-      player.visible = !(P.inv > 0 && Math.floor(G.t * 20) % 2 && P.hurtT > -0.3);
+      player.visible = !P.hidden && !(P.inv > 0 && Math.floor(G.t * 20) % 2 && P.hurtT > -0.3);
       push('shadow', w(P.x, P.y, 0.04), FLATQ, tmpS.set(1.2, 1.2, 1));
       if (P.buffT > 0) push('glow', w(P.x, P.y, 0.9), camQ, tmpS.set(3, 3, 1), tmpC.set(1, 0.3, 0.85));
     }
     // co-op teammates
     const peerSeen = new Set();
     for (const pe of G.peers || []) {
+      if (!hasRig(pe.key)) continue;   // model not loaded yet
       peerSeen.add(pe.id);
       let pm = peerModels.get(pe.id);
       if (pm && pm.userData.pkey !== pe.key) { scene.remove(pm); peerModels.delete(pe.id); pm = null; }
