@@ -233,3 +233,11 @@ input[type=range]{width:100%;accent-color:#f0a93a}
 .crow.sel{border-color:#ff6a6a;background:rgba(122,31,43,.45)}
 .crow.sel .cn{background:#7a1f2b;border-color:#ff6a6a;box-shadow:0 0 10px rgba(255,80,80,.5)}
 .setlist h3:first-child{margin-top:0}
+/* co-op lobby */
+.coop{margin-bottom:10px;padding:8px 10px;border-radius:10px;background:rgba(127,216,255,.08);border:1px solid rgba(127,216,255,.35)}
+.coop h3{margin:0 0 6px}
+.cpl{display:flex;align-items:center;gap:8px;padding:3px 0}
+.cpl img,.cpl i{width:34px;height:34px;border-radius:8px;object-fit:cover;background:rgba(255,255,255,.08);flex:none}
+.cpl b{display:block;font-size:13px}.cpl span{font-size:11px;color:var(--dim)}
+.cdim{font-size:11px;color:var(--dim)}
+.crow.locked{cursor:default;opacity:.75}.crow.locked.sel{opacity:1}

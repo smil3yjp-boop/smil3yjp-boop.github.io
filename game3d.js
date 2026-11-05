@@ -432,13 +432,16 @@ class Arena {
     return this.isWalk(x + d, y) && this.isWalk(x - d, y) && this.isWalk(x, y + d) && this.isWalk(x, y - d);
   }
   // BFS flow field toward (x,y)
-  computeFlow(x, y) {
+  computeFlow(x, y) {   // (x, y) or a list of {x, y} targets (co-op: bloons head for the nearest player)
     const C = this.cols, R = this.rows, walk = this.walk, flow = this.flow, q = this.queue;
     flow.fill(65535);
-    let c = Math.floor(x / this.cell), r = Math.floor(y / this.cell);
-    let start = r * C + c;
-    if (!walk[start]) return;
-    let h = 0, t = 0; q[t++] = start; flow[start] = 0;
+    let h = 0, t = 0;
+    for (const o of Array.isArray(x) ? x : [{ x, y }]) {
+      const c = Math.floor(o.x / this.cell), r = Math.floor(o.y / this.cell), start = r * C + c;
+      if (c < 0 || r < 0 || c >= C || r >= R || !walk[start] || flow[start] === 0) continue;
+      q[t++] = start; flow[start] = 0;
+    }
+    if (!t) return;
     while (h < t) {
       const i = q[h++], d = flow[i] + 1, cc = i % C;
       if (d > 200) continue;
@@ -583,8 +586,8 @@ try { const s = JSON.parse(localStorage.getItem('bss_sel') || 'null'); if (s) me
 let BEST = {};
 try { BEST = JSON.parse(localStorage.getItem('bss_best') || '{}'); } catch (e) { }
 
-async function newGame() {
-  const ch = CHARS[menuSel.char], G0MAP = Math.floor(Math.random() * MAPS.length), mapDef = MAPS[G0MAP], chaos = CHAOS[menuSel.chaos];
+async function newGame(opts = {}) {
+  const ch = CHARS[menuSel.char], G0MAP = opts.map ?? Math.floor(Math.random() * MAPS.length), mapDef = MAPS[G0MAP], chaos = CHAOS[menuSel.chaos];
   show('menu', false); show('loading', true);
   const setMsg = m => { document.querySelector('#loading .lvtitle').textContent = m; };
   try {
@@ -615,22 +618,25 @@ async function newGame() {
     towerPos: {}, runStats: {}, buf: { dmg: 0, heroDmg: 0, as: 0, shield: 0 }, abilCd: 8, drainT: 0, blindT: 0, towerStunT: 0, rerolls: 3, banishes: 2, banished: new Set(), manualAim: false, kills: 0, dmgDealt: 0, chests: 0,
     toast: null, toastT: 0, freeze: 0,
     gold: 0, goldEarned: 0, chestsOpened: 0, chestT: 35, items: {}, loop: 0, bossKills: 0, goalStart: 0, portals: null, grace: 0, mapIdx: G0MAP,
+    netHaz: [], coopN: NET.on ? 1 + NET.runIds.size : 1,
   };
   META.start(stats, G);
+  coopSpread(G.player);
   const hsk = { id: 'hero', hero: true, def: Object.assign({ icon: ch.spr, lv: [] }, HERO_ATK[ch.id]), lv: 1, cd: 0.6, t: 0, state: {} };
   G.skills.push(hsk);
   sndInit();
   setTimeout(() => voice('Place'), 600);
   arena.computeFlow(G.player.x, G.player.y);
   // small opening wave so it's not empty
-  for (let i = 0; i < 10; i++) spawnBloon('red', null);
+  if (!NET.guest) for (let i = 0; i < 10; i++) spawnBloon('red', null);
   show('menu', false); show('end', false); show('pause', false);
   toast(`${mapDef.name} — Chaos ${chaos.n}`);
 }
-async function continueRun() {
+async function continueRun(forceIdx) {
   G.portals = null; G.state = 'loading';
   play('BossPhayzeWarp', { vol: 0.8 });
-  let idx = G.mapIdx; if (MAPS.length > 1) while (idx === G.mapIdx) idx = Math.floor(Math.random() * MAPS.length);
+  let idx = forceIdx ?? G.mapIdx; if (forceIdx === undefined && MAPS.length > 1) while (idx === G.mapIdx) idx = Math.floor(Math.random() * MAPS.length);
+  if (NET.guest) NET.resetWorld();
   const mapDef = MAPS[idx];
   show('loading', true);
   const setMsg = m => { document.querySelector('#loading .lvtitle').textContent = m; };
@@ -638,9 +644,10 @@ async function continueRun() {
   try { await R3.buildArena(mapDef.id, setMsg); } catch (e) { setMsg('Could not load arena: ' + e.message); console.error(e); return; }
   show('loading', false);
   G.mapIdx = idx; G.arena = new Arena(mapDef);
-  const P = G.player; P.x = mapDef.spawn[0]; P.y = mapDef.spawn[1]; P.vx = P.vy = 0; G.cam.x = P.x; G.cam.y = P.y;
-  G.bloons = []; G.projs = []; G.eproj = []; G.hazards = []; G.effects = []; G.texts = [];
-  const freeLeft = G.pickups.filter(q => q.kind === 'chest' && q.free).length;
+  const P = G.player; P.x = mapDef.spawn[0]; P.y = mapDef.spawn[1]; P.vx = P.vy = 0; G.cam.x = P.x; G.cam.y = P.y; coopSpread(P);
+  G.bloons = []; G.projs = []; G.eproj = []; G.hazards = []; G.effects = []; G.texts = []; G.netHaz = [];
+  if (P.down) { P.down = false; P.rev = 0; P.hp = G.stats.maxhp * 0.4; }
+  const freeLeft = G.pickups.filter(q => q.kind === 'chest' && q.free && (!q.owner || q.owner === (NET.me && NET.me.id))).length;
   G.pickups = [];
   G.summons = G.summons.filter(sm => sm.kind !== 'sentry');
   for (const sm of G.summons) { sm.x = P.x + rnd(-1, 1); sm.y = P.y + rnd(-1, 1); }
@@ -652,6 +659,13 @@ async function continueRun() {
   G.state = 'play';
   toast(`${mapDef.name} — Loop ${G.loop + 1}: bloons are stronger!`, '#ffcf5a');
   if (freeLeft) { G.pendingChest = (G.pendingChest || 0) + freeLeft; openLevelUp(true); }   // unopened boss chest comes with you
+}
+// co-op: each player starts at their own spot around the spawn point
+function coopSpread(P) {
+  if (!NET.on || !NET.me) return;
+  const ids = [NET.me.id, ...NET.runIds].sort(), i = ids.indexOf(NET.me.id), a = i * TAU / ids.length;
+  for (let r = 2.2; r > 0.4; r -= 0.4) { const x = P.x + Math.cos(a) * r, y = P.y + Math.sin(a) * r; if (G.arena.free(x, y, 0.7)) { P.x = x; P.y = y; break; } }
+  G.cam.x = P.x; G.cam.y = P.y;
 }
 function xpFor(l) { return Math.floor(6 + l * 5 + Math.pow(l, 1.55) * 2.2); }
 
@@ -1279,7 +1293,7 @@ const HERO_ABIL = {
 };
 const ABIL_SND = {"quincy": "ActivatedStormOfArrows", "gwen": "ActivatedMolotov", "striker": "ActivatedConcussiveBlast", "obyn": "ActivatedBrambles", "rosalia": ["ActivatedRosaliaKineticChargeNoVO01", "Activated3RosaliaVO01"], "churchill": "ActivatedAPShells", "benjamin": "ActivatedSyphonFunding", "pat": "ActivatedRallyingRoar", "ezili": "ActivatedMoabHex", "adora": "ActivatedBallOfLight", "brickell": "ActivatedNavalTactics", "etienne": "ActivatedUcav", "sauda": "ActivatedLeapingSword", "psi": "ActivatedPsychicBlast", "geraldo": "ActivatedGenericRecharge", "corvus": "Activated7CorvusVO01", "silas": ["ActivatedSilasFrozenBurialNoVO", "Activated10SilasVO01"]};
 function useAbility() {
-  if (!G || G.state !== 'play') return;
+  if (!G || G.state !== 'play' || G.player.down) return;
   const A = HERO_ABIL[G.ch.id]; if (!A || G.abilCd > 0) return;
   SRC = 'hero';
   if (A.fn() === false) { toast('No target for ' + A.name, '#cbbfa8'); return; }
@@ -1287,10 +1301,13 @@ function useAbility() {
   for (const k of [].concat(ABIL_SND[G.ch.id] || [])) play(k, { vol: 1, gap: 0, bus: /VO|^Activated(?!.*NoVO)/.test(k) ? 'vo' : undefined });
 }
 // ---------------------------------------------------------------- bloons
-function hpScale(def) { return G.chaos.hp * (1 + G.t / 240) * (def.moab ? 1 + G.t / 400 : 1) * Math.pow(1.6, G.loop); }
+function hpScale(def) { return G.chaos.hp * (1 + G.t / 240) * (def.moab ? 1 + G.t / 400 : 1) * Math.pow(1.6, G.loop) * (1 + 0.5 * ((G.coopN || 1) - 1)); }
+// co-op: a random living player (bloons spawn around everyone)
+function anyPlayer() { const all = [G.player].concat(NET.on ? NET.alivePeers() : []).filter(q => !q.down); return all.length ? pick(all) : G.player; }
+function nearestPlayer(x, y) { let best = G.player.down ? null : G.player, bd = best ? Math.hypot(best.x - x, best.y - y) : 1e9; if (NET.on) for (const q of NET.alivePeers()) { const d = Math.hypot(q.x - x, q.y - y); if (d < bd) { bd = d; best = q; } } return best || G.player; }
 function spawnBloon(type, pos, parent) {
   const def = BLOONS[type];
-  const p = G.player;
+  const p = anyPlayer();
   if (!pos) { pos = G.arena.randomCellNear(p.x, p.y, 17, 28); if (!pos) return null; }
   const hpS = hpScale(def);
   const b = {
@@ -1318,6 +1335,7 @@ function damage(b, dmg, tags, opts = {}) {
   if ((b.def && b.def.moab) || b.isBoss) { d *= (opts.moabMult || 1); const ps = G.skillOf && G.skillOf[SRC]; if (ps && ps.lv >= 3) d *= Math.pow(1.25, pathCount(ps, 'B')); }
   if (b.isBoss && (b.shield || b.shieldT > 0)) d *= 0.25;
   rs().dmg += Math.min(d, Math.max(0, b.hp)); if (opts.burn) b.burnSrc = SRC;
+  if (b.net) NET.queueDmg(b, d); else { b.lastOwner = NET_OWNER; b.lastSrc = SRC; }
   b.hp -= d; b.hitT = 0.08; b.quiet = 0;
   if (!opts.quiet || Math.random() < 0.15) {
     sfxHit(b);
@@ -1330,8 +1348,9 @@ function damage(b, dmg, tags, opts = {}) {
     const kind = crit ? 'crit' : opts.burnTick ? 'burn' : (tags || []).includes('frost') ? 'frost' : (tags || []).includes('lightning') ? 'lightning' : 'normal';
     G.texts.push({ x: b.x + rnd(-0.3, 0.3), y: b.y - b.r, s: crit ? '' + Math.round(d) + '!' : '' + Math.max(1, Math.round(d)), t: 0, life: 0.6, crit, kind });
   }
-  if (b.hp <= 0) b.isBoss ? killBoss(b) : popBloon(b, -b.hp);
+  if (b.hp <= 0) { if (b.net) NET.localPop(b); else b.isBoss ? killBoss(b) : popBloon(b, -b.hp); }
 }
+let NET_OWNER = null;   // co-op host: which teammate's burn/hex is ticking
 // give a freshly spawned bloon its camo / regrow / fortified properties
 function setProps(b, { camo, regrow, fort } = {}) {
   if (!b || b.def.golden) return b;
@@ -1361,19 +1380,21 @@ function regrowTick(b, dt) {
 }
 function popBloon(b, overflow) {
   b.dead = true;
-  rs().pops++; META.pop(b);
+  const own = NET.host ? b.lastOwner : null;
+  if (!own) { rs().pops++; META.pop(b); }
   G.pops++; if (b.def.moab || !b.def.kids.length) G.kills++;
   G.effects.push({ kind: 'pop', x: b.x, y: b.y, r: b.r, t: 0, life: 0.16, color: b.def.color });
   // pops are worth gold (BTD: $1 per layer popped; blimps pay a bounty)
   // golden bloon: 10x a ceramic's gold (2) and xp (5)
   const gold = (b.def.golden ? 150 : b.def.moab ? { moab: 40, bfb: 120, ddt: 90, zomg: 400 }[b.type] || 40 : b.type === 'ceramic' || b.def.ds ? 2 : 1) * goldMult();
-  if (b.def.golden) {
+  if (b.def.golden && !own) {
     play('PopGolden', { vol: 1 }); G.texts.push({ x: b.x, y: b.y - b.r, s: '+$' + Math.round(gold), t: 0, life: 1.4, gold: true });
     for (let i = 0; i < 8; i++) G.effects.push({ kind: 'coinpop', x: b.x + rnd(-1, 1), y: b.y + rnd(-1, 1), t: 0, life: 0.9 });
   }
   if (b.def.magma) G.hazards.push({ kind: 'magma', x: b.x, y: b.y, r: 1.6, t: 0, life: 3, tick: 0 });
-  G.gold += gold; G.goldEarned += gold;
-  { const vm = goldMult() / G.stats.gold; const extra = gold - gold / vm; rs().gold += gold - extra; if (extra > 0) rs('village').gold += extra; }
+  if (own) NET.credit(own, b.lastSrc, b, gold / goldMult());
+  else { G.gold += gold; G.goldEarned += gold;
+  { const vm = goldMult() / G.stats.gold; const extra = gold - gold / vm; rs().gold += gold - extra; if (extra > 0) rs('village').gold += extra; } }
   if (b.def.moab) {
     shake(0.35);
     G.effects.push({ kind: 'expl', x: b.x, y: b.y, r: b.r * 1.4, t: 0, life: 0.7 });
@@ -1403,7 +1424,7 @@ function dropSoul(x, y, v) { G.pickups.push({ kind: 'soul', x, y, v, t: 0, vx: r
 function spawnDirector(dt) {
   if (G.boss && !G.boss.dead) { G.spawnBudget += dt * 0.5; } // trickle during boss
   const t = G.t;
-  const rate = (1.6 + t / 22 + Math.pow(t / 100, 1.6)) * G.chaos.rate * (1 + 0.3 * G.loop);
+  const rate = (1.6 + t / 22 + Math.pow(t / 100, 1.6)) * G.chaos.rate * (1 + 0.3 * G.loop) * (1 + 0.35 * ((G.coopN || 1) - 1));
   G.spawnBudget += rate * dt;
   checkMilestones();
   if (G.bloons.length > 420) return;
@@ -1416,7 +1437,7 @@ function spawnDirector(dt) {
     const cost = Math.sqrt(COST[type]) * groupN;
     if (cost > G.spawnBudget + 6) { G.spawnBudget -= 1; setProps(spawnBloon(avail[0]), rollProps(avail[0])); continue; }
     G.spawnBudget -= cost;
-    const pos = G.arena.randomCellNear(G.player.x, G.player.y, 17, 26);
+    const sp0 = anyPlayer(), pos = G.arena.randomCellNear(sp0.x, sp0.y, 17, 26);
     if (!pos) break;
     const props = rollProps(type);   // a group shares its properties, like a BTD round
     for (let i = 0; i < groupN; i++) setProps(spawnBloon(type, [pos[0] + rnd(-1, 1), pos[1] + rnd(-1, 1)]), props);
@@ -1438,7 +1459,7 @@ function checkMilestones() {
 function spawnBoss() {
   const def = BOSSES[(G.mapIdx + G.chaosIdx + G.loop) % BOSSES.length];
   const pos = G.arena.randomCellNear(G.player.x, G.player.y, 12, 18) || [G.player.x + 10, G.player.y];
-  const hp = def.hp * G.chaos.hp * (1 + G.t / 600) * Math.pow(1.7, G.loop);
+  const hp = def.hp * G.chaos.hp * (1 + G.t / 600) * Math.pow(1.7, G.loop) * (1 + 0.6 * ((G.coopN || 1) - 1));
   G.boss = { isBoss: true, def, x: pos[0], y: pos[1], r: def.r, hp, maxhp: hp, spd: def.spd, dead: false, hitT: 0, slowT: 0, frozenT: 0, stunT: 0, burnT: 0, burnD: 0, atkT: 3, phase: 1, wob: 0, kx: 0, ky: 0, shield: false,
     skulls: [0.75, 0.5, 0.25], blimpSkull: rint(0, 2), dashAtSpawn: G.dashesUsed || 0 };
   G.bossIntro = 3;
@@ -1463,7 +1484,7 @@ function bossSkull(b, idx) {
     what = 'Lych raises Mini-Lychs!';
   } else if (id === 'vortex') {   // gale of wind-boosted bloons + a gust that shoves you away
     ring(14, b.r + 2, (x, y) => { const m = spawnBloon(tier(), [x, y], b); if (m) m.wind = true; });
-    const a = Math.atan2(p.y - b.y, p.x - b.x); for (let i = 0; i < 12; i++) moveCircle(p, Math.cos(a) * 0.5, Math.sin(a) * 0.5);
+    const a = Math.atan2(p.y - b.y, p.x - b.x); if (p === G.player) for (let i = 0; i < 12; i++) moveCircle(p, Math.cos(a) * 0.5, Math.sin(a) * 0.5);
     what = 'Vortex unleashes a gale!';
   } else if (id === 'dreadbloon') {   // armoured rock bloons
     ring(5, b.r + 2, (x, y) => spawnBloon('rock', [x, y], b));
@@ -1484,7 +1505,7 @@ function bossSkull(b, idx) {
   toast('☠ ' + what, '#ff6a6a');
 }
 function bossAI(b, dt) {
-  const p = G.player;
+  const p = nearestPlayer(b.x, b.y);
   while (b.skulls.length && b.hp / b.maxhp <= b.skulls[0]) bossSkull(b, 3 - b.skulls.length), b.skulls.shift();
   if (b.shieldT > 0) b.shieldT -= dt;
   // living Mini-Lychs feed the Lych
@@ -1527,6 +1548,7 @@ function bossMechanic(b, dt) {
   b.mechT = (b.mechT ?? 8) - dt;
   if (b.mechWarn) { b.mechWarn -= dt; if (b.mechWarn > 0) return; b.mechWarn = 0; }
   if (b.mechT > 0) return;
+  if (NET.host) NET.broadcastMech(id);
   if (id === 'lych') {
     b.mechT = ph2 ? 10 : 14;
     const stole = [];
@@ -1554,7 +1576,8 @@ function killBoss(b) {
   b.dead = true; G.bossDone = true; G.bossKills++; META.bossKill(b);
   shake(1);
   for (let i = 0; i < 30; i++) dropSoul(b.x + rnd(-3, 3), b.y + rnd(-3, 3), 6 * (1 + G.loop));
-  G.pickups.push({ kind: 'chest', x: b.x, y: b.y, t: 0, free: true });
+  G.pickups.push({ kind: 'chest', x: b.x, y: b.y, t: 0, free: true, owner: NET.on ? NET.me.id : undefined });
+  if (NET.host) { NET.broadcastBossKill(b); let i = 0; for (const id of NET.runIds) { i++; const a = i * 2.1; G.pickups.push({ kind: 'chest', x: b.x + Math.cos(a) * 2, y: b.y + Math.sin(a) * 2, t: 0, free: true, owner: id }); } }
   // first kill sets the best time; then the run continues with tougher bloons and a stronger next boss
   if (G.bossKills === 1) { const key = `${G.arena.def.id}_${G.chaosIdx}`, best = BEST[key]; if (!best || G.t < best) { BEST[key] = G.t; G.bestThisRun = G.t; try { localStorage.setItem('bss_best', JSON.stringify(BEST)); } catch (e) { } } }
   // clear the arena and open Soulstone-style portals: continue (new random arena) or end the run
@@ -1580,7 +1603,7 @@ function killBoss(b) {
 // ---------------------------------------------------------------- player
 function tryDash() {
   if (!G || G.state !== 'play') return;
-  const p = G.player;
+  const p = G.player; if (p.down) return;
   if ((p.dashN ?? 1) < 1 || p.dashT > 0) return;
   let [dx, dy] = moveAxis();
   if (!dx && !dy) { dx = p.face; }
@@ -1596,15 +1619,21 @@ function moveCircle(o, dx, dy) {
 }
 function hurtPlayer(dmg) {
   const p = G.player;
-  if (p.inv > 0 || G.state !== 'play') return;
+  if (p.inv > 0 || G.state !== 'play' || p.down) return;
   const d = Math.max(1, dmg - G.stats.armor);
   p.hp -= d; p.inv = 0.45; p.hurtT = 0.25;
   shake(0.25);
   G.texts.push({ x: p.x, y: p.y - 1, s: '-' + Math.round(d), t: 0, life: 0.7, hurt: true });
   play('ShieldDamaged0*', { vol: 0.55, gap: 0.12, key: 'hurt' });
-  if (p.hp <= 0) { p.hp = 0; endRun(false); }
+  if (p.hp <= 0) {
+    p.hp = 0;
+    if (!NET.on) return endRun(false);
+    p.down = true; p.rev = 0; p.vx = p.vy = 0; G.player.dashT = 0;
+    toast('You are DOWN — a teammate can revive you by standing next to you', '#ff7a7a'); play('LivesLost', { vol: 0.6 }) || play('ShieldDamaged0*', { vol: 0.8 });
+  }
 }
 function gainXp(v) {
+  if (NET.guest) { NET.send(NET.hostId, { t: 'xp', v: v * G.stats.xp }); return; }
   G.xp += v * G.stats.xp * G.chaos.xp;
   while (G.xp >= G.xpNext) {
     G.xp -= G.xpNext; G.level++; G.xpNext = xpFor(G.level); G.pendingLevels++;
@@ -1619,7 +1648,7 @@ function update(dt) {
   G.t += dt;
   popBudget = Math.max(0, popBudget - dt * 30);
   // movement
-  let [mx, my] = moveAxis();
+  let [mx, my] = p.down ? [0, 0] : moveAxis();
   const ml = Math.hypot(mx, my);
   const spd = G.ch.spd * s.speed * (p.slowT > 0 ? 0.55 : 1);
   p.slowT = (p.slowT || 0) - dt;
@@ -1633,12 +1662,13 @@ function update(dt) {
   if (p.dashN === undefined) p.dashN = s.dashes;
   if (p.dashN < s.dashes) { p.dashCd -= dt; if (p.dashCd <= 0) { p.dashN++; p.dashCd = p.dashN < s.dashes ? 2.2 * (1 - (s.dashCdr || 0)) : 0; } } else p.dashCd = 0;
   META.tick(dt);
-  if (p.hp < s.maxhp) rs('hero').heal += Math.min(s.maxhp - p.hp, s.regen * dt);
-  p.hp = Math.min(s.maxhp, p.hp + s.regen * dt);
+  if (p.down) NET.reviveStep(dt);
+  else { if (p.hp < s.maxhp) rs('hero').heal += Math.min(s.maxhp - p.hp, s.regen * dt);
+  p.hp = Math.min(s.maxhp, p.hp + s.regen * dt); }
 
   // flow field
   G.flowT -= dt;
-  if (G.flowT <= 0) { G.arena.computeFlow(p.x, p.y); G.flowT = 0.25; }
+  if (G.flowT <= 0 && !NET.guest) { const tg = [G.player].concat(NET.on ? NET.alivePeers() : []).filter(q => !q.down); G.arena.computeFlow(tg.length ? tg : [p]); G.flowT = 0.25; }
 
   if (G.grace > 0) G.grace -= dt;
   if (G.portals) {
@@ -1648,16 +1678,18 @@ function update(dt) {
       // walking in no longer triggers it: press E while standing in the portal
       if (pt.near && G.useKey) {
         G.useKey = false;
+        if (NET.guest) { NET.send(NET.hostId, { t: 'portal', k: pt.kind }); toast('Asked the host to ' + (pt.kind === 'continue' ? 'continue' : 'end the run'), '#ffe39a'); break; }
+        if (NET.host) { NET.usePortal(pt.kind); return; }
         if (pt.kind === 'continue') { continueRun(); return; }
         G.portals = null; endRun(true, true); return;
       }
     }
     G.useKey = false;
-  } else if (G.grace <= 0) spawnDirector(dt);
-  G.chestT -= dt;
+  } else if (G.grace <= 0 && !NET.guest) spawnDirector(dt);
+  if (!NET.guest) G.chestT -= dt;
   if (G.chestT <= 0) {
     G.chestT = 45;
-    const pos = G.arena.randomCellNear(p.x, p.y, 7, 16);
+    const cp = anyPlayer(), pos = G.arena.randomCellNear(cp.x, cp.y, 7, 16);
     if (pos && G.pickups.filter(q => q.kind === 'chest').length < 4) { G.pickups.push({ kind: 'chest', x: pos[0], y: pos[1], t: 0 }); toast('A chest appeared!', '#ffcf5a'); }
   }
 
@@ -1670,6 +1702,7 @@ function update(dt) {
     }); }
   // skills
   for (const sk of G.skills) {
+    if (p.down) break;   // downed heroes don't attack
     if (G.towerStunT > 0 && !sk.hero) continue;   // Vortex static storm
     sk.cd -= dt;
     if (sk.cd <= 0) {
@@ -1702,12 +1735,13 @@ function update(dt) {
 
   // bloons
   const A = G.arena;
-  for (const b of G.bloons) {
+  if (NET.guest) NET.guestWorldStep(dt);
+  else for (const b of G.bloons) {
     if (b.dead) continue;
     b.slowT -= dt; b.frozenT -= dt; b.stunT -= dt; b.hitT -= dt; b.wob += dt * 4;
     regrowTick(b, dt);
-    if (b.hexT > 0) { b.hexT -= dt; b.hexAcc = (b.hexAcc || 0) + dt; if (b.hexAcc > 0.5) { b.hexAcc = 0; SRC = 'hero'; damage(b, b.hexD * 0.5, ['area'], { quiet: true }); if (b.dead) continue; } }
-    if (b.burnT > 0) { b.burnT -= dt; b.burnAcc = (b.burnAcc || 0) + dt; if (b.burnAcc > 0.33) { b.burnAcc = 0; SRC = b.burnSrc || 'hero'; damage(b, b.burnD, ['fire'], { quiet: true, burnTick: true }); if (b.dead) continue; } }
+    if (b.hexT > 0) { b.hexT -= dt; b.hexAcc = (b.hexAcc || 0) + dt; if (b.hexAcc > 0.5) { b.hexAcc = 0; SRC = 'hero'; NET_OWNER = b.hexOwner || null; damage(b, b.hexD * 0.5, ['area'], { quiet: true }); NET_OWNER = null; if (b.dead) continue; } }
+    if (b.burnT > 0) { b.burnT -= dt; b.burnAcc = (b.burnAcc || 0) + dt; if (b.burnAcc > 0.33) { b.burnAcc = 0; SRC = b.burnSrc || 'hero'; NET_OWNER = b.burnOwner || null; damage(b, b.burnD, ['fire'], { quiet: true, burnTick: true }); NET_OWNER = null; if (b.dead) continue; } }
     if (b.def.golden) {   // golden bloons hop away like in BTD6
       if (b.hop > 0) { b.hop -= dt * 2.2; if (b.hop < 0) b.hop = 0; }
       b.hopT -= dt;
@@ -1717,7 +1751,8 @@ function update(dt) {
     if (b.phase) { b.phaseT = (b.phaseT || rnd(2)) - dt; if (b.phaseT <= 0) { b.phased = !b.phased; b.phaseT = b.phased ? 1.2 : 2.2; } }
     if (b.frozenT > 0 || b.stunT > 0) continue;
     let sp = b.spd * (b.slowT > 0 ? 0.45 : 1) * (b.wind ? 1.7 : 1);
-    const dx = p.x - b.x, dy = p.y - b.y, d = Math.hypot(dx, dy);
+    const tq = NET.on ? nearestPlayer(b.x, b.y) : p;
+    const dx = tq.x - b.x, dy = tq.y - b.y, d = Math.hypot(dx, dy);
     let ux, uy;
     if (d < 5) { ux = dx / (d || 1); uy = dy / (d || 1); }
     else { [ux, uy] = A.flowDir(b.x, b.y); if (!ux && !uy) { ux = dx / d; uy = dy / d; } }
@@ -1728,7 +1763,7 @@ function update(dt) {
     moveCircle(b, vx, vy);
     if (b.x === ox && b.y === oy && (vx || vy)) { b.x += vx * 0.3; b.y += vy * 0.3; } // unstick (they're balloons)
     // contact
-    if (d < b.r + p.r) hurtPlayer(b.def.dmg * G.chaos.dmg);
+    if (tq === p && d < b.r + p.r) hurtPlayer(b.def.dmg * G.chaos.dmg);
     // DDTs are too fast to dodge their shots, so they also pulse a damaging shock ring around themselves
     if (b.type === 'ddt') {
       b.auraT = (b.auraT ?? rnd(0.5, 1.5)) - dt;
@@ -1736,7 +1771,8 @@ function update(dt) {
         b.auraT = 1.6;
         G.effects.push({ kind: 'ring', x: b.x, y: b.y, r: DDT_AURA, t: 0, life: 0.45, color: '#ff4040' });
         G.effects.push({ kind: 'boom', x: b.x, y: b.y, r: DDT_AURA * 0.7, t: 0, life: 0.3, color: '#ff3a3a' });
-        if (d < DDT_AURA + p.r) hurtPlayer(10 * G.chaos.dmg);
+        if (Math.hypot(p.x - b.x, p.y - b.y) < DDT_AURA + p.r) hurtPlayer(10 * G.chaos.dmg);
+        if (NET.host) for (const pe of NET.peers.values()) if (!pe.player.down && Math.hypot(pe.player.x - b.x, pe.player.y - b.y) < DDT_AURA + 0.6) NET.hurtPeer(pe.id, 10 * G.chaos.dmg);
         play('Explosion0*', { vol: 0.15, gap: 0.25 });
       }
     }
@@ -1754,7 +1790,7 @@ function update(dt) {
   }
   // boss
   const B = G.boss;
-  if (B && !B.dead) {
+  if (B && !B.dead && !NET.guest) {
     if (G.bossIntro > 0) G.bossIntro -= dt;
     B.hitT -= dt; B.wob += dt * 2;
     if (B.hexT > 0) { B.hexT -= dt; B.hexAcc = (B.hexAcc || 0) + dt; if (B.hexAcc > 0.5) { B.hexAcc = 0; SRC = 'hero'; damage(B, B.hexD * 0.5, ['area'], { quiet: true }); } }
@@ -1765,7 +1801,7 @@ function update(dt) {
       if (c.t > c.tele + c.dur) B.charge = null;
     } else {
       bossAI(B, dt);
-      const dx = p.x - B.x, dy = p.y - B.y, d = Math.hypot(dx, dy);
+      const tq = nearestPlayer(B.x, B.y), dx = tq.x - B.x, dy = tq.y - B.y, d = Math.hypot(dx, dy);
       if (d > 4) {
         let [ux, uy] = A.flowDir(B.x, B.y); if (!ux && !uy) { ux = dx / d; uy = dy / d; }
         B.x += ux * B.spd * dt; B.y += uy * B.spd * dt;
@@ -1822,11 +1858,11 @@ function update(dt) {
   for (const pr of G.projs) if (pr.rehit && pr.hits instanceof Set) pr.hits = new Map();
 
   // enemy projectiles
-  for (const e of G.eproj) {
+  if (!NET.guest) for (const e of G.eproj) {
     e.x += e.vx * dt; e.y += e.vy * dt; e.life -= dt;
     if (Math.hypot(e.x - p.x, e.y - p.y) < e.r + p.r * 0.8) { hurtPlayer(e.dmg); e.life = 0; }
   }
-  G.eproj = G.eproj.filter(e => e.life > 0);
+  if (!NET.guest) G.eproj = G.eproj.filter(e => e.life > 0);
 
   // hazards
   for (const h of G.hazards) {
@@ -1914,6 +1950,9 @@ function update(dt) {
   // pickups
   const mag = s.magnet;
   for (const pk of G.pickups) {
+    if (pk.net) continue;
+    if (pk.kind === 'chest' && pk.owner && NET.me && pk.owner !== NET.me.id) continue;
+    if (p.down) continue;
     pk.t += dt;
     if (pk.vx) { pk.x += pk.vx * dt; pk.y += pk.vy * dt; pk.vx *= 0.9; pk.vy *= 0.9; if (Math.abs(pk.vx) < 0.05) pk.vx = 0; }
     const dx = p.x - pk.x, dy = p.y - pk.y, d = Math.hypot(dx, dy);
@@ -1942,6 +1981,7 @@ function update(dt) {
     }
     if (pk.kind === 'chest') pk.afford = pk.free || G.gold >= chestCost();
   }
+  if (p.down) for (const pk of G.pickups) pk.t += dt;
   G.pickups = G.pickups.filter(pk => !pk.dead);
   if (G.pickups.length > 900) { // merge distant souls
     const souls = G.pickups.filter(q => q.kind === 'soul');
@@ -1969,7 +2009,11 @@ function render(dt = 0.016) {
   ctx.setTransform(1, 0, 0, 1, 0, 0);
   ctx.clearRect(0, 0, W, H);
   if (!G) return;
-  R3.frame(G, dt);
+  if (NET.on) {   // teammates' heroes, towers, shots and effects ride along with this frame
+    const V = Object.create(G);
+    V.projs = G.projs.concat(NET.extraProjs()); V.summons = G.summons.concat(NET.extraSummons()); V.effects = G.effects.concat(NET.extraFx()); V.peers = NET.renderPeers();
+    R3.frame(V, dt);
+  } else R3.frame(G, dt);
   // floating damage numbers
   ctx.textAlign = 'center';
   const u = H / 1080;
@@ -1999,6 +2043,28 @@ function render(dt = 0.016) {
       ctx.fillStyle = '#ff3b4f'; ctx.fillRect(p[0] - bw / 2 + 1, p[1] + 1, (bw - 2) * k, 8 * u - 2);
     }
     if (bi) ctx.drawImage(bi, p[0] - bw / 2 - 16 * u, p[1] - 4 * u, 24 * u, 25 * u);
+  }
+  // co-op: teammate names, health and revive progress
+  if (NET.on) {
+    const tag = (P, name, mhp, me) => {
+      const q = R3.project(P.x, P.y, 2.9, W, H); if (!q) return;
+      if (!me) text(name, q[0], q[1] - 14 * u, 15 * u, '#ffffff', 'center');
+      const bw = 70 * u, k = clamp(P.hp / Math.max(1, mhp), 0, 1);
+      if (!me) { ctx.fillStyle = 'rgba(0,0,0,.65)'; ctx.fillRect(q[0] - bw / 2, q[1] - 4 * u, bw, 7 * u); ctx.fillStyle = P.down ? '#888' : '#5fd35f'; ctx.fillRect(q[0] - bw / 2 + 1, q[1] - 3 * u, (bw - 2) * k, 5 * u); }
+      if (P.down) {
+        text(me ? 'DOWN — wait for a teammate' : 'DOWN — stand next to revive', q[0], q[1] + 20 * u, 14 * u, '#ff8a7a', 'center');
+        const rv = clamp((P.rev || 0) / 3, 0, 1);
+        ctx.strokeStyle = 'rgba(0,0,0,.6)'; ctx.lineWidth = 6 * u; ctx.beginPath(); ctx.arc(q[0], q[1] + 50 * u, 16 * u, 0, TAU); ctx.stroke();
+        ctx.strokeStyle = '#7dff8a'; ctx.beginPath(); ctx.arc(q[0], q[1] + 50 * u, 16 * u, -Math.PI / 2, -Math.PI / 2 + TAU * rv); ctx.stroke();
+      }
+    };
+    for (const pe of NET.renderPeers()) tag(pe.player, pe.name, pe.player.mhp, false);
+    tag(G.player, '', G.stats.maxhp, true);
+    const wait = NET.host ? (NET.worldHeld() ? [...NET.peers.values()].filter(pe => pe.st === 'levelup' || pe.st === 'pause' || pe.st === 'loading').map(pe => pe.name) : []) : NET.held() ? NET.paused.filter(n => n !== NET.me.name) : [];
+    if (wait.length && G.state === 'play') {
+      ctx.fillStyle = 'rgba(0,0,0,.55)'; roundRect(W / 2 - 260 * u, H * 0.22 - 26 * u, 520 * u, 44 * u, 12 * u); ctx.fill();
+      text(`Waiting for ${wait.join(', ')}…`, W / 2, H * 0.22 + 4 * u, 22 * u, '#ffe39a', 'center');
+    }
   }
   // portal labels
   if (G.portals) for (const pt of G.portals) {
@@ -2749,7 +2815,7 @@ function renderStats(el, extra = []) {
   el.innerHTML = rows.map(([a, b]) => `<span>${a}</span><b>${b}</b>`).join('');
 }
 $('resume').onclick = togglePause;
-$('quit').onclick = () => { show('pause', false); endRun(false, true); };
+$('quit').onclick = () => { show('pause', false); if (NET.host) NET.send('*', { t: 'end', win: false, quit: true }); endRun(false, true); };
 function endRun(win, quit = false) {
   if (G.state === 'end') return;
   G.state = 'end';
@@ -2770,7 +2836,7 @@ function endRun(win, quit = false) {
   setTimeout(() => askName(runRec), win ? 400 : 1100);
   setTimeout(() => show('end', true), win ? 200 : 900);
 }
-$('again').onclick = () => { show('end', false); G = null; R3.resetRun(); buildMenu(); show('menu', true); startMenuMusic(); };
+$('again').onclick = () => { show('end', false); G = null; R3.resetRun(); if (NET.inRun) NET.leaveRun(); buildMenu(); show('menu', true); startMenuMusic(); };
 
 // ---------------------------------------------------------------- profile: Monkey Money + skins
 // purchase confirmation: previews the skin on the stage and asks before spending Monkey Money
@@ -2902,7 +2968,8 @@ function buildMenu() {
     };
     sbox.appendChild(el);
   });
-  // chaos ranks (arena is picked at random when the run starts)
+  // chaos ranks (arena is picked at random when the run starts); in co-op the host picks
+  const coopGuest = NET.ready && NET.others.length > 0 && !NET.amHost;
   const chx = $('chaos'); chx.innerHTML = '';
   CHAOS.forEach((c, i) => {
     const el = document.createElement('div'); el.className = 'crow' + (i === menuSel.chaos ? ' sel' : '');
@@ -2910,9 +2977,26 @@ function buildMenu() {
       : `x${c.hp} bloon HP · x${c.dmg} damage taken · x${c.rate} spawns · +${Math.round((c.xp - 1) * 100)}% XP`;
     el.title = i === 0 ? 'Normal difficulty.' : `Bloons have x${c.hp} health, hit you x${c.dmg} harder and spawn x${c.rate} as fast. Tougher bloon types (ceramics, MOABs…) show up about ${i * 25}s sooner. You earn ${Math.round((c.xp - 1) * 100)}% more XP.`;
     el.innerHTML = `<div class="cn">${c.n}</div><div><div class="ct">${CHAOS_NAME[i]}</div><div class="cd">${st}</div></div>`;
-    el.onclick = () => { menuSel.chaos = i; saveSel(); play('UIClick01', { vol: 0.5 }); buildMenu(); };
+    el.onclick = () => { if (coopGuest) return; menuSel.chaos = i; saveSel(); play('UIClick01', { vol: 0.5 }); buildMenu(); };
+    if (coopGuest) el.classList.add('locked');
     chx.appendChild(el);
   });
+  // co-op lobby (Discord Activity with friends)
+  const co = $('coop'), lp = NET.ready ? NET.lobbyPlayers() : [];
+  if (lp.length > 1 || NET.full) {
+    co.classList.remove('hidden');
+    co.innerHTML = `<h3>Co-op · ${lp.length}/4</h3>` + (NET.full ? '<div class="cdim">This session already has 4 players.</div>' : '') + lp.map(pl => {
+      const me = pl.id === NET.me.id, L = me ? null : NET.lobby[pl.id], hc = me ? CHARS[menuSel.char] : NET.heroOf(pl.id);
+      const icon = me ? (selectedSkin(hc) ? selectedSkin(hc).icon : HERO_ICON[hc.id]) : L && L.icon;
+      const st = me ? 'you' : L ? (L.st === 'run' ? 'in a run' : L.st === 'end' ? 'results' : 'ready') : 'joining…';
+      return `<div class="cpl">${icon ? `<img src="${heroIconSrc(icon)}">` : '<i></i>'}<div><b>${pl.id === NET.hostId ? '👑 ' : ''}${pl.name.replace(/[<>&]/g, '')}</b><span>${hc ? hc.name : '…'} · ${st}</span></div></div>`;
+    }).join('');
+    NET.sayHi(); NET.hostLobby();
+    if (!$('start').disabled) {
+      if (!NET.amHost) { $('start').disabled = true; $('start').textContent = NET.hostRunning ? 'RUN IN PROGRESS…' : 'WAITING FOR HOST…'; }
+      else $('start').textContent = `BEGIN RUN · ${lp.filter(pl => pl.id === NET.me.id || (NET.lobby[pl.id] && NET.lobby[pl.id].st !== 'run')).length} PLAYERS`;
+    }
+  } else { co.classList.add('hidden'); co.innerHTML = ''; if (NET.ready) NET.sayHi(); }
 }
 const CHAOS_NAME = ['Calm', 'Restless', 'Stormy', 'Wild', 'Chaotic', 'Apocalypse'];
 function gfxChips(box, after) {
@@ -2980,14 +3064,21 @@ function drawMapThumb(c, m) {
   const fi = img(m.floor); if (!fi.complete) fi.addEventListener('load', draw);
 }
 function saveSel() { try { localStorage.setItem('bss_sel', JSON.stringify(menuSel)); } catch (e) { } }
-$('start').onclick = () => { audio(); stopMenuMusic(); newGame(); };
+$('start').onclick = () => {
+  audio();
+  if (NET.ready && NET.others.length && !NET.amHost) return;   // guests wait for the host
+  const map = Math.floor(Math.random() * MAPS.length);
+  if (NET.ready && NET.amHost && NET.others.length) NET.startRun(map);
+  stopMenuMusic(); newGame({ map });
+};
 
 // ---------------------------------------------------------------- main loop
 let last = performance.now();
 function frame(now) {
   const dt = Math.min(0.05, (now - last) / 1000); last = now;
   pollPad();
-  if (G && G.state === 'play') update(dt);
+  if (G && G.state === 'play' && !NET.worldHeld() && !NET.held()) update(dt);
+  if (G && G.state !== 'loading') NET.tick(dt);
   if (G && G.state !== 'loading') {
     renderWorld(G.state === 'play' ? dt : 0);
   } else {

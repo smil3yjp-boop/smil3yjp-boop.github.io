@@ -95,6 +95,7 @@
       }
       try { localStorage.setItem('bss_name', CLOUD.user.name); } catch (e) { }
       if (typeof buildMenu === 'function' && !G) buildMenu();
+      if (window.NET) NET.connect();
       note('🎈 SIGNED IN', `${CLOUD.user.name} — progress saves to your Discord account`);
     } catch (e) {
       console.warn('Discord sign-in failed; saving locally only', e);

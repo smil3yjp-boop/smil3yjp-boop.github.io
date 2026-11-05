@@ -617,7 +617,7 @@ const R3 = (() => {
   const COMP_SKIP = { heli: 1, ace: 1, village: 1, farm: 1 };
   const BEASTM = { raptor1: ['t_Raptor1', 1.5, 'max'], raptor2: ['t_Raptor2', 1.7, 'max'], raptor3: ['t_Raptor3', 1.9, 'max'], trex2: ['t_TRex2', 2.5, 'max'], trex3: ['t_TRex3', 2.7, 'max'], giga3: ['t_Giga3', 3.0, 'max'],
     eagle1: ['x_eagle1', 1.8, 'max'], eagle2: ['x_eagle2', 2.1, 'max'], condor2: ['x_condor2', 2.6, 'max'], pouakai2: ['x_pouakai2', 3.0, 'max'], pouakai3: ['x_pouakai3', 3.4, 'max'] };
-  const pickupModels = new Map();
+  const pickupModels = new Map(), peerModels = new Map();
   function setPlayerModel(key) {
     if (player) scene.remove(player);
     player = actor(key, 1.9, 'height') || new THREE.Mesh(new THREE.SphereGeometry(0.6), new THREE.MeshLambertMaterial({ color: 0x8b5a2b }));
@@ -631,6 +631,7 @@ const R3 = (() => {
     for (const m of big.values()) scene.remove(m); big.clear();
     for (const m of summonModels.values()) scene.remove(m); summonModels.clear(); for (const c of compModels.values()) scene.remove(c.m); compModels.clear();
     for (const m of pickupModels.values()) scene.remove(m); pickupModels.clear();
+    for (const m of peerModels.values()) scene.remove(m); peerModels.clear();
     for (const p of Object.values(pools)) if (!p.mesh.parent) scene.add(p.mesh);
     if (!lines.parent) scene.add(lines);
   }
@@ -645,6 +646,29 @@ const R3 = (() => {
     return { key: list[k], len };
   }
 
+  // a tower standing beside a hero (mine or a teammate's), wearing its current upgrade tier
+  const cseen = new Set();
+  function drawComp(sk, pos, G, dt, P) {
+    const key = towerKey(sk.id, sk.lv, sk); if (!key) return;
+    cseen.add(sk);
+    let c = compModels.get(sk);
+    if (c && c.key !== key) { scene.remove(c.m); compModels.delete(sk); c = null; G.effects.push({ kind: 'ring', x: P.x, y: P.y, r: 2.2, t: 0, life: 0.5, color: '#ffe39a' }); }
+    if (!c) {
+      const big = /spike|mortar|dartling|sub|buccaneer|farm|tack|bomb/.test(sk.id) || (sk.id === 'plasma' && sk.lv >= 7);
+      const m = actor(key, big ? 1.5 : 1.25, big ? 'max' : 'height'); if (!m) return;
+      c = { m, key, x: P.x, y: P.y, fired: sk.fired || 0, face: 0 }; compModels.set(sk, c); scene.add(m);
+      if (m.userData.rig) m.userData.rig.play('upgrade') || m.userData.rig.play('place');
+    }
+    c.x = pos.x; c.y = pos.y;   // position is owned by the game (projectiles launch from here)
+    let best = null, bd = 196;
+    for (const b of G.bloons) { const dx = b.x - c.x, dy = b.y - c.y, d = dx * dx + dy * dy; if (d < bd) { bd = d; best = b; } }
+    if (best) c.face = Math.atan2(best.y - c.y, best.x - c.x);
+    c.m.position.copy(w(c.x, c.y, 0));
+    let d = faceAngle(c.face) - c.m.rotation.y; d = Math.atan2(Math.sin(d), Math.cos(d)); c.m.rotation.y += d * Math.min(1, dt * 10);
+    const rg = c.m.userData.rig;
+    if (rg) { if ((sk.fired || 0) !== c.fired) { c.fired = sk.fired || 0; if (!rg.busy()) rg.play('attack', { speed: 1.4 }); } rg.update(dt); }
+    push('shadow', w(c.x, c.y, 0.04), FLATQ, tmpS.set(1.3, 1.3, 1));
+  }
   const white = new THREE.Color(1, 1, 1), frozenC = new THREE.Color(0.6, 0.9, 1.3), slowC = new THREE.Color(0.8, 1.1, 0.6);
   function frame(G, dt) {
     if (!nav) return;
@@ -677,6 +701,28 @@ const R3 = (() => {
       player.visible = !(P.inv > 0 && Math.floor(G.t * 20) % 2 && P.hurtT > -0.3);
       push('shadow', w(P.x, P.y, 0.04), FLATQ, tmpS.set(1.2, 1.2, 1));
       if (P.buffT > 0) push('glow', w(P.x, P.y, 0.9), camQ, tmpS.set(3, 3, 1), tmpC.set(1, 0.3, 0.85));
+    }
+    // co-op teammates
+    const peerSeen = new Set();
+    for (const pe of G.peers || []) {
+      peerSeen.add(pe.id);
+      let pm = peerModels.get(pe.id);
+      if (pm && pm.userData.pkey !== pe.key) { scene.remove(pm); peerModels.delete(pe.id); pm = null; }
+      if (!pm) { pm = actor(pe.key, 1.9, 'height') || new THREE.Mesh(new THREE.SphereGeometry(0.6), new THREE.MeshLambertMaterial({ color: 0x8b5a2b })); pm.userData.pkey = pe.key; peerModels.set(pe.id, pm); scene.add(pm); if (pm.userData.rig) pm.userData.rig.play('place'); }
+      const Q = pe.player, moving = !Q.down && Math.hypot(Q.vx, Q.vy) > 0.5;
+      pm.position.copy(w(Q.x, Q.y, Q.down ? 0.25 : (moving ? Math.abs(Math.sin(G.t * 12)) * 0.15 : Math.sin(G.t * 3) * 0.03) + (Q.dashT > 0 ? 0.3 : 0)));
+      let d = faceAngle(Q.faceA ?? Math.PI / 2) - pm.rotation.y; d = Math.atan2(Math.sin(d), Math.cos(d)); pm.rotation.y += d * Math.min(1, dt * 14);
+      pm.rotation.z = Q.down ? 1.35 : moving ? Math.sin(G.t * 12) * 0.06 : 0;
+      if (pm.userData.rig) pm.userData.rig.update(dt);
+      pm.visible = !(Q.inv > 0 && Math.floor(G.t * 20) % 2 && Q.hurtT > -0.3);
+      push('shadow', w(Q.x, Q.y, 0.04), FLATQ, tmpS.set(1.2, 1.2, 1));
+      if (Q.down) push('glow', w(Q.x, Q.y, 0.3), camQ, tmpS.set(3.4, 3.4, 1), tmpC.setRGB(1, 0.25, 0.25));
+      if (Q.buffT > 0) push('glow', w(Q.x, Q.y, 0.9), camQ, tmpS.set(3, 3, 1), tmpC.set(1, 0.3, 0.85));
+      for (const c of pe.comps.values()) drawComp(c.sk, c, G, dt, Q);
+    }
+    for (const [id, m] of peerModels) if (!peerSeen.has(id)) { scene.remove(m); peerModels.delete(id); }
+    if (player) {   // my own downed pose
+      if (P.down) { player.rotation.z = 1.35; player.position.y -= 0; push('glow', w(P.x, P.y, 0.3), camQ, tmpS.set(3.4, 3.4, 1), tmpC.setRGB(1, 0.25, 0.25)); }
     }
     // bloons
     const seen = new Set();
@@ -781,29 +827,10 @@ const R3 = (() => {
     }
     for (const [sm, m] of summonModels) if (!sseen.has(sm)) { scene.remove(m); summonModels.delete(sm); }
     // tower companions: every tower skill without its own summon stands beside the hero, wearing its current upgrade tier
-    const cseen = new Set(), comps = G.skills.filter(sk => TW[sk.id] && G.towerPos && G.towerPos[sk.id]);
-    comps.forEach((sk, i) => {
-      const key = towerKey(sk.id, sk.lv, sk); if (!key) return;
-      cseen.add(sk);
-      let c = compModels.get(sk);
-      if (c && c.key !== key) { scene.remove(c.m); compModels.delete(sk); c = null; G.effects.push({ kind: 'ring', x: P.x, y: P.y, r: 2.2, t: 0, life: 0.5, color: '#ffe39a' }); }
-      if (!c) {
-        const big = /spike|mortar|dartling|sub|buccaneer|farm|tack|bomb/.test(sk.id) || (sk.id === 'plasma' && sk.lv >= 7);
-        const m = actor(key, big ? 1.5 : 1.25, big ? 'max' : 'height'); if (!m) return;
-        c = { m, key, x: P.x, y: P.y, fired: sk.fired || 0, face: 0 }; compModels.set(sk, c); scene.add(m);
-        if (m.userData.rig) m.userData.rig.play('upgrade') || m.userData.rig.play('place');
-      }
-      c.x = G.towerPos[sk.id].x; c.y = G.towerPos[sk.id].y;   // position is owned by the game (projectiles launch from here)
-      let best = null, bd = 196;
-      for (const b of G.bloons) { const dx = b.x - c.x, dy = b.y - c.y, d = dx * dx + dy * dy; if (d < bd) { bd = d; best = b; } }
-      if (best) c.face = Math.atan2(best.y - c.y, best.x - c.x);
-      c.m.position.copy(w(c.x, c.y, 0));
-      let d = faceAngle(c.face) - c.m.rotation.y; d = Math.atan2(Math.sin(d), Math.cos(d)); c.m.rotation.y += d * Math.min(1, dt * 10);
-      const rg = c.m.userData.rig;
-      if (rg) { if ((sk.fired || 0) !== c.fired) { c.fired = sk.fired || 0; if (!rg.busy()) rg.play('attack', { speed: 1.4 }); } rg.update(dt); }
-      push('shadow', w(c.x, c.y, 0.04), FLATQ, tmpS.set(1.3, 1.3, 1));
-    });
+    const comps = G.skills.filter(sk => TW[sk.id] && G.towerPos && G.towerPos[sk.id]);
+    comps.forEach(sk => drawComp(sk, G.towerPos[sk.id], G, dt, P));
     for (const [sk, c] of compModels) if (!cseen.has(sk)) { scene.remove(c.m); compModels.delete(sk); }
+    cseen.clear();
     const fs = G.skills.find(s => s.id === 'fire');
     if (fs && fs.state.phoenix && fs.state.phoenix.x !== undefined) push('glow', w(fs.state.phoenix.x, fs.state.phoenix.y, 1.8), camQ, tmpS.set(3, 3, 1), tmpC.setRGB(1, 0.5, 0.15));
     const bs = G.skills.find(s => s.id === 'boomer');
