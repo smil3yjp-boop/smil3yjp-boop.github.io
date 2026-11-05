@@ -341,9 +341,10 @@ function renderAch() {
 let rebinding = null;
 function renderSettings() {
   const tog = (id, label, desc) => `<div class="srow"><div><b>${label}</b><div class="sd">${desc}</div></div><button class="btn small tog${SETTINGS[id] ? ' on' : ''}" data-s="${id}">${SETTINGS[id] ? 'ON' : 'OFF'}</button></div>`;
-  $('setlist').innerHTML = tog('shake', 'Screen shake', 'Camera shake on explosions and hits') + tog('cbLabels', 'Colourblind bloon labels', 'Shows a letter on nearby bloons (R, B, G, Y, P… plus c/r/f for camo, regrow, fortified)') + tog('dmgNumbers', 'Damage numbers', 'Floating damage numbers on hits') +
+  $('setlist').innerHTML = `<h3>Sound</h3><div id="setaud" class="aud"></div><h3>Graphics</h3><div id="setgfx" class="chips"></div><h3>Gameplay</h3>` + tog('shake', 'Screen shake', 'Camera shake on explosions and hits') + tog('cbLabels', 'Colourblind bloon labels', 'Shows a letter on nearby bloons (R, B, G, Y, P… plus c/r/f for camo, regrow, fortified)') + tog('dmgNumbers', 'Damage numbers', 'Floating damage numbers on hits') +
     `<h3>Controls</h3>` + Object.keys(DEFAULT_KEYS).map(a => `<div class="srow"><div><b>${KEY_LABEL[a]}</b></div><button class="btn small key${rebinding === a ? ' on' : ''}" data-k="${a}">${rebinding === a ? 'Press a key…' : keyName(SETTINGS.keys[a])}</button></div>`).join('') +
     `<div class="srow"><div class="sd">Gamepad: left stick move · A/RB dash · X/LB ability · B portal · Y aim · Start pause. Touch: drag on the left to move, buttons on the right.</div><button class="btn small" id="keyreset">Reset keys</button></div>`;
+  buildAudioUI($('setaud')); gfxChips($('setgfx'));
   $('setlist').querySelectorAll('[data-s]').forEach(b => b.onclick = () => { SETTINGS[b.dataset.s] = !SETTINGS[b.dataset.s]; saveSettings(); renderSettings(); play('UIClick01', { vol: 0.4 }); });
   $('setlist').querySelectorAll('[data-k]').forEach(b => b.onclick = () => { rebinding = b.dataset.k; renderSettings(); });
   $('keyreset').onclick = () => { SETTINGS.keys = Object.assign({}, DEFAULT_KEYS); saveSettings(); renderSettings(); };

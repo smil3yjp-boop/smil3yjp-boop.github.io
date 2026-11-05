@@ -223,3 +223,13 @@ input[type=range]{width:100%;accent-color:#f0a93a}
 .achpop .at{font-size:11px;letter-spacing:3px;color:var(--gold)} .achpop .an{font-size:20px;font-weight:900;color:#fff} .achpop .ad{font-size:12px;color:var(--dim)} .achpop .am{justify-content:center;margin-top:4px}
 .achpop.out{opacity:0;transition:opacity .5s}
 @keyframes achin{from{transform:translate(-50%,-30px);opacity:0}to{transform:translate(-50%,0);opacity:1}}
+/* chaos rank list (main menu) */
+.chaoslist{display:flex;flex-direction:column;gap:6px;flex:1;overflow:auto;min-height:0;margin-bottom:10px;padding-right:2px}
+.crow{display:flex;gap:10px;align-items:center;padding:8px 10px;border-radius:10px;border:2px solid transparent;background:rgba(255,255,255,.05);cursor:pointer}
+.crow:hover{background:rgba(255,255,255,.09)}
+.crow .cn{flex:none;width:34px;height:34px;border-radius:50%;display:grid;place-items:center;font-weight:900;border:1px solid var(--line)}
+.crow .ct{font-weight:800;font-size:13px}
+.crow .cd{font-size:11px;color:var(--dim);line-height:1.35}
+.crow.sel{border-color:#ff6a6a;background:rgba(122,31,43,.45)}
+.crow.sel .cn{background:#7a1f2b;border-color:#ff6a6a;box-shadow:0 0 10px rgba(255,80,80,.5)}
+.setlist h3:first-child{margin-top:0}

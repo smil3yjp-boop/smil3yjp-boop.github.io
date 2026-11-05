@@ -584,7 +584,7 @@ let BEST = {};
 try { BEST = JSON.parse(localStorage.getItem('bss_best') || '{}'); } catch (e) { }
 
 async function newGame() {
-  const ch = CHARS[menuSel.char], mapDef = MAPS[menuSel.map], chaos = CHAOS[menuSel.chaos];
+  const ch = CHARS[menuSel.char], G0MAP = Math.floor(Math.random() * MAPS.length), mapDef = MAPS[G0MAP], chaos = CHAOS[menuSel.chaos];
   show('menu', false); show('loading', true);
   const setMsg = m => { document.querySelector('#loading .lvtitle').textContent = m; };
   try {
@@ -614,7 +614,7 @@ async function newGame() {
     hash: new Hash(2.5), flowT: 0, spawnBudget: 0, pops: 0, goal: chaos.goal, elitesSpawned: 0, boss: null, bossDone: false,
     towerPos: {}, runStats: {}, buf: { dmg: 0, heroDmg: 0, as: 0, shield: 0 }, abilCd: 8, drainT: 0, blindT: 0, towerStunT: 0, rerolls: 3, banishes: 2, banished: new Set(), manualAim: false, kills: 0, dmgDealt: 0, chests: 0,
     toast: null, toastT: 0, freeze: 0,
-    gold: 0, goldEarned: 0, chestsOpened: 0, chestT: 35, items: {}, loop: 0, bossKills: 0, goalStart: 0, portals: null, grace: 0, mapIdx: menuSel.map,
+    gold: 0, goldEarned: 0, chestsOpened: 0, chestT: 35, items: {}, loop: 0, bossKills: 0, goalStart: 0, portals: null, grace: 0, mapIdx: G0MAP,
   };
   META.start(stats, G);
   const hsk = { id: 'hero', hero: true, def: Object.assign({ icon: ch.spr, lv: [] }, HERO_ATK[ch.id]), lv: 1, cd: 0.6, t: 0, state: {} };
@@ -2902,26 +2902,19 @@ function buildMenu() {
     };
     sbox.appendChild(el);
   });
-  // maps
-  const mbox = $('maps'); mbox.innerHTML = '';
-  MAPS.forEach((m, i) => {
-    const el = document.createElement('div'); el.className = 'mitem' + (i === menuSel.map ? ' sel' : '');
-    const best = BEST[`${m.id}_${menuSel.chaos}`];
-    el.innerHTML = `<canvas width="148" height="100"></canvas><div><div class="nm">${m.name}</div><div class="ds">${best ? 'Best: ' + fmtTime(best) : 'Not yet beaten'}</div></div>`;
-    drawMapThumb(el.querySelector('canvas'), m);
-    el.onclick = () => { menuSel.map = i; saveSel(); play('UIClick01', { vol: 0.5 }); buildMenu(); };
-    mbox.appendChild(el);
-  });
-  const gq = $('gfx'); gq.innerHTML = ''; gfxChips(gq, buildMenu);
+  // chaos ranks (arena is picked at random when the run starts)
   const chx = $('chaos'); chx.innerHTML = '';
   CHAOS.forEach((c, i) => {
-    const el = document.createElement('div'); el.className = 'chip' + (i === menuSel.chaos ? ' sel' : '');
-    el.textContent = c.n; el.title = `Chaos ${c.n}: bloon HP x${c.hp}, damage x${c.dmg}, spawn rate x${c.rate}`;
-    el.onclick = () => { menuSel.chaos = i; saveSel(); buildMenu(); };
+    const el = document.createElement('div'); el.className = 'crow' + (i === menuSel.chaos ? ' sel' : '');
+    const st = i === 0 ? 'Standard bloons and damage. Start here.'
+      : `x${c.hp} bloon HP · x${c.dmg} damage taken · x${c.rate} spawns · +${Math.round((c.xp - 1) * 100)}% XP`;
+    el.title = i === 0 ? 'Normal difficulty.' : `Bloons have x${c.hp} health, hit you x${c.dmg} harder and spawn x${c.rate} as fast. Tougher bloon types (ceramics, MOABs…) show up about ${i * 25}s sooner. You earn ${Math.round((c.xp - 1) * 100)}% more XP.`;
+    el.innerHTML = `<div class="cn">${c.n}</div><div><div class="ct">${CHAOS_NAME[i]}</div><div class="cd">${st}</div></div>`;
+    el.onclick = () => { menuSel.chaos = i; saveSel(); play('UIClick01', { vol: 0.5 }); buildMenu(); };
     chx.appendChild(el);
   });
-  buildAudioUI($('aud'));
 }
+const CHAOS_NAME = ['Calm', 'Restless', 'Stormy', 'Wild', 'Chaotic', 'Apocalypse'];
 function gfxChips(box, after) {
   ['Auto', 'High', 'Medium', 'Low'].forEach(q => {
     const el = document.createElement('div'); el.className = 'chip' + (R3.getQuality() === q ? ' sel' : '');
@@ -2960,8 +2953,6 @@ function renderPause() {
     pi.appendChild(el);
   }
   renderStats($('pausestats'));
-  const pg = $('pgfx'); pg.innerHTML = ''; gfxChips(pg);
-  buildAudioUI($('paud'));
 }
 const thumbCache = {};
 function drawMapThumb(c, m) {
