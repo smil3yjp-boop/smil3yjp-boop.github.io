@@ -2704,7 +2704,7 @@ function toastDom(t) { const el = $('endbanner'); if (!el) return; const o = el.
 let hsCat = 'damage';
 async function openScores() {
   show('scores', true); play('UIClick01', { vol: 0.5 });
-  $('hsmode').textContent = HS.shared ? 'Shared online leaderboard' : 'Scores saved on this computer';
+  $('hsmode').textContent = (window.CLOUD && CLOUD.active) ? `Online leaderboard · signed in as ${CLOUD.user.name}` : HS.shared ? 'Shared online leaderboard' : 'Scores saved on this computer';
   const tabs = $('hstabs'); tabs.innerHTML = '';
   HS_CATS.forEach(c => { const el = document.createElement('div'); el.className = 'chip' + (c.id === hsCat ? ' sel' : ''); el.textContent = c.name; el.onclick = () => { hsCat = c.id; openScores(); }; tabs.appendChild(el); });
   const box = $('hslist'); box.innerHTML = '<div class="hsempty">Loading…</div>';
