@@ -406,6 +406,7 @@ const R3 = (() => {
       if (!/^prop$|^prop\d|propel|turbine/i.test(nm)) continue;
       const g = m.geometry; if (!g.boundingBox) g.computeBoundingBox();
       const bb = g.boundingBox, sz = bb.getSize(new THREE.Vector3()), c = bb.getCenter(new THREE.Vector3());
+      { const d = [sz.x, sz.y, sz.z].sort((a, b) => a - b); if (d[0] / d[2] > 0.3) continue; }   // only flat blades spin, not whole engine pods/housings
       const ax = sz.x <= sz.y && sz.x <= sz.z ? new THREE.Vector3(1, 0, 0) : sz.y <= sz.z ? new THREE.Vector3(0, 1, 0) : new THREE.Vector3(0, 0, 1);
       const pivot = new THREE.Object3D(); pivot.position.copy(c); m.parent.add(pivot); pivot.add(m); m.position.sub(c);
       spinners.push({ o: pivot, ax, sp: /turbine/i.test(nm) ? 4 : 22 });
@@ -502,13 +503,25 @@ const R3 = (() => {
     pools[name] = { mesh: m, n: 0, cap };
     return pools[name];
   }
+  // Effects slider: the player's skill visuals go into twin pools whose opacity follows SETTINGS.fx
+  let DIM = false, fxA = 1;
+  function twin(name) {
+    const k = name + '~'; if (pools[k]) return k;
+    const src = pools[name]; if (!src) return name;
+    const mat = src.mesh.material.clone(); mat.transparent = true; mat.depthWrite = false;
+    const p = instPool(k, src.mesh.geometry, mat, src.cap); p.baseOp = src.mesh.material.opacity ?? 1; p.aspect = src.aspect;
+    p.mesh.castShadow = false; scene.add(p.mesh);
+    return k;
+  }
   function push(name, pos, quat, scale, color) {
+    if (DIM && fxA < 0.999) { if (fxA <= 0.01) return; name = twin(name); }
     const p = pools[name]; if (!p || p.n >= p.cap) return;
     tmpM.compose(pos, quat, scale);
     p.mesh.setMatrixAt(p.n, tmpM);
     if (color && p.mesh.instanceColor !== undefined) p.mesh.setColorAt(p.n, color);
     p.n++;
   }
+  const ENEMY_HZ = /^(slime|magma|bossSlam|chargeLine)$/;
   const IDQ = new THREE.Quaternion();
   const FLATQ = new THREE.Quaternion().setFromEuler(new THREE.Euler(-Math.PI / 2, 0, 0));
   let bloonMats = {};
@@ -585,7 +598,8 @@ const R3 = (() => {
     if (lineN >= 5998) return;
     const P = lines.geometry.attributes.position.array, C = lines.geometry.attributes.color.array;
     P.set([a.x, a.y, a.z, b.x, b.y, b.z], lineN * 3);
-    C.set([col.r, col.g, col.b, col.r, col.g, col.b], lineN * 3);
+    const f = DIM ? fxA : 1; if (f <= 0.01) return;
+    C.set([col.r * f, col.g * f, col.b * f, col.r * f, col.g * f, col.b * f], lineN * 3);
     lineN += 2;
   }
   function starGeometry(R, r, n) {
@@ -837,7 +851,9 @@ const R3 = (() => {
     const bs = G.skills.find(s => s.id === 'boomer');
     if (bs && bs.lv >= 7) for (let i = 0; i < 2; i++) { const a = (bs.state.oa || 0) + i * Math.PI; tmpQ.setFromEuler(new THREE.Euler(0, a * 3, 0)); if (pools.ps_GlaiveLordGlaive) push('ps_GlaiveLordGlaive', w(P.x + Math.cos(a) * 2.6, P.y + Math.sin(a) * 2.6, 0.9), tmpQ, tmpS.set(1.5, 1, 1.5)); else push('glaive', w(P.x + Math.cos(a) * 2.6, P.y + Math.sin(a) * 2.6, 0.9), tmpQ, tmpS.set(1.6, 1.6, 1.6)); }
 
-    // projectiles
+    // projectiles (all of them are the players' skills)
+    fxA = Math.max(0, Math.min(1, window.SETTINGS && SETTINGS.fx !== undefined ? SETTINGS.fx : 1));
+    DIM = true;
     for (const pr of G.projs) {
       const pos = w(pr.x, pr.y, 0.9);
       const a = pr.rot || 0;
@@ -867,9 +883,11 @@ const R3 = (() => {
     }
     for (const e of G.eproj) { const pos = w(e.x, e.y, 0.9); push('glow', pos, camQ, tmpS.setScalar(e.r * 3.5), tmpC.setRGB(1, 0.2, 0.35)); push('glow', pos, camQ, tmpS.setScalar(e.r * 1.2), white); }
 
-    // hazards
-    for (const h of G.hazards) {
+    DIM = false;
+    // hazards (players' traps dim; boss slime/magma/slams/charges always show)
+    for (const h of G.hazards.concat(G.netHaz || [])) {
       const k = h.t / h.life;
+      DIM = !ENEMY_HZ.test(h.kind);
       if (h.kind === 'slime') { push('disc', w(h.x, h.y, 0.06), FLATQ, tmpS.set(h.r, h.r * 0.9, 1), tmpC.setRGB(0.3, 0.85, 0.15)); }
       else if (h.kind === 'magma') { push('discAdd', w(h.x, h.y, 0.07), FLATQ, tmpS.set(h.r, h.r, 1), tmpC.setRGB(0.9 * (1 - k * 0.6), 0.3 * (1 - k), 0.05)); }
       else if (h.kind === 'glue') { push('disc', w(h.x, h.y, 0.06), FLATQ, tmpS.set(h.r, h.r * 0.85, 1), h.fire ? tmpC.setRGB(1, 0.42, 0.1) : tmpC.setRGB(0.66, 0.9, 0.24)); if (h.fire && Math.random() < 0.3) push('glow', w(h.x + (Math.random() - .5) * h.r * 1.4, h.y + (Math.random() - .5) * h.r * 1.4, 0.5), camQ, tmpS.set(1.2, 1.2, 1), tmpC2.setRGB(1, 0.5, 0.1)); }
@@ -883,9 +901,10 @@ const R3 = (() => {
         for (let i = 0; i <= steps; i++) { const d = h.len * i / steps; push('discAdd', w(h.x + Math.cos(h.a) * d, h.y + Math.sin(h.a) * d, 0.07), FLATQ, tmpS.set(h.w / 2, h.w / 2, 1), tmpC.setRGB(0.25 + 0.3 * k, 0.03, 0.03)); }
       }
     }
-    // effects
+    // effects (skill effects dim; bloon pops and anything the boss/enemies made always show)
     for (const e of G.effects) {
       const k = e.t / e.life, fade = 1 - k;
+      DIM = !e.enemy && e.kind !== 'pop' && e.kind !== 'coinpop' && e.kind !== 'ghost';
       switch (e.kind) {
         case 'pop': { // simple balloon burst: quick flash + coloured shreds flying out
           const hgt = e.r * 1.15 + 0.15, c = tmpC.set(e.color || '#ffffff');
@@ -916,8 +935,10 @@ const R3 = (() => {
         case 'coinpop': push('spr_CoinSpr', w(e.x, e.y, 1 + k * 1.6), camQ, tmpS.setScalar(0.5 * fade + 0.2), white); break;
       }
     }
+    DIM = false;
     // commit pools
     for (const p of Object.values(pools)) {
+      if (p.baseOp !== undefined) p.mesh.material.opacity = p.baseOp * fxA;
       p.mesh.count = p.n; p.mesh.visible = p.n > 0;
       p.mesh.instanceMatrix.needsUpdate = true;
       if (p.mesh.instanceColor) p.mesh.instanceColor.needsUpdate = true;

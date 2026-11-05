@@ -75,7 +75,7 @@ var PROG = (() => {
     const el = $('hlevel'); if (!el) return;
     const p = progressOf(ch.id), next = PERKS.find(q => q.lv > p.l);
     el.innerHTML = `<div class="hlv"><b>LV ${p.l}</b><i><s style="width:${p.max ? 100 : Math.round(p.cur / p.need * 100)}%"></s></i><span>${p.max ? 'MAX' : `${p.cur.toLocaleString()} / ${p.need.toLocaleString()} XP`}</span></div>` +
-      `<div class="hperks">${PERKS.map(q => `<span class="${p.l >= q.lv ? 'on' : ''}" title="Lv ${q.lv}: ${q.desc}">${q.lv}</span>`).join('')}</div>` +
+      `<div class="hperks">${PERKS.map(q => `<span class="${p.l >= q.lv ? 'on' : ''}" data-tip="<b>Lv ${q.lv} · ${q.name}</b><div>${q.desc}</div><div class='tdim'>${p.l >= q.lv ? 'Unlocked' : `Unlocks at level ${q.lv}`}</div>">${q.lv}</span>`).join('')}</div>` +
       (next ? `<div class="hnext">Next at Lv ${next.lv}: <b>${next.name}</b> — ${next.desc}</div>` : `<div class="hnext"><b>Mastered</b> — every perk unlocked</div>`);
   }
 

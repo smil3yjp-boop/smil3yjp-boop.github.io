@@ -5,7 +5,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Bloonstone SurvivorS</title>
-<link rel="stylesheet" href="style.css?v=27">
+<link rel="stylesheet" href="style.css?v=28">
 </head>
 <body>
 <canvas id="gl"></canvas>
@@ -15,7 +15,7 @@
 <div id="menu" class="overlay menu2">
   <header class="mtop">
     <div class="brand"><div class="logo">BLOONSTONE</div><div class="logo sub">SURVIVORS</div></div>
-    <div class="mtopr"><div id="pbar" class="pbar hidden"></div><button id="knowbtn" class="btn hsbtn">🧠 KNOWLEDGE</button><button id="achbtn" class="btn hsbtn">🎖 ACHIEVEMENTS</button><button id="hsbtn" class="btn hsbtn">🏆 HIGHSCORES</button><button id="codexbtn" class="btn hsbtn" title="Codex">📖</button><button id="histbtn" class="btn hsbtn" title="Run history">📜</button><button id="setbtn" class="btn hsbtn">⚙</button>
+    <div class="mtopr"><div id="pbar" class="pbar hidden"></div><button id="knowbtn" class="btn hsbtn ibtn" data-tip="<b>Monkey Knowledge</b><div>Permanent upgrades bought with Monkey Money</div>"><img src="assets/ui/menu/knowledge.png"><span>KNOWLEDGE</span></button><button id="achbtn" class="btn hsbtn ibtn" data-tip="<b>Achievements</b>"><img src="assets/ui/menu/achievements.png"><span>ACHIEVEMENTS</span></button><button id="hsbtn" class="btn hsbtn ibtn" data-tip="<b>Highscores</b>"><img src="assets/ui/menu/highscores.png"><span>HIGHSCORES</span></button><button id="codexbtn" class="btn hsbtn iconly" data-tip="<b>Codex</b><div>Every bloon, tower, relic and boss you've met</div>"><img src="assets/ui/menu/codex.png"></button><button id="histbtn" class="btn hsbtn iconly" data-tip="<b>Run history</b><div>Your last 20 runs and their builds</div>"><img src="assets/ui/menu/history.png"></button><button id="setbtn" class="btn hsbtn iconly" data-tip="<b>Settings</b>"><img src="assets/ui/menu/settings.png"></button>
     <div class="mm" title="Monkey Money — earned every run, spent on hero skins"><img src="assets/ui/heroes/mm.png" onerror="this.style.display='none'"><span id="mmv">0</span></div></div>
   </header>
   <main class="mgrid">
@@ -81,6 +81,7 @@
       <div class="pcol"><h3>Towers</h3><div id="pskills" class="pskills"></div><h3>Relics</h3><div id="prelics" class="pitems"></div><div id="psets" class="psets"></div><h3>Items</h3><div id="pitems" class="pitems"></div></div>
       <div class="pcol"><h3>Stats</h3><div id="pausestats" class="stats"></div></div>
     </div>
+    <div id="pfx" class="pfx"></div>
     <div class="row center">
       <button id="resume" class="btn big">Resume</button>
       <button id="psetbtn" class="btn">Settings</button>
@@ -139,17 +140,17 @@
 
 <div id="loading" class="overlay"><div class="lvtitle">Inflating bloons…</div></div>
 
-<script src="lib/three.js?v=27"></script>
-<script src="loader.js?v=27"></script>
-<script src="maps.js?v=27"></script>
-<script src="assets/sprites.js?v=27"></script>
-<script src="assets/bloon_sprites.js?v=27"></script>
-<script src="assets/btd_models.js?v=27"></script>
-<script src="assets/btd_rigs.js?v=27"></script>
-<script src="highscores_config.js?v=27" onerror=""></script><script src="assets/btd_fx.js?v=27"></script><script src="assets/btd_proj.js?v=27"></script><script src="assets/relic_tex.js?v=27"></script><script src="assets/bloon_variants.js?v=27"></script><script src="assets/btd_fort.js?v=27"></script>
-<script src="assets/btd_audio.js?v=27"></script>
-<script src="assets/music.js?v=27"></script>
-<script src="render3d.js?v=27"></script>
-<script src="game3d.js?v=27"></script><script src="meta.js?v=27"></script><script src="progress.js?v=27"></script><script src="discord_config.js?v=27"></script><script src="discord_link.js?v=27"></script><script src="net.js?v=27"></script>
+<script src="lib/three.js?v=28"></script>
+<script src="loader.js?v=28"></script>
+<script src="maps.js?v=28"></script>
+<script src="assets/sprites.js?v=28"></script>
+<script src="assets/bloon_sprites.js?v=28"></script>
+<script src="assets/btd_models.js?v=28"></script>
+<script src="assets/btd_rigs.js?v=28"></script>
+<script src="highscores_config.js?v=28" onerror=""></script><script src="assets/btd_fx.js?v=28"></script><script src="assets/btd_proj.js?v=28"></script><script src="assets/relic_tex.js?v=28"></script><script src="assets/bloon_variants.js?v=28"></script><script src="assets/btd_fort.js?v=28"></script>
+<script src="assets/btd_audio.js?v=28"></script>
+<script src="assets/music.js?v=28"></script>
+<script src="render3d.js?v=28"></script>
+<script src="game3d.js?v=28"></script><script src="meta.js?v=28"></script><script src="progress.js?v=28"></script><script src="discord_config.js?v=28"></script><script src="discord_link.js?v=28"></script><script src="net.js?v=28"></script>
 </body>
 </html>

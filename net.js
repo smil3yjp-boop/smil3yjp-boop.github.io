@@ -236,7 +236,7 @@ var NET = (() => {
     const tw = G.skills.filter(k => !k.hero && G.towerPos[k.id]).map(k => [k.id, k.lv, k.path3 || 0, k.path5 || 0, r2(G.towerPos[k.id].x), r2(G.towerPos[k.id].y), k.fired || 0, k.paragon ? 1 : 0]);
     const sm = G.summons.map(s => [s.kind, r2(s.x), r2(s.y), s.face !== undefined ? r2(s.face) : null, s.sk ? s.sk.lv : 1, s.sp || 0, s.anim || 0, s.sk && !s.sk.hero ? s.sk.id : 0, s.sk ? s.sk.path3 || 0 : 0, s.sk ? s.sk.path5 || 0 : 0, r2(s.dive || 0), s.bird ? 1 : 0]);
     const pr = []; for (let i = G.projs.length - 1; i >= 0 && pr.length < 70; i--) { const q = G.projs[i]; pr.push([q.spr || 0, q.kind, r2(q.x), r2(q.y), r1(q.vx), r1(q.vy), r2(q.rot || 0), r2(q.r)]); }
-    const fx = []; for (const e of G.effects) { if (e.net || e.sent || e.kind === 'pop' || e.kind === 'coinpop' || e.kind === 'ghost' || fx.length >= 25) continue; e.sent = true; fx.push([e.kind, r2(e.x), r2(e.y), r2(e.r || 1), e.color || 0, r2(e.life - e.t), e.x2 !== undefined ? r2(e.x2) : null, e.y2 !== undefined ? r2(e.y2) : null]); }
+    const fx = []; for (const e of G.effects) { if (e.net || e.sent || e.enemy || e.kind === 'pop' || e.kind === 'coinpop' || e.kind === 'ghost' || fx.length >= 25) continue; e.sent = true; fx.push([e.kind, r2(e.x), r2(e.y), r2(e.r || 1), e.color || 0, r2(e.life - e.t), e.x2 !== undefined ? r2(e.x2) : null, e.y2 !== undefined ? r2(e.y2) : null]); }
     const sk = selectedSkin(G.ch);
     return { t: 'p', x: r2(p.x), y: r2(p.y), vx: r1(p.vx), vy: r1(p.vy), fa: r2(p.faceA ?? Math.PI / 2), dt: r2(p.dashT), iv: r2(p.inv), ht: r2(p.hurtT), bt: p.buffT > 0 ? 1 : 0, dn: p.down ? 1 : 0, rv: r2(p.rev || 0),
       hp: Math.round(p.hp), mh: Math.round(G.stats.maxhp), k: G.ch.model, sk: sk ? sk.key : null, st: G.state, g: Math.floor(G.gold), cc: chestCost(), xm: r2(G.stats.xp), mg: r2(G.stats.magnet), tw, sm, pr, fx };
@@ -336,8 +336,8 @@ var NET = (() => {
       wob: Math.random() * 6.28, elite: false, kx: 0, ky: 0, spd: bloonSpd(def), pend: [], base: null };
   }
   function popFx(b) {
-    G.effects.push({ kind: 'pop', x: b.x, y: b.y, r: b.r, t: 0, life: 0.16, color: b.def.color, net: true });
-    if (b.def.moab) { G.effects.push({ kind: 'expl', x: b.x, y: b.y, r: b.r * 1.4, t: 0, life: 0.7, net: true }); shake(0.35); play(b.type === 'zomg' || b.type === 'bfb' ? 'ZomgDestroyed01' : 'MoabDestroyed0*', { vol: 0.9, gap: 0.1, key: 'moabdie' }); }
+    G.effects.push({ kind: 'pop', x: b.x, y: b.y, r: b.r, t: 0, life: 0.16, color: b.def.color, net: true, enemy: true });
+    if (b.def.moab) { G.effects.push({ kind: 'expl', x: b.x, y: b.y, r: b.r * 1.4, t: 0, life: 0.7, net: true, enemy: true }); shake(0.35); play(b.type === 'zomg' || b.type === 'bfb' ? 'ZomgDestroyed01' : 'MoabDestroyed0*', { vol: 0.9, gap: 0.1, key: 'moabdie' }); }
     else if (b.type === 'ceramic') play('CeramicDestroyed0*', { vol: 0.45, gap: 0.05 });
     else sfxPop(false);
   }
@@ -438,7 +438,7 @@ var NET = (() => {
       if (p.down) continue;
       if (h.kind === 'slime') { if (Math.hypot(p.x - h.x, p.y - h.y) < h.r) p.slowT = 0.3; }
       else if (h.kind === 'magma') { h.tick = (h.tick || 0) - dt; if (h.tick <= 0 && Math.hypot(p.x - h.x, p.y - h.y) < h.r + p.r * 0.5) { h.tick = 0.5; hurtPlayer(8 * G.chaos.dmg); } }
-      else if (h.kind === 'bossSlam' && h.t >= h.life && !h.done) { h.done = true; G.effects.push({ kind: 'boom', x: h.x, y: h.y, r: h.r, t: 0, life: 0.4, color: '#ff3030', net: true }); if (Math.hypot(p.x - h.x, p.y - h.y) < h.r + p.r * 0.5) hurtPlayer(h.dmg); }
+      else if (h.kind === 'bossSlam' && h.t >= h.life && !h.done) { h.done = true; G.effects.push({ kind: 'boom', x: h.x, y: h.y, r: h.r, t: 0, life: 0.4, color: '#ff3030', net: true, enemy: true }); if (Math.hypot(p.x - h.x, p.y - h.y) < h.r + p.r * 0.5) hurtPlayer(h.dmg); }
     }
     for (const q of G.pickups) if (q.net && q.tx !== undefined) { q.x += (q.tx - q.x) * k; q.y += (q.ty - q.y) * k; q.t += dt; if (q.kind === 'chest') q.afford = q.free || G.gold >= chestCost(); }
   };
@@ -499,7 +499,7 @@ var NET = (() => {
       let stole = 0;
       if (p.buffT > 0 && p.buffT < 1e8) { p.buffT = 0; stole++; }
       for (const k in G.buf) if (G.buf[k] > 0) { G.buf[k] = 0; stole++; }
-      G.drainT = 6; G.effects.push({ kind: 'ring', x: p.x, y: p.y, r: 3, t: 0, life: 0.6, color: '#a040ff' });
+      G.drainT = 6; G.effects.push({ kind: 'ring', x: p.x, y: p.y, r: 3, t: 0, life: 0.6, color: '#a040ff', enemy: true });
       play('BossLychEtherealize', { vol: 0.7 }); toast('☠ The Lych drains your power!' + (stole ? ' (buffs stolen)' : ''), '#c070ff');
     } else if (m.id === 'phayze') { play('BossPhayzeSummonPortal', { vol: 0.7 }); toast('☠ Phayze warps reality — you are blinded!', '#33ddff'); }
     else if (m.id === 'vortex') { play('VortexTornado0*', { vol: 0.7 }); toast('☠ Vortex shorts out your towers!', '#9fd6ff'); }
@@ -511,7 +511,7 @@ var NET = (() => {
     META.bossKill({ def, x: m.x, y: m.y, dashAtSpawn: G.boss && G.boss.dashAtSpawn !== undefined ? G.boss.dashAtSpawn : G.dashesUsed });
     if (G.boss) G.boss.dead = true;
     shake(1); play(BOSS_SFX[def.id][1], { vol: 1 });
-    G.effects.push({ kind: 'expl', x: m.x, y: m.y, r: 4, t: 0, life: 0.9, net: true });
+    G.effects.push({ kind: 'expl', x: m.x, y: m.y, r: 4, t: 0, life: 0.9, net: true, enemy: true });
     setTimeout(() => G && toast(`${def.name} DEFEATED!  Stand in a portal and press ${keyName(SETTINGS.keys.interact)}`, '#ffe39a'), 600);
   }
 

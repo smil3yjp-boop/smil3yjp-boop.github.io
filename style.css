@@ -303,3 +303,24 @@ input[type=range]{width:100%;accent-color:#f0a93a}
 .hirl{display:flex;flex-wrap:wrap;gap:4px;margin-bottom:6px}.hirl img{width:34px;height:34px}
 .hiit{display:flex;flex-wrap:wrap;gap:6px}.hiit span{font-size:11px;padding:2px 8px;border-radius:999px;background:rgba(255,255,255,.08)}
 .coop.hidden,.pbar.hidden,.coopcards.hidden,.hib.hidden{display:none}
+/* tooltips */
+.tip{position:fixed;z-index:9999;pointer-events:none;max-width:300px;padding:9px 11px;border-radius:10px;background:rgba(18,10,26,.96);border:1px solid rgba(232,194,122,.55);box-shadow:0 6px 18px rgba(0,0,0,.55);font-size:12.5px;color:#e8e0d0;line-height:1.4}
+.tip.hidden{display:none}
+.tip b{color:#ffe39a}.tip > b:first-child{display:block;font-size:14px;margin-bottom:2px}
+.tip .tdim{color:var(--dim);font-size:11.5px}
+.tip .trar{display:inline-block;font-size:10px;font-weight:800;padding:0 5px;border-radius:5px;background:rgba(255,255,255,.1);color:#cbbfa8;margin-right:4px}
+.tip .tset{margin-top:5px;font-size:11.5px}.tip .tset span{opacity:.5}.tip .tset span.on{opacity:1}
+/* effects slider */
+.fxs{display:flex;align-items:center;gap:8px;min-width:200px}.fxs input{flex:1;accent-color:#ffb02e}.fxs span{min-width:40px;text-align:right;font-weight:800;color:#ffe39a}
+.pfx{margin:8px 0 2px}.pfx .srow{background:rgba(255,255,255,.04);border-radius:10px;padding:6px 10px}
+/* menu buttons with BTD6 icons */
+.hsbtn.ibtn{display:inline-flex;align-items:center;gap:6px;padding-left:8px}
+.hsbtn.ibtn img{width:30px;height:30px;object-fit:contain;margin:-6px 0;filter:drop-shadow(0 1px 2px rgba(0,0,0,.5))}
+.hsbtn.iconly{padding:3px 6px;display:inline-flex;align-items:center;justify-content:center}
+.hsbtn.iconly img{width:34px;height:34px;object-fit:contain;margin:-4px 0;filter:drop-shadow(0 1px 2px rgba(0,0,0,.5))}
+.mtopr{gap:8px}
+.hsbtn.ibtn{font-size:14px;padding:8px 13px 8px 7px;letter-spacing:1px}
+/* narrower windows (most Discord Activity sizes): icons only, names in the tooltip */
+@media (max-width:1500px){ .hsbtn.ibtn span{display:none} .hsbtn.ibtn{padding:3px 6px;gap:0} .hsbtn.ibtn img{width:34px;height:34px;margin:-4px 0} }
+.hlevel{position:relative;z-index:3}
+.hinfo .hlevel{pointer-events:auto}

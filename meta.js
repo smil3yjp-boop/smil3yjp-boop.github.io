@@ -5,7 +5,7 @@
 // ================================================================ settings + key bindings
 const DEFAULT_KEYS = { up: 'KeyW', down: 'KeyS', left: 'KeyA', right: 'KeyD', dash: 'Space', ability: 'KeyR', interact: 'KeyE', aim: 'KeyQ', pause: 'Escape' };
 const KEY_LABEL = { up: 'Move up', down: 'Move down', left: 'Move left', right: 'Move right', dash: 'Dash', ability: 'Hero ability', interact: 'Enter portal', aim: 'Toggle mouse aim', pause: 'Pause' };
-let SETTINGS = { shake: true, cbLabels: false, dmgNumbers: true, keys: Object.assign({}, DEFAULT_KEYS) };
+let SETTINGS = { shake: true, cbLabels: false, dmgNumbers: true, fx: 1, keys: Object.assign({}, DEFAULT_KEYS) };
 try { const s = JSON.parse(localStorage.getItem('bss_settings') || '{}'); SETTINGS = Object.assign(SETTINGS, s); SETTINGS.keys = Object.assign({}, DEFAULT_KEYS, s.keys || {}); } catch (e) { }
 function saveSettings() { try { localStorage.setItem('bss_settings', JSON.stringify(SETTINGS)); } catch (e) { } updateHint(); }
 // the controls line under the menu follows your key bindings
@@ -201,11 +201,66 @@ function drawRelics(u, yTop) {
     ctx.fillStyle = 'rgba(10,6,16,.75)'; roundRect(x, y, is, is, 6 * u); ctx.fill();
     ctx.strokeStyle = S ? S.color : '#ffb02e'; ctx.lineWidth = 2 * u; roundRect(x, y, is, is, 6 * u); ctx.stroke();
     const im = uiImg('relic/' + r.icon); if (im) ctx.drawImage(im, x + 2 * u, y + 2 * u, is - 4 * u, is - 4 * u);
+    HUD_TIPS.push({ x, y, w: is, h: is, tip: relicTip(r) });
   });
   // set progress
   const sets = Object.keys(RELIC_SETS).map(k => [k, setCount(k)]).filter(x => x[1]);
   sets.forEach(([k, n], i) => text(`${RELIC_SETS[k].name} ${n}/4`, x0 + i * 110 * u, y0 - 22 * u, 11 * u, RELIC_SETS[k].color));
   return y0 - 30 * u;
+}
+
+// ================================================================ tooltips (hover anything with data-tip, or HUD icons)
+const HUD_TIPS = [];
+const tipEsc = s => String(s).replace(/[<>&]/g, c => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;' })[c]);
+function relicTip(r) {
+  const S = r.set && RELIC_SETS[r.set];
+  let h = `<b>${tipEsc(r.name)}</b><div>${tipEsc(r.desc)}</div>`;
+  if (S) { const n = G ? setCount(r.set) : 0; h += `<div class="tset" style="color:${S.color}"><b>${S.name} set ${n}/4</b><br><span class="${n >= 2 ? 'on' : ''}">(2) ${tipEsc(S.b2)}</span><br><span class="${n >= 4 ? 'on' : ''}">(4) ${tipEsc(S.b4)}</span></div>`; }
+  else h += '<div class="tdim">Boss essence</div>';
+  return h;
+}
+function itemTip(it) {
+  const L = it.lines || [], seen = {};
+  for (const [r, d] of L) { const k = r + '|' + d; seen[k] = (seen[k] || 0) + 1; }
+  const rows = Object.entries(seen).map(([k, n]) => { const [r, d] = k.split('|'); return `<div><span class="trar">${r}</span> ${tipEsc(d)}${n > 1 ? ` <b>×${n}</b>` : ''}</div>`; });
+  return `<b>${tipEsc(it.name)}${it.n > 1 ? ' ×' + it.n : ''}</b>${it.card && it.card.heroCard ? '<div class="tdim">Signature hero card</div>' : ''}${rows.join('') || '<div class="tdim">Attribute upgrade</div>'}`;
+}
+function towerTip(s) {
+  if (s.hero) return `<b>${tipEsc(s.def.name)}</b><div class="tdim">Hero attack · upgraded by level-up cards</div><div>${tipEsc(s.def.desc)}</div><div>Damage ×${G.stats.heroDmg.toFixed(2)} · extra shots ${G.stats.heroExtra}</div>`;
+  const path = [s.path3, s.path5].filter(Boolean).map(L => PATHS[s.id] ? PATHS[s.id][{ T: 0, M: 1, B: 2 }[L]][0] : L);
+  return `<b>${tipEsc(s.paragon ? PARAGONS[s.id] || s.def.name : s.def.name)}</b><div class="tdim">Level ${s.lv}/${MAXLV}${path.length ? ' · ' + path.join(' → ') : ''}</div><div>${tipEsc(s.lv > 1 ? s.def.lv[s.lv - 2] : s.def.desc)}</div><div class="tdim">${(s.def.tags || []).map(t => TAGNAME[t] || t).join(' · ')}</div>`;
+}
+const TIP = document.createElement('div'); TIP.className = 'tip hidden'; document.body.appendChild(TIP);
+function showTip(html, x, y) {
+  if (TIP.dataset.h !== html) { TIP.innerHTML = html; TIP.dataset.h = html; }
+  TIP.classList.remove('hidden');
+  const w = TIP.offsetWidth, h = TIP.offsetHeight;
+  TIP.style.left = Math.min(innerWidth - w - 8, x + 16) + 'px';
+  TIP.style.top = (y + 16 + h > innerHeight ? y - h - 12 : y + 16) + 'px';
+}
+addEventListener('mousemove', e => {
+  const el = e.target && e.target.closest ? e.target.closest('[data-tip]') : null;
+  if (el) { TIP.src = el; TIP.dataset.src = 1; return showTip(el.dataset.tip, e.clientX, e.clientY); }
+  TIP.dataset.src = '';
+  if (G && G.state === 'play' && (e.target === cv || e.target.id === 'gl')) {
+    const mx = e.clientX * DPR, my = e.clientY * DPR;
+    const h = HUD_TIPS.find(r => mx >= r.x && mx <= r.x + r.w && my >= r.y && my <= r.y + r.h);
+    if (h) return showTip(h.tip, e.clientX, e.clientY);
+  }
+  TIP.classList.add('hidden');
+});
+addEventListener('mousedown', () => TIP.classList.add('hidden'));
+addEventListener('keydown', () => TIP.classList.add('hidden'));
+// hide if whatever it was describing goes away (menus closing, HUD changing)
+setInterval(() => { if (!TIP.classList.contains('hidden') && TIP.dataset.src && TIP.src && (!TIP.src.isConnected || TIP.src.offsetParent === null)) TIP.classList.add('hidden'); }, 250);
+
+// ================================================================ Effects slider (fade your own skill visuals; enemies always show)
+function fxSlider(el) {
+  if (!el) return;
+  const v = Math.round((SETTINGS.fx ?? 1) * 100);
+  el.innerHTML = `<div class="srow fxrow"><div><b>Skill effects</b><div class="sd">Fade your towers' and hero's shots and effects. Bloons, bosses and their attacks always show.</div></div><div class="fxs"><input type="range" min="0" max="100" step="5" value="${v}"><span>${v}%</span></div></div>`;
+  const r = el.querySelector('input'), lab = el.querySelector('span');
+  r.oninput = () => { SETTINGS.fx = r.value / 100; lab.textContent = r.value + '%'; saveSettings(); };
 }
 
 // ================================================================ Monkey Knowledge (permanent upgrades bought with Monkey Money)
@@ -380,10 +435,10 @@ function renderAch() {
 let rebinding = null;
 function renderSettings() {
   const tog = (id, label, desc) => `<div class="srow"><div><b>${label}</b><div class="sd">${desc}</div></div><button class="btn small tog${SETTINGS[id] ? ' on' : ''}" data-s="${id}">${SETTINGS[id] ? 'ON' : 'OFF'}</button></div>`;
-  $('setlist').innerHTML = `<h3>Sound</h3><div id="setaud" class="aud"></div><h3>Graphics</h3><div id="setgfx" class="chips"></div><h3>Gameplay</h3>` + tog('shake', 'Screen shake', 'Camera shake on explosions and hits') + tog('cbLabels', 'Colourblind bloon labels', 'Shows a letter on nearby bloons (R, B, G, Y, P… plus c/r/f for camo, regrow, fortified)') + tog('dmgNumbers', 'Damage numbers', 'Floating damage numbers on hits') +
+  $('setlist').innerHTML = `<h3>Sound</h3><div id="setaud" class="aud"></div><h3>Graphics</h3><div id="setgfx" class="chips"></div><div id="setfx"></div><h3>Gameplay</h3>` + tog('shake', 'Screen shake', 'Camera shake on explosions and hits') + tog('cbLabels', 'Colourblind bloon labels', 'Shows a letter on nearby bloons (R, B, G, Y, P… plus c/r/f for camo, regrow, fortified)') + tog('dmgNumbers', 'Damage numbers', 'Floating damage numbers on hits') +
     `<h3>Controls</h3>` + Object.keys(DEFAULT_KEYS).map(a => `<div class="srow"><div><b>${KEY_LABEL[a]}</b></div><button class="btn small key${rebinding === a ? ' on' : ''}" data-k="${a}">${rebinding === a ? 'Press a key…' : keyName(SETTINGS.keys[a])}</button></div>`).join('') +
     `<div class="srow"><div class="sd">Gamepad: left stick move · A/RB dash · X/LB ability · B portal · Y aim · Start pause. Touch: drag on the left to move, buttons on the right.</div><button class="btn small" id="keyreset">Reset keys</button></div>`;
-  buildAudioUI($('setaud')); gfxChips($('setgfx'));
+  buildAudioUI($('setaud')); gfxChips($('setgfx')); fxSlider($('setfx'));
   $('setlist').querySelectorAll('[data-s]').forEach(b => b.onclick = () => { SETTINGS[b.dataset.s] = !SETTINGS[b.dataset.s]; saveSettings(); renderSettings(); play('UIClick01', { vol: 0.4 }); });
   $('setlist').querySelectorAll('[data-k]').forEach(b => b.onclick = () => { rebinding = b.dataset.k; renderSettings(); });
   $('keyreset').onclick = () => { SETTINGS.keys = Object.assign({}, DEFAULT_KEYS); saveSettings(); renderSettings(); };

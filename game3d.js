@@ -713,7 +713,7 @@ function coopSpread(P) {
   for (let r = 2.2; r > 0.4; r -= 0.4) { const x = P.x + Math.cos(a) * r, y = P.y + Math.sin(a) * r; if (G.arena.free(x, y, 0.7)) { P.x = x; P.y = y; break; } }
   G.cam.x = P.x; G.cam.y = P.y;
 }
-function xpFor(l) { return Math.floor(6 + l * 5 + Math.pow(l, 1.55) * 2.2); }
+function xpFor(l) { return Math.floor((6 + l * 5 + Math.pow(l, 1.55) * 2.2) * (l >= 50 ? 2 : 1)); }
 
 // ---------------------------------------------------------------- skills
 function addSkill(id) {
@@ -1426,6 +1426,9 @@ function regrowTick(b, dt) {
   G.effects.push({ kind: 'ring', x: b.x, y: b.y, r: b.r * 2.2, t: 0, life: 0.35, color: '#ff7ab8' });
 }
 function popBloon(b, overflow) {
+  const fx0 = G.effects.length; try { popBloon0(b, overflow); } finally { for (let i = fx0; i < G.effects.length; i++) G.effects[i].enemy = true; }
+}
+function popBloon0(b, overflow) {
   b.dead = true;
   const own = NET.host ? b.lastOwner : null;
   if (!own) { rs().pops++; META.pop(b); }
@@ -1602,7 +1605,7 @@ function bossMechanic(b, dt) {
     if (p.buffT > 0 && p.buffT < 1e8) { p.buffT = 0; stole.push('brew'); }
     for (const k in G.buf) if (G.buf[k] > 0) { G.buf[k] = 0; stole.push(k); }
     G.drainT = ph2 ? 8 : 6; b.drainFx = G.drainT;
-    b.hp = Math.min(b.maxhp, b.hp + b.maxhp * (0.03 + 0.01 * stole.length));
+    b.hp = Math.min(b.maxhp, b.hp + b.maxhp * (0.015 + 0.005 * stole.length));
     G.effects.push({ kind: 'ring', x: p.x, y: p.y, r: 3, t: 0, life: 0.6, color: '#a040ff' });
     play('BossLychEtherealize', { vol: 0.7 }); toast('☠ The Lych drains your power!' + (stole.length ? ' (buffs stolen)' : ''), '#c070ff');
   } else if (id === 'phayze') {
@@ -1620,6 +1623,9 @@ function bossMechanic(b, dt) {
   } else b.mechT = 99;
 }
 function killBoss(b) {
+  const fx0 = G.effects.length; try { killBoss0(b); } finally { for (let i = fx0; i < G.effects.length; i++) G.effects[i].enemy = true; }
+}
+function killBoss0(b) {
   b.dead = true; G.bossDone = true; G.bossKills++; META.bossKill(b);
   shake(1);
   for (let i = 0; i < 30; i++) dropSoul(b.x + rnd(-3, 3), b.y + rnd(-3, 3), 6 * (1 + G.loop));
@@ -1783,6 +1789,7 @@ function update(dt) {
   for (const b of G.bloons) if (!b.dead) G.hash.add(b);
 
   // bloons
+  const fxEnemy0 = G.effects.length;
   const A = G.arena;
   if (NET.guest) NET.guestWorldStep(dt);
   else for (const b of G.bloons) {
@@ -1861,6 +1868,7 @@ function update(dt) {
   }
   if (G.towerStunT > 0) for (const t of Object.values(G.towerPos)) if (Math.random() < dt * 6) G.effects.push({ kind: 'spark', x: t.x + rnd(-0.5, 0.5), y: t.y + rnd(-0.5, 0.5), h: 1.2, r: 0.5, t: 0, life: 0.15, color: '#9fd6ff' });
 
+  for (let i = fxEnemy0; i < G.effects.length; i++) G.effects[i].enemy = true;
   // projectiles
   for (const pr of G.projs) {
     pr.t += dt; pr.life -= dt; SRC = pr.src || 'hero';
@@ -1934,7 +1942,7 @@ function update(dt) {
     } else if (h.kind === 'delayed' && h.t >= h.life) {
       explode(h.x, h.y, h.r, h.dmg, h.tags, { stun: h.stun }); play('Explosion0*', { vol: 0.4, gap: 0.06 });
     } else if (h.kind === 'bossSlam' && h.t >= h.life) {
-      G.effects.push({ kind: 'boom', x: h.x, y: h.y, r: h.r, t: 0, life: 0.4, color: '#ff3030' }); shake(0.3);
+      G.effects.push({ kind: 'boom', x: h.x, y: h.y, r: h.r, t: 0, life: 0.4, color: '#ff3030', enemy: true }); shake(0.3);
       if (Math.hypot(p.x - h.x, p.y - h.y) < h.r + p.r * 0.5) hurtPlayer(h.dmg);
     }
   }
@@ -2442,6 +2450,7 @@ function drawHUD() {
   });
 
   // ---- bottom-left: relics, then collected items (small icons + count)
+  HUD_TIPS.length = 0;
   const items = Object.values(G.items);
   { const is0 = 34 * u, ig0 = 6 * u, rows0 = Math.ceil(items.length / 6); drawRelics(u, items.length ? H - 18 * u - rows0 * (is0 + ig0) - 18 * u : H - 18 * u); }
   drawCombo(u); drawCbLabels(u); drawTouch(u);
@@ -2456,6 +2465,7 @@ function drawHUD() {
       if (sp) drawSprite(ctx, sp, x + is / 2, y + is / 2, is * 0.86);
       else text(it.name[0], x + is / 2, y + is * 0.68, 16 * u, '#ffe39a', 'center');
       if (it.n > 1) text('x' + it.n, x + is - 2 * u, y + is - 3 * u, 11 * u, '#fff', 'right');
+      HUD_TIPS.push({ x, y, w: is, h: is, tip: itemTip(it) });
     });
   }
 
@@ -2714,7 +2724,7 @@ function chooseCard(o, info) {
     G.pathPick = false; o.from.pathPicked = true; chooseCard(o.from, cardInfo(o.from)); return;
   } else if (o.type === 'up') { o.sk.lv++; G.stats.skillBonus = G.stats.skillBonus || {}; o.sk.def = Object.assign({}, o.sk.def, { dmg: o.sk.def.dmg * (1 + (R.m - 1) * 0.15) }); }
   else if (o.type === 'new') addSkill(o.id);
-  else { o.c.apply(G.stats, info.v, G); const it = G.items[o.c.id] || (G.items[o.c.id] = { icon: o.c.icon, name: o.c.name, n: 0, card: o.c }); it.n++; it.rar = Math.max(it.rar || 0, o.rar); }
+  else { o.c.apply(G.stats, info.v, G); const it = G.items[o.c.id] || (G.items[o.c.id] = { icon: o.c.icon, name: o.c.name, n: 0, card: o.c, lines: [] }); it.n++; it.rar = Math.max(it.rar || 0, o.rar); (it.lines || (it.lines = [])).push([RARITY[o.rar || 0].name, info.desc]); }
   play('UIClick01', { vol: 0.5 });
   show('levelup', false);
   G.state = 'play';
@@ -3079,14 +3089,15 @@ function renderPause() {
     const nl = s.hero ? 5 : MAXLV, cur = s.hero ? G.stats.heroExtra : s.lv;
     el.innerHTML = `<canvas width="80" height="80"></canvas><div class="nm">${s.def.name}${s.hero ? ' <span style="color:#7fd8ff;font-size:10px">HERO ATTACK · x' + G.stats.heroDmg.toFixed(2) + ' dmg</span>' : ''}<div style="font-size:11px;color:var(--dim);font-weight:400">${!s.hero && s.lv > 1 ? s.def.lv[s.lv - 2] : s.def.desc}</div></div><div class="pips">${Array.from({ length: nl }, (_, i) => `<i class="${i < cur ? 'on' : ''}"></i>`).join('')}</div>`;
     spriteToCanvas(el.querySelector('canvas'), pickSpr(s.def.icon), '#a7794a');
+    el.dataset.tip = towerTip(s);
     ps.appendChild(el);
   }
   const pr = $('prelics'); pr.innerHTML = (G.relics || []).length ? '' : '<span style="color:var(--dim);font-size:12px">No relics yet — they drop from chests, blimps and bosses</span>';
-  for (const id of G.relics || []) { const r = relicById(id), S = r.set && RELIC_SETS[r.set]; const el = document.createElement('div'); el.className = 'pitem'; el.style.borderColor = S ? S.color : '#ffb02e'; el.title = `${r.name} — ${r.desc}${S ? ' (' + S.name + ' set)' : ''}`; el.innerHTML = `<img src="assets/ui/relic/${r.icon}.png" style="width:100%;height:100%;object-fit:contain">`; pr.appendChild(el); }
+  for (const id of G.relics || []) { const r = relicById(id), S = r.set && RELIC_SETS[r.set]; const el = document.createElement('div'); el.className = 'pitem'; el.style.borderColor = S ? S.color : '#ffb02e'; el.dataset.tip = relicTip(r); el.innerHTML = `<img src="assets/ui/relic/${r.icon}.png" style="width:100%;height:100%;object-fit:contain">`; pr.appendChild(el); }
   $('psets').innerHTML = Object.entries(RELIC_SETS).map(([k, S]) => { const n = setCount(k); return n ? `<div style="color:${S.color}"><b>${S.name} ${n}/4</b> · <span style="opacity:${n >= 2 ? 1 : .5}">(2) ${S.b2}</span> · <span style="opacity:${n >= 4 ? 1 : .5}">(4) ${S.b4}</span></div>` : ''; }).join('');
   const pi = $('pitems'); pi.innerHTML = Object.keys(G.items).length ? '' : '<span style="color:var(--dim);font-size:12px">No items yet</span>';
   for (const it of Object.values(G.items)) {
-    const el = document.createElement('div'); el.className = 'pitem'; el.title = it.name;
+    const el = document.createElement('div'); el.className = 'pitem'; el.dataset.tip = itemTip(it);
     el.style.borderColor = ['#9a9a9a', '#5fd35f', '#4aa3ff', '#c35cff', '#ffb02e'][it.rar || 0];
     el.innerHTML = `<canvas width="64" height="64"></canvas>${it.n > 1 ? `<b>x${it.n}</b>` : ''}`;
     const c = el.querySelector('canvas'), spn = (it.icon || []).find(n => sprite(n));
@@ -3094,6 +3105,7 @@ function renderPause() {
     pi.appendChild(el);
   }
   renderStats($('pausestats'));
+  fxSlider($('pfx'));
 }
 const thumbCache = {};
 function drawMapThumb(c, m) {
