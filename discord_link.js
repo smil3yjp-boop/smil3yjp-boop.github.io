@@ -105,7 +105,10 @@
     } catch (e) {
       console.warn('Discord sign-in failed; saving locally only', e);
       const why = (e && (e.message || e.code)) || String(e);
-      note('⚠ OFFLINE', `Sign-in failed while ${step} (${why}). Progress is only saved on this device.`);
+      CLOUD.error = `Sign-in failed while ${step}: ${why}`;
+      const el = document.createElement('div'); el.className = 'achpop'; el.style.cssText = 'cursor:pointer;max-width:520px;pointer-events:auto';
+      el.innerHTML = '<div class="at">⚠ OFFLINE — click to close</div><div class="ad"></div>'; el.querySelector('.ad').textContent = CLOUD.error + '. Progress is only saved on this device.';
+      el.onclick = () => el.remove(); document.body.appendChild(el);
     }
   })();
 })();
