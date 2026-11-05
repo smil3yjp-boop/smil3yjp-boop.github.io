@@ -3,7 +3,7 @@
 'use strict';
 
 // co-op lives in net.js; this stand-in keeps the game running if that file is missing or stale
-var NET = window.NET || { on: false, host: false, guest: false, inRun: false, ready: false, amHost: false, full: false, others: [], runIds: new Set(), peers: new Map(), me: null,
+var NET = window.NET || { renderPlayers() { }, on: false, host: false, guest: false, inRun: false, ready: false, amHost: false, full: false, others: [], runIds: new Set(), peers: new Map(), me: null,
   worldHeld() { return false; }, held() { return false; }, tick() { }, alivePeers() { return []; }, sayHi() { }, hostLobby() { }, lobbyPlayers() { return []; }, connect() { }, leaveRun() { } };
 
 // ---------------------------------------------------------------- utilities
@@ -3038,6 +3038,7 @@ function buildMenu() {
       else $('start').textContent = `BEGIN RUN · ${lp.filter(pl => pl.id === NET.me.id || (NET.lobby[pl.id] && NET.lobby[pl.id].st !== 'run')).length} PLAYERS`;
     }
   } else { co.classList.add('hidden'); co.innerHTML = ''; if (NET.ready) NET.sayHi(); }
+  NET.renderPlayers();
 }
 const CHAOS_NAME = ['Calm', 'Restless', 'Stormy', 'Wild', 'Chaotic', 'Apocalypse'];
 function gfxChips(box, after) {

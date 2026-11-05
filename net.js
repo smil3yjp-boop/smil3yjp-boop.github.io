@@ -52,14 +52,14 @@ var NET = (() => {
   // ------------------------------------------------------------------ lobby
   function myLobby() {
     const ch = CHARS[menuSel.char], sk = selectedSkin(ch);
-    return { t: 'hi', hero: ch.id, skin: sk ? sk.key : null, icon: sk ? sk.icon : HERO_ICON[ch.id], st: G ? (G.state === 'end' ? 'end' : 'run') : 'menu', name: N.me ? N.me.name : '' };
+    return { t: 'hi', hero: ch.id, skin: sk ? sk.key : null, icon: sk ? sk.icon : HERO_ICON[ch.id], avatar: window.CLOUD && CLOUD.user ? CLOUD.user.avatar || null : null, st: G ? (G.state === 'end' ? 'end' : 'run') : 'menu', name: N.me ? N.me.name : '' };
   }
   let lastHi = '';
   N.sayHi = (force) => { const m = JSON.stringify(myLobby()); if (!force && m === lastHi) return; lastHi = m; send('*', JSON.parse(m)); };
   let lastLobby = '';
   function hostLobby() { if (!N.amHost) return; const m = { t: 'lobby', chaos: menuSel.chaos, running: !!(G && N.inRun) }, k = JSON.stringify(m); if (k === lastLobby) return; lastLobby = k; send('*', m); }
   N.hostLobby = hostLobby;
-  function refreshLobby() { if (typeof buildMenu === 'function' && (!G) && !$('menu').classList.contains('hidden')) buildMenu(); }
+  function refreshLobby() { renderPlayers(); if (typeof buildMenu === 'function' && (!G) && !$('menu').classList.contains('hidden')) buildMenu(); }
 
   function onRoster(m) {
     const prevHost = N.hostId;
@@ -556,6 +556,24 @@ var NET = (() => {
       </div>`).join('') + waiting.map(pe => `<div class="ccard wait"><div class="cname">${esc(pe.name)}</div><div class="chn">still playing…</div></div>`).join('');
   }
   N.renderFinals = renderFinals;
+  N.avatarUrl = avatarUrl;
+
+  // top bar: who's signed in here, plus everyone else in this Activity
+  function renderPlayers() {
+    const bar = $('pbar'); if (!bar) return;
+    if (!window.CLOUD || !CLOUD.active || !CLOUD.user) { bar.classList.add('hidden'); return; }
+    const me = { id: CLOUD.user.id, name: CLOUD.user.name, avatar: CLOUD.user.avatar };
+    const others = N.ready ? N.roster.filter(p => p.id !== me.id).map(p => ({ id: p.id, name: p.name, avatar: (N.lobby[p.id] || {}).avatar })) : [];
+    const chip = (p, mine) => {
+      const L = mine ? null : N.lobby[p.id], hc = mine ? CHARS[menuSel.char] : N.heroOf(p.id);
+      const fallback = heroIconSrc(mine ? ((selectedSkin(hc) || {}).icon || HERO_ICON[hc.id]) : (L && L.icon) || HERO_ICON.quincy);
+      const host = N.ready && N.roster.length > 1 && p.id === N.hostId ? '👑 ' : '';
+      return `<div class="pchip${mine ? ' me' : ''}${host ? ' host' : ''}" title="${host ? 'Host · ' : ''}${esc(p.name)}${hc ? ' · ' + esc(hc.name) : ''}${mine ? ' (you)' : ''}"><img src="${avatarUrl(p.id, p.avatar)}" onerror="this.onerror=null;this.src='${fallback}'"><span>${host}${esc(p.name)}</span></div>`;
+    };
+    bar.innerHTML = chip(me, true) + others.map(p => chip(p, false)).join('');
+    bar.classList.remove('hidden');
+  }
+  N.renderPlayers = renderPlayers;
 
   // hero for the lobby tiles
   N.heroOf = id => { const l = N.lobby[id]; return l ? CHARS.find(c => c.id === l.hero) : null; };

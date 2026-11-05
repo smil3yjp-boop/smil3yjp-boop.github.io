@@ -254,3 +254,15 @@ input[type=range]{width:100%;accent-color:#f0a93a}
 .chn{font-size:12px;color:var(--dim);margin-bottom:8px}
 .crows div{display:flex;justify-content:space-between;font-size:12.5px;padding:3px 2px;border-top:1px solid rgba(255,255,255,.07)}
 .crows span{color:var(--dim)}.crows b{color:#ffe39a}
+/* signed-in players (top bar) */
+.pbar{display:flex;align-items:center;gap:8px}
+.pchip{display:flex;align-items:center;gap:7px;padding:4px 10px 4px 4px;border-radius:999px;background:rgba(20,12,30,.75);border:1px solid rgba(232,194,122,.35);max-width:170px}
+.pchip.me{border-color:#ffe39a;background:rgba(60,40,10,.6)}
+.pchip img{width:34px;height:34px;border-radius:50%;object-fit:cover;flex:none;background:#2a1d14}
+.pchip span{font-weight:800;font-size:13px;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pchip:not(.me){padding-right:8px}.pchip:not(.me) span{font-size:12px;color:#e8e0d0}
+.pchip:not(.me){padding:2px;gap:0;max-width:none;margin-left:-14px;border-radius:50%;background:none;border:2px solid rgba(232,194,122,.6)}
+.pchip:not(.me) span{display:none}
+.pchip:not(.me) img{width:34px;height:34px}
+.pchip.me{max-width:150px;margin-right:10px}
+.pbar .pchip.host:not(.me){border-color:#ffd23f}
