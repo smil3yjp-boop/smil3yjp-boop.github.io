@@ -2841,13 +2841,6 @@ $('hsclose').onclick = () => show('scores', false);
 $('rvclose').onclick = () => show('runview', false);
 $('scores').onclick = e => { if (e.target.id === 'scores') show('scores', false); };
 $('runview').onclick = e => { if (e.target.id === 'runview') show('runview', false); };
-$('hsexport').onclick = () => { const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([JSON.stringify(HS.local(), null, 1)], { type: 'application/json' })); a.download = 'bloonstone_highscores.json'; a.click(); };
-$('hsimport').onchange = async e => {
-  const f = e.target.files[0]; if (!f) return;
-  try { const add = JSON.parse(await f.text()); if (!Array.isArray(add)) throw 0; const L = HS.local(), seen = new Set(L.map(x => x.date + x.name));
-    for (const r of add) if (r && r.date && !seen.has(r.date + r.name)) L.push(r); HS.saveLocal(L); openScores(); } catch (err) { alert('That file is not a highscores export.'); }
-  e.target.value = '';
-};
 function renderStats(el, extra = []) {
   const s = G.stats;
   const rows = [
