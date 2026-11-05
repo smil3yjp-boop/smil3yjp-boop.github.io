@@ -2,7 +2,7 @@
 // Everyone in the same Activity instance joins one room (Cloudflare Durable Object relay).
 // The host simulates the shared world (bloons, boss, drops); every player runs their OWN hero, towers,
 // cards and chests locally, and sends the damage they deal to the host. Up to 4 players.
-const NET = (() => {
+var NET = (() => {
   const BT = Object.keys(BLOONS);                       // bloon type <-> index
   const PK = ['soul', 'heart', 'chest', 'relic', 'banana'];
   const HZ = ['slime', 'magma', 'bossSlam', 'chargeLine'];

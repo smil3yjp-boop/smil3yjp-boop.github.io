@@ -2,6 +2,10 @@
    Personal fan project; art is extracted locally from the player's own game installs. */
 'use strict';
 
+// co-op lives in net.js; this stand-in keeps the game running if that file is missing or stale
+var NET = window.NET || { on: false, host: false, guest: false, inRun: false, ready: false, amHost: false, full: false, others: [], runIds: new Set(), peers: new Map(), me: null,
+  worldHeld() { return false; }, held() { return false; }, tick() { }, alivePeers() { return []; }, sayHi() { }, hostLobby() { }, lobbyPlayers() { return []; }, connect() { }, leaveRun() { } };
+
 // ---------------------------------------------------------------- utilities
 const TAU = Math.PI * 2;
 const rnd = (a = 1, b) => b === undefined ? Math.random() * a : a + Math.random() * (b - a);
