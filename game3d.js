@@ -207,6 +207,45 @@ const HERO_ATK = {
 };
 function heroMelee() { return G && HERO_ATK[G.ch.id].type === 'melee'; }
 
+// ---------------------------------------------------------------- signature hero cards (level-ups only, for the hero you're playing)
+const HD = () => G.skills.find(k => k.hero).def;
+const HC = {
+  pierce: (id, name, n = 2) => ({ id, name, v: n, fmt: v => `Hero attack: +${Math.max(1, Math.round(v))} pierce`, apply: (s, v) => { const d = HD(); d.pierce = (d.pierce || 1) + Math.max(1, Math.round(v)); } }),
+  speed: (id, name) => ({ id, name, v: 0.1, fmt: v => `Hero attack: ${pct(v)} faster`, apply: (s, v) => { HD().cd /= 1 + v; } }),
+  size: (id, name, what) => ({ id, name, v: 0.15, fmt: v => `Hero attack: +${pct(v)} ${what}`, apply: (s, v) => { const d = HD(); for (const k of ['range', 'aoe', 'explode']) if (d[k]) d[k] *= 1 + v; } }),
+  dmg: (id, name) => ({ id, name, v: 0.12, fmt: v => `Hero attack: +${pct(v)} damage`, apply: (s, v) => { s.heroDmg += v; } }),
+  burn: (id, name) => ({ id, name, v: 1.5, fmt: v => `Hero attack: hexes burn ${v.toFixed(1)}s longer`, apply: (s, v) => { const d = HD(); d.burn = (d.burn || 0) + v; } }),
+  slow: (id, name) => ({ id, name, v: 0.8, fmt: v => `Hero attack: slows ${v.toFixed(1)}s longer`, apply: (s, v) => { const d = HD(); d.slow = (d.slow || 0) + v; } }),
+  stun: (id, name) => ({ id, name, v: 0.2, fmt: v => `Hero attack: stuns ${v.toFixed(2)}s longer`, apply: (s, v) => { const d = HD(); d.stun = (d.stun || 0) + v; } }),
+  homing: (id, name) => ({ id, name, v: 1, fmt: v => `Hero attack: +1 pierce, stronger homing`, apply: (s, v) => { const d = HD(); d.pierce = (d.pierce || 1) + 1; d.homing = (d.homing || 0) + 4 * v; } }),
+};
+const HERO_CARD_SET = {
+  quincy: [HC.pierce('hc_q1', 'Sharpened Arrowheads'), HC.speed('hc_q2', 'Quick Draw')],
+  gwen: [HC.size('hc_g1', 'Hotter Flames', 'flame reach'), HC.speed('hc_g2', 'Heat It Up')],
+  striker: [HC.size('hc_s1', 'Concussive Shells', 'blast radius'), HC.speed('hc_s2', 'Rapid Reload')],
+  obyn: [HC.homing('hc_o1', 'Spirit of the Forest'), HC.speed('hc_o2', 'Druid Haste')],
+  rosalia: [HC.size('hc_r1', 'Overcharged Laser', 'laser range'), HC.speed('hc_r2', 'Jetpack Overdrive')],
+  churchill: [HC.size('hc_c1', 'Heavy Shells', 'blast radius'), HC.dmg('hc_c2', 'Big Guns')],
+  benjamin: [HC.speed('hc_b1', 'Overclocked Code'), HC.pierce('hc_b2', 'Trojan Payload', 1)],
+  pat: [HC.size('hc_p1', 'Mega Slap', 'slap reach'), HC.stun('hc_p2', 'Stunning Blow')],
+  ezili: [HC.burn('hc_e1', 'Deep Hex'), HC.pierce('hc_e2', 'Voodoo Reach', 1)],
+  adora: [HC.pierce('hc_a1', 'Blinding Light'), HC.dmg('hc_a2', 'Divine Fury')],
+  brickell: [HC.dmg('hc_br1', 'Hollow Points'), HC.speed('hc_br2', 'Fast Hands')],
+  etienne: [HC.speed('hc_et1', 'Drone Swarm'), HC.pierce('hc_et2', 'Tungsten Darts', 1)],
+  sauda: [HC.size('hc_sa1', 'Sword Mastery', 'slash reach'), HC.speed('hc_sa2', 'Whirlwind Blades')],
+  psi: [HC.size('hc_ps1', 'Psionic Wave', 'blast radius'), HC.speed('hc_ps2', 'Mind Over Matter')],
+  geraldo: [HC.dmg('hc_ge1', 'Bigger Bullets'), HC.speed('hc_ge2', 'Fan the Hammer')],
+  corvus: [HC.pierce('hc_co1', 'Soul Spear'), HC.dmg('hc_co2', 'Dark Ritual')],
+  silas: [HC.slow('hc_si1', 'Permafrost'), HC.speed('hc_si2', 'Ice Storm')],
+};
+const HERO_CARD_MAX = 4;
+function heroCards() {
+  const ch = G.ch, A = HERO_ABIL[ch.id], set = (HERO_CARD_SET[ch.id] || []).slice();
+  if (A) set.push({ id: 'hc_abil_' + ch.id, name: A.name + ' Mastery', v: 0.3, fmt: v => `${A.name}: +${pct(v)} damage, -8% cooldown`, apply: (s, v) => { s.abilDmg = (s.abilDmg || 1) + v; s.abilCdr = (s.abilCdr || 0) + 0.08; } });
+  for (const c of set) { c.icon = ch.spr; c.heroCard = true; }
+  return set;
+}
+
 // ---------------------------------------------------------------- data: skills
 // Each skill: tags, icon sprite, base cooldown, cast(sk) + level descriptions (lv2..lv7)
 const MAXLV = 7;
@@ -1248,7 +1287,7 @@ const CAST = {
 };
 
 // ---------------------------------------------------------------- hero abilities (press R)
-function abilDmg(m = 1) { const h = G.skills.find(k => k.hero); return skillDmg(h, m) * G.stats.heroDmg * 4; }
+function abilDmg(m = 1) { const h = G.skills.find(k => k.hero); return skillDmg(h, m) * G.stats.heroDmg * 4 * (G.stats.abilDmg || 1); }
 function abilTarget(maxd = 22) { const b = nearestBloon(G.player.x, G.player.y, maxd); return b ? [b.x, b.y] : [G.player.x + Math.cos(G.player.face > 0 ? 0 : Math.PI) * 5, G.player.y]; }
 function strongest(maxd = 26) { let best = null, bh = -1; const p = G.player; for (const b of G.bloons.concat(G.boss && !G.boss.dead ? [G.boss] : [])) { if (b.dead || (b.x - p.x) ** 2 + (b.y - p.y) ** 2 > maxd * maxd) continue; const h = b.maxhp + (b.isBoss ? 1e9 : b.def.moab ? 1e6 : 0); if (h > bh) { bh = h; best = b; } } return best; }
 const HERO_ABIL = {
@@ -1621,7 +1660,7 @@ function hurtPlayer(dmg) {
   const p = G.player;
   if (p.inv > 0 || G.state !== 'play' || p.down) return;
   const d = Math.max(1, dmg - G.stats.armor);
-  p.hp -= d; p.inv = 0.45; p.hurtT = 0.25;
+  p.hp -= d; p.inv = 0.45; p.hurtT = 0.25; G.tookDmg = true;
   shake(0.25);
   G.texts.push({ x: p.x, y: p.y - 1, s: '-' + Math.round(d), t: 0, life: 0.7, hurt: true });
   play('ShieldDamaged0*', { vol: 0.55, gap: 0.12, key: 'hurt' });
@@ -2540,7 +2579,8 @@ function buildOffer(chest = false) {
     if (c.tag && !ownedTags.has(c.tag)) continue;
     pool.push({ type: 'stat', c, cat: 'stat', minR: c.minR || 0 });
   }
-  const CATW = { up: 4.5, new: G.skills.length < 3 ? 3 : 1.8, stat: 3.5 };
+  if (!chest) for (const c of heroCards()) { if (G.banished.has('stat_' + c.id) || (G.items[c.id] && G.items[c.id].n >= HERO_CARD_MAX)) continue; pool.push({ type: 'stat', c, cat: 'hero', minR: 0 }); }
+  const CATW = { up: 4.5, new: G.skills.length < 3 ? 3 : 1.8, stat: 3.5, hero: 2.2 };
   const n = chest ? 3 : (G.level % 5 === 0 ? 4 : 3);
   const opts = [];
   for (let tries = 0; opts.length < n && pool.length && tries < 60; tries++) {
@@ -2595,7 +2635,7 @@ function cardInfo(o) {
   }
   if (o.type === 'paragon') return { title: PARAGONS[o.sk.id], kind: `PARAGON · merge ${o.sk.def.name}`, desc: `Your three maxed towers lend their power: ${o.sk.def.name} becomes its Paragon.<br><br><span style="color:var(--gold2)">x3 damage · 40% faster attacks · Paragon model</span>`, icon: o.sk.def.icon, tags: o.sk.def.tags };
   const v = o.c.v * R.m;
-  return { title: o.c.name, kind: o.c.tag ? `${TAGNAME[o.c.tag]} Upgrade` : 'Attribute', desc: o.c.fmt(v), icon: o.c.icon || ['UpgradeIcon'], tags: o.c.tag ? [o.c.tag] : [], v };
+  return { title: o.c.name, kind: o.c.heroCard ? `${G.ch.name} · Signature${G.items[o.c.id] ? ` (${G.items[o.c.id].n}/${HERO_CARD_MAX})` : ''}` : o.c.tag ? `${TAGNAME[o.c.tag]} Upgrade` : 'Attribute', desc: o.c.fmt(v), icon: o.c.icon || ['UpgradeIcon'], tags: o.c.tag ? [o.c.tag] : [], v };
 }
 function renderCards() {
   const box = $('cards'); box.innerHTML = '';
@@ -2833,6 +2873,7 @@ function endRun(win, quit = false) {
   renderStats($('endstats'), [['Monkey Money earned', '+' + mm + '  (total ' + Math.floor(PROFILE.mm) + ')'], ['Bosses defeated', G.bossKills], ['Gold earned', '$' + Math.round(G.goldEarned).toLocaleString()], ...(rec ? [['Record', rec]] : [])]);
   renderBreakdown($('endbreak'));
   const runRec = runRecord(win, quit, mm);
+  if (NET.on) META.ach('coop1');
   if (NET.on) NET.shareFinal({ hero: G.ch.name, icon: (selectedSkin(G.ch) || {}).icon || HERO_ICON[G.ch.id], rows: [['Level', G.level], ['Damage dealt', Math.round(G.dmgDealt).toLocaleString()], ['Bloons popped', Object.values(G.runStats || {}).reduce((a, r) => a + (r.pops || 0), 0).toLocaleString()], ['Gold earned', '$' + Math.round(G.goldEarned).toLocaleString()], ['Chests opened', G.chests], ['Relics', (G.relics || []).length], ['Times downed', G.downs || 0], ['Revived teammates', G.revives || 0], ['Monkey Money', '+' + mm]], dmg: Math.round(G.dmgDealt), result: eb.textContent });
   else setTimeout(() => askName(runRec), win ? 400 : 1100);
   setTimeout(() => show('end', true), win ? 200 : 900);
@@ -2842,6 +2883,7 @@ $('again').onclick = () => { show('end', false); G = null; R3.resetRun(); if (NE
 // ---------------------------------------------------------------- profile: Monkey Money + skins
 // purchase confirmation: previews the skin on the stage and asks before spending Monkey Money
 function confirmSkin(ch, s) {
+  if (!heroUnlocked(ch.id)) return;
   const box = $('buyskin'), can = PROFILE.mm >= s.cost;
   $('bsicon').src = heroIconSrc(s.icon); $('bsname').textContent = s.name; $('bshero').textContent = ch.name + ' skin';
   $('bscost').textContent = s.cost.toLocaleString();
@@ -2857,7 +2899,7 @@ function confirmSkin(ch, s) {
   box.onclick = e => { if (e.target === box) close(); };
   $('bsok').onclick = () => {
     if (PROFILE.mm < s.cost) return;
-    PROFILE.mm -= s.cost; PROFILE.owned.push(s.key); PROFILE.skin[ch.id] = s.key; saveProfile();
+    PROFILE.mm -= s.cost; PROFILE.owned.push(s.key); META.ach('skin1'); PROFILE.skin[ch.id] = s.key; saveProfile();
     play('UIChestOpen03', { vol: 0.8 }); close();
   };
 }
@@ -2961,9 +3003,10 @@ function buildMenu() {
     const owned = !s.key || PROFILE.owned.includes(s.key), sel = (sk ? sk.key : null) === s.key;
     const el = document.createElement('div'); el.className = 'skin' + (sel ? ' sel' : '') + (owned ? '' : ' locked') + (!owned && PROFILE.mm < s.cost ? ' cant' : '');
     el.innerHTML = `<img src="${heroIconSrc(s.icon)}"><div class="nm">${s.name}</div>${owned ? '' : `<div class="cost"><img src="assets/ui/heroes/mm.png">${s.cost}</div>`}`;
-    el.title = owned ? 'Equip ' + s.name : `Unlock ${s.name} for ${s.cost} Monkey Money`;
+    el.title = owned ? 'Equip ' + s.name : !heroUnlocked(ch.id) ? `Unlock ${ch.name} first` : `Unlock ${s.name} for ${s.cost} Monkey Money`;
+    if (!owned && !heroUnlocked(ch.id)) { el.classList.add('cant'); el.querySelector('.cost').innerHTML = '🔒 hero locked'; }
     el.onclick = () => {
-      if (!owned) { confirmSkin(ch, s); return; }
+      if (!owned) { if (!heroUnlocked(ch.id)) { play('UIChestLatch02', { vol: 0.6 }); return; } confirmSkin(ch, s); return; }
       play('UIClick01', { vol: 0.5 });
       PROFILE.skin[ch.id] = s.key; saveProfile(); buildMenu();
     };

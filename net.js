@@ -543,6 +543,8 @@ const NET = (() => {
     if (!N.finals.size) { box.classList.add('hidden'); $('endstats').style.display = ''; return; }
     box.classList.remove('hidden'); $('endstats').style.display = 'none';
     const list = [...N.finals.entries()], top = Math.max(...list.map(([, c]) => c.dmg || 0));
+    const mine = N.me && N.finals.get(N.me.id);
+    if (list.length > 1 && mine && top > 0 && mine.dmg === top && ![...N.runIds].some(id => !N.finals.has(id))) META.ach('mvp');
     // teammates still playing get a placeholder until their card arrives
     const waiting = [...N.runIds].filter(id => !N.finals.has(id)).map(id => N.peers.get(id)).filter(Boolean);
     box.innerHTML = list.map(([id, c]) => `

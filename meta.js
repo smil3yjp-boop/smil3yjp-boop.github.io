@@ -255,6 +255,22 @@ const ACH = [
   { id: 'blimps100', name: 'Blimp Hunter', desc: 'Destroy 100 MOAB-class bloons (all runs)', mm: 300 },
   { id: 'abil20', name: 'Show-off', desc: 'Use your hero ability 20 times in one run', mm: 150 },
   { id: 'allheroes', name: 'Full Roster', desc: 'Unlock every hero', mm: 1000 },
+  { id: 'boss3', name: 'Boss Rush', desc: 'Defeat 3 bosses in one run', mm: 400 },
+  { id: 'chaos6', name: 'Apocalypse Now', desc: 'Defeat a boss on Chaos VI', mm: 800 },
+  { id: 'lvl50', name: 'Genius', desc: 'Reach level 50', mm: 400 },
+  { id: 'dmg10m', name: 'Unstoppable', desc: 'Deal 10,000,000 damage in one run', mm: 500 },
+  { id: 'cash20k', name: 'Fat Stacks', desc: 'Earn $20,000 in one run', mm: 400 },
+  { id: 'chests10', name: 'Treasure Hunter', desc: 'Open 10 chests in one run', mm: 250 },
+  { id: 'maxtower', name: 'Fully Upgraded', desc: 'Get a tower to its final tier', mm: 200 },
+  { id: 'six', name: 'Full Arsenal', desc: 'Hold 6 towers at once', mm: 250 },
+  { id: 'sig5', name: 'Signature Style', desc: 'Take 5 signature hero cards in one run', mm: 200 },
+  { id: 'untouch', name: 'Untouchable', desc: 'Survive the first 3 minutes without taking damage', mm: 300 },
+  { id: 'mm10k', name: 'Monkey Mogul', desc: 'Have 10,000 Monkey Money at once', mm: 500 },
+  { id: 'skin1', name: 'Dressed to Pop', desc: 'Buy a hero skin', mm: 100 },
+  { id: 'know1', name: 'Know-It-All', desc: 'Max out a Monkey Knowledge upgrade', mm: 300 },
+  { id: 'coop1', name: 'Better Together', desc: 'Finish a co-op run with friends', mm: 200 },
+  { id: 'revive3', name: 'Medic!', desc: 'Revive teammates 3 times in one run', mm: 250 },
+  { id: 'mvp', name: 'Most Valuable Monkey', desc: 'Be the MVP of a co-op run', mm: 300 },
 ];
 
 // ================================================================ META facade used by game3d.js
@@ -276,6 +292,17 @@ const META = {
     if (G.goldEarned >= 5000) META.ach('cash5k');
     if (G.loop >= 1) META.ach('loop2');
     if (G.loop >= 3) META.ach('loop4');
+    if (G.bossKills >= 3) META.ach('boss3');
+    if (G.level >= 50) META.ach('lvl50');
+    if (G.dmgDealt >= 1e7) META.ach('dmg10m');
+    if (G.goldEarned >= 20000) META.ach('cash20k');
+    if (G.chests >= 10) META.ach('chests10');
+    if (G.skills.some(k => !k.hero && k.lv >= MAXLV)) META.ach('maxtower');
+    if (G.skills.filter(k => !k.hero).length >= 6) META.ach('six');
+    if (Object.values(G.items).filter(it => it.card && it.card.heroCard).reduce((a, it) => a + it.n, 0) >= 5) META.ach('sig5');
+    if (G.t >= 180 && !G.tookDmg) META.ach('untouch');
+    if (PROFILE.mm >= 10000) META.ach('mm10k');
+    if ((G.revives || 0) >= 3) META.ach('revive3');
   },
   pop(b) {
     comboPop();
@@ -294,6 +321,7 @@ const META = {
     META.ach('boss1');
     if (G.dashesUsed === b.dashAtSpawn) META.ach('nodash');
     if (G.chaosIdx >= 2) META.ach('chaos3');
+    if (G.chaosIdx >= 5) META.ach('chaos6');
     // hero unlock
     const nu = nextUnlock();
     if (nu) {
@@ -334,7 +362,7 @@ function renderKnowledge() {
       <button class="btn small">${l >= max ? 'MAXED' : `<img src="assets/ui/heroes/mm.png">${cost}`}</button>`;
     el.querySelector('button').onclick = () => {
       if (l >= max || PROFILE.mm < cost) { play('UIError02', { vol: 0.5 }); return; }
-      PROFILE.mm -= cost; PROFILE.know = PROFILE.know || {}; PROFILE.know[k.id] = l + 1; saveProfile(); play('UpgradeParagonDartMonkey', { vol: 0.4 }); renderKnowledge(); buildMenu();
+      PROFILE.mm -= cost; PROFILE.know = PROFILE.know || {}; PROFILE.know[k.id] = l + 1; if (l + 1 >= k.costs.length) META.ach('know1'); saveProfile(); play('UpgradeParagonDartMonkey', { vol: 0.4 }); renderKnowledge(); buildMenu();
     };
     box.appendChild(el);
   }
