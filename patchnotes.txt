@@ -1,3 +1,13 @@
+v0.3.3 | Nov 5, 2026
+- Map music is now Soulstone Survivors' music, matched to each map (forest, desert, cavern, snow, cathedral and Void King themes)
+- Boss themes are unchanged
+- Banana Farm paths now have their own effects: Top grows more bananas that heal more, Middle banks gold every harvest, Bottom sends bananas straight to you with extra XP
+- Monkey Village paths now have their own effects: Top gives all towers attack speed and pierce, Middle gives damage and extra damage to MOABs and bosses, Bottom gives more gold and cheaper chests
+- Banana Farm and Monkey Village level 7 upgrades are now a Tier 5 capstone for the path you picked (Banana Central, Monkey-Nomics, Monkey Wall Street, Primary Expertise, Homeland Defense, Monkeyopolis)
+- Renamed Banana Farm and Monkey Village base upgrades so they no longer share names with their paths
+- Banana Farm now follows you in the world like the Monkey Village
+- Engineer sentries now stand on their tripod legs instead of floating as blocks
+
 v0.3.2 | Nov 5, 2026
 - Added a Patch Notes button at the bottom of the main menu
 - Removed the controls/tutorial text from the bottom of the main menu

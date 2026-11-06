@@ -456,7 +456,7 @@ $('psetbtn').onclick = () => { renderSettings(); openPage('setpage'); };
 for (const id of ['knowpage', 'achpage', 'setpage']) { $(id).onclick = e => { if (e.target.id === id) show(id, false); }; $(id).querySelector('.pclose').onclick = () => { rebinding = null; show(id, false); }; }
 
 // ================================================================ patch notes (patchnotes.txt; "vX.Y.Z | date" headers, "- " bullets)
-const GAME_VERSION = 'v0.3.2';
+const GAME_VERSION = 'v0.3.3';
 (() => {
   const $p = id => document.getElementById(id);
   if ($p('pnver')) $p('pnver').textContent = GAME_VERSION;

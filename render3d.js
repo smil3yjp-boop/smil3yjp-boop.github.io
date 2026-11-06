@@ -328,6 +328,7 @@ const R3 = (() => {
   async function loadTower(sid) {
     if (sid in TW) return; TW[sid] = null;
     try { if (!window.BSS_ASSETS || !window.BSS_ASSETS['tw_' + sid]) await loadScript('assets/towers/tw_' + sid + '.js'); await loadRigs('tw_' + sid); } catch (e) { console.warn('tower', sid, e); return; }
+    if (sid === 'sentry') await loadSkin('x_sentries');   // sentry turrets with their tripod legs switched on
     TW[sid] = Object.keys(RIGS).filter(k => k.startsWith('w_' + sid + '_')).map(k => +k.split('_').pop()).filter(n => n > 0).sort((a, b) => a - b);
   }
   const BADRIG = { w_heli_M4: 'w_heli_M3', w_heli_M5: 'w_heli_M3' }; // untextured exports fall back to the tier-3 model
@@ -835,12 +836,12 @@ const R3 = (() => {
       const lvl = sm.sk ? sm.sk.lv : 1;
       const SUM = {
         heli: [towerKey('heli', lvl, sm.sk) || 't_HeliPilot', 1.6, 'max', { hide: /^(Helipad|Lights|HeliPad.*)$/i }],
-        sentry: [lvl >= 7 ? 't_SentryChamp' : lvl >= 5 ? 't_SentryBoom' : lvl >= 3 ? 't_SentryEnergy' : 't_Sentry', 1.1, 'height'],
+        sentry: [lvl >= 7 ? 't_SentryChamp' : lvl >= 5 ? 't_SentryBoom' : lvl >= 3 ? 't_SentryEnergy' : 't_Sentry', 1.3, 'height'],
         ace: lvl >= 8 && towerKey('ace', 8) ? [towerKey('ace', 8), 3.6, 'max'] : sm.sk && sm.sk.path3 && towerKey('ace', lvl, sm.sk) !== towerKey('ace', lvl) ? [towerKey('ace', lvl, sm.sk), 2.3, 'max'] : lvl >= 7 ? ['t_Ace204', 2.2, 'max'] : lvl >= 5 ? ['t_Ace104', 2.0, 'max'] : ['t_MonkeyAce', 1.9, 'max', { hide: /^MonkeyAceBase$/ }],
         beast: BEASTM[sm.sp] && hasRig(BEASTM[sm.sp][0]) ? BEASTM[sm.sp] : ['t_Raptor1', 1.5, 'max'],
         drone: ['x_drone', 0.9, 'max'],
         rabbit: ['x_wererabbit', 1.05, 'max'],
-        village: towerKey('village', lvl, sm.sk) ? [towerKey('village', lvl, sm.sk), 2.6, 'max'] : ['m_MonkeyVillage', 2.6, 'max'], farm: [towerKey('farm', lvl, sm.sk) || 't_BananaFarm', 1.6, 'max'],
+        village: towerKey('village', lvl, sm.sk) ? [towerKey('village', lvl, sm.sk), 2.6, 'max'] : ['m_MonkeyVillage', 2.6, 'max'], farm: [towerKey('farm', lvl, sm.sk) || 't_BananaFarm', 2.0, 'max'],
       }[sm.kind] || ['t_EngineerMonkey', 1.1, 'height'];
       if (m && m.userData.skey !== SUM[0]) { scene.remove(m); summonModels.delete(sm); m = null; G.effects.push({ kind: 'ring', x: sm.x, y: sm.y, r: 2, t: 0, life: 0.5, color: '#ffe39a' }); }
       if (!m) {

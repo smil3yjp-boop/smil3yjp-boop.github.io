@@ -265,6 +265,24 @@ const PATHS = {"dart": [["Spike-o-pult", "Juggernaut", "Ultra-Juggernaut"], ["Tr
 const PATH_ICON = {"dart_T3": "Spike-o-pultUpgradeIcon", "dart_T4": "JuggernautUpgradeIcon", "dart_T5": "UltraJuggernautUpgradeIcon", "dart_M3": "TripleShotUpgradeIcon", "dart_M4": "SuperMonkeyFanClubUpgradeIcon", "dart_M5": "PlasmaMonkeyFanClubUpgradeIcon", "dart_B3": "CrossBowUpgradeIcon", "dart_B4": "SharpShooterUpgradeIcon", "dart_B5": "CrossBowMasterUpgradeIcon", "boomer_T3": "GlaiveRicochetUpgradeIcon", "boomer_T4": "MoarGlaivesUpgradeIcon", "boomer_T5": "GlaiveLordUpgradeIcon", "boomer_M3": "BionicBoomerangUpgradeIcon", "boomer_M4": "TurbochargeUpgradeIcon", "boomer_M5": "PermaChargeUpgradeIcon", "boomer_B3": "KylieBoomerangUpgradeIcon", "boomer_B4": "MoabPressUpgradeIcon", "boomer_B5": "MoabDominationUpgradeIcon", "bomb_T3": "ReallyBigBombsUpgradeIcon", "bomb_T4": "BloonImpactUpgradeIcon", "bomb_T5": "BloonCrushUpgradeIcon", "bomb_M3": "ClusterBombsUpgradeIcon", "bomb_M4": "RecursiveClusterUpgradeIcon", "bomb_M5": "BombBlitzUpgradeIcon", "bomb_B3": "MoabMaulerUpgradeIcon", "bomb_B4": "MoabAssassinUpgradeIcon", "bomb_B5": "MoabEliminatorUpgradeIcon", "tack_T3": "HotShotsUpgradeIcon", "tack_T4": "RingOfFireUpgradeIcon", "tack_T5": "InfernoRingUpgradeIcon", "tack_M3": "BladeShooterUpgradeIcon", "tack_M4": "BladeMaelstromUpgradeIcon", "tack_M5": "SuperMaelstromUpgradeIcon", "tack_B3": "TackSprayerUpgradeIcon", "tack_B4": "OverdriveUpgradeIcon", "tack_B5": "TheTackZoneUpgradeIcon", "frost_T3": "IceShardsUpgradeIcon", "frost_T4": "EmbrittlementUpgradeIcon", "frost_T5": "SuperBrittleUpgradeIcon", "frost_M3": "ArcticWindUpgradeIcon", "frost_M4": "SnowstormUpgradeIcon", "frost_M5": "AbsoluteZeroUpgradeIcon", "frost_B3": "CryoCannonUpgradeIcon", "frost_B4": "IciclesUpgradeIcon", "frost_B5": "IcicleImpaleUpgradeIcon", "glue_T3": "BloonDissolverUpgradeIcon", "glue_T4": "BloonLiquefierUpgradeIcon", "glue_T5": "TheBloonSolverUpgradeIcon", "glue_M3": "GlueSplatterUpgradeIcon", "glue_M4": "GlueHoseUpgradeIcon", "glue_M5": "GlueStormUpgradeIcon", "glue_B3": "MoabGlueUpgradeIcon", "glue_B4": "RelentlessGlueUpgradeIcon", "glue_B5": "SuperGlueUpgradeIcon", "sniper_T3": "DeadlyPrecisionUpgradeIcon", "sniper_T4": "MaimMoabUpgradeIcon", "sniper_T5": "CrippleMoabUpgradeIcon", "sniper_M3": "BouncingBulletUpgradeIcon", "sniper_M4": "CashDropUpgradeIcon", "sniper_M5": "EliteSniperUpgradeIcon", "sniper_B3": "SemiAutomaticUpgradeIcon", "sniper_B4": "FullAutoRifleUpgradeIcon", "sniper_B5": "EliteDefenderUpgradeIcon", "shuriken_T3": "DoubleShotUpgradeIcon", "shuriken_T4": "BloonjitsuUpgradeIcon", "shuriken_T5": "GrandmasterNinjaUpgradeIcon", "shuriken_M3": "ShinobiTacticsUpgradeIcon", "shuriken_M4": "BloonSabotageUpgradeIcon", "shuriken_M5": "GrandSaboteurUpgradeIcon", "shuriken_B3": "FlashBombUpgradeIcon", "shuriken_B4": "StickyBombUpgradeIcon", "shuriken_B5": "MasterBomberUpgradeIcon", "fire_T3": "ArcaneMasteryUpgradeIcon", "fire_T4": "ArcaneSpikeUpgradeIcon", "fire_T5": "ArchmageUpgradeIcon", "fire_M3": "DragonsBreathUpgradeIcon", "fire_M4": "SummonPhoenixUpgradeIcon", "fire_M5": "WizardLordPhoenixUpgradeIcon", "fire_B3": "ShimmerUpgradeIcon", "fire_B4": "SoulbindUpgradeIcon", "fire_B5": "SoulbindUpgradeIcon", "lightning_T3": "DruidoftheStormUpgradeIcon", "lightning_T4": "BallLightningUpgradeIcon", "lightning_T5": "SuperStormUpgradeIcon", "lightning_M3": "DruidoftheJungleUpgradeIcon", "lightning_M4": "JunglesBountyUpgradeIcon", "lightning_M5": "SpiritoftheForestUpgradeIcon", "lightning_B3": "DruidofWrathUpgradeIcon", "lightning_B4": "PoplustUpgradeIcon", "lightning_B5": "AvatarofWrathUpgradeIcon", "spike_T3": "SpikedBallsUpgradeIcon", "spike_T4": "SpikedMinesUpgradeIcon", "spike_T5": "SuperMinesUpgradeIcon", "spike_M3": "MOABSHREDRUpgradeIcon", "spike_M4": "SpikeStormUpgradeIcon", "spike_M5": "CarpetOfSpikesUpgradeIcon", "spike_B3": "LongLifeSpikesUpgradeIcon", "spike_B4": "DeadlySpikesUpgradeIcon", "spike_B5": "PermaSpikeUpgradeIcon", "mortar_T3": "ShellShockUpgradeIcon", "mortar_T4": "TheBIgOneUpgradeIcon", "mortar_T5": "TheBIggestOneUpgradeIcon", "mortar_M3": "HeavyShellsUpgradeIcon", "mortar_M4": "ArtilleryBatteryUpgradeIcon", "mortar_M5": "PopandAweUpgradeIcon", "mortar_B3": "SignalFlareUpgradeIcon", "mortar_B4": "ShatteringShellsUpgradeIcon", "mortar_B5": "BlooncinerationUpgradeIcon", "heli_T3": "RazorRotorsUpgradeIcon", "heli_T4": "ApacheDartshipUpgradeIcon", "heli_T5": "ApachePrimeUpgradeIcon", "heli_M3": "DowndraftUpgradeIcon", "heli_M4": "SupportChinookUpgradeIcon", "heli_M5": "SpecialPoperationsUpgradeIcon", "heli_B3": "MOABShoveUpgradeIcon", "heli_B4": "ComancheDefenseUpgradeIcon", "heli_B5": "ComancheCommanderUpgradeIcon", "sentry_T3": "SprocketsUpgradeIcon", "sentry_T4": "SentryExpertUpgradeIcon", "sentry_T5": "SentryParagonUpgradeIcon", "sentry_M3": "CleansingFoamUpgradeIcon", "sentry_M4": "OverclockUpgradeIcon", "sentry_M5": "UltraboostUpgradeIcon", "sentry_B3": "DoubleGunUpgradeIcon", "sentry_B4": "BloonTrapUpgradeIcon", "sentry_B5": "XXXLUpgradeIcon", "plasma_T3": "SunAvatarUpgradeIcon", "plasma_T4": "SunTempleUpgradeIcon", "plasma_T5": "TrueSonGodUpgradeIcon", "plasma_M3": "RoboMonkeyUpgradeIcon", "plasma_M4": "TechTerrorUpgradeIcon", "plasma_M5": "TheAntiBloonUpgradeIcon", "plasma_B3": "DarkKnightUpgradeIcon", "plasma_B4": "DarkChampionUpgradeIcon", "plasma_B5": "LegendOfTheNightUpgradeIcon", "brew_T3": "BerserkerBrewUpgradeIcon", "brew_T4": "StrongerStimulantUpgradeIcon", "brew_T5": "PermanentBrewUpgradeIcon", "brew_M3": "UnstableConcoctionUpgradeIcon", "brew_M4": "TransformingTonicUpgradeIcon", "brew_M5": "TotalTransformationUpgradeIcon", "brew_B3": "LeadtoGoldUpgradeIcon", "brew_B4": "RubbertoGoldUpgradeIcon", "brew_B5": "BloonMasterAlchemistUpgradeIcon", "farm_T3": "BananaPlantationUpgradeIcon", "farm_T4": "BananaResearchFacilityUpgradeIcon", "farm_T5": "BananaCentralUpgradeIcon", "farm_M3": "MonkeyBankUpgradeIcon", "farm_M4": "IMFLoanUpgradeIcon", "farm_M5": "MonkeyNomicsUpgradeIcon", "farm_B3": "MarketplaceUpgradeIcon", "farm_B4": "CentralMarketUpgradeIcon", "farm_B5": "MonkeyWallStreetUpgradeIcon", "sub_T3": "SubmergeandSupportUpgradeIcon", "sub_T4": "BloontoniumReactorUpgradeIcon", "sub_T5": "EnergizerUpgradeIcon", "sub_M3": "BallisticMissileUpgradeIcon", "sub_M4": "FirstStrikeCapabilityUpgradeIcon", "sub_M5": "PreEmptiveStrikeUpgradeIcon", "sub_B3": "TripleGunsUpgradeIcon", "sub_B4": "ArmorPiercingDartsUpgradeIcon", "sub_B5": "SubCommanderUpgradeIcon", "buccaneer_T3": "DestroyerUpgradeIcon", "buccaneer_T4": "AircraftCarrierUpgradeIcon", "buccaneer_T5": "CarrierFlagshipUpgradeIcon", "buccaneer_M3": "CannonShipUpgradeIcon", "buccaneer_M4": "MonkeyPiratesUpgradeIcon", "buccaneer_M5": "PirateLordUpgradeIcon", "buccaneer_B3": "MerchantmanUpgradeIcon", "buccaneer_B4": "FavoredTradesUpgradeIcon", "buccaneer_B5": "TradeEmpireUpgradeIcon", "ace_T3": "FighterPlaneUpgradeIcon", "ace_T4": "OperationDartStormUpgradeIcon", "ace_T5": "SkyShredderUpgradeIcon", "ace_M3": "BomberAceUpgradeIcon", "ace_M4": "GroundZeroUpgradeIcon", "ace_M5": "TsarBombaUpgradeIcon", "ace_B3": "NevaMissTargetingUpgradeIcon", "ace_B4": "SpecterUpgradeIcon", "ace_B5": "FlyingFortressUpgradeIcon", "dartling_T3": "LaserCannonUpgradeIcon", "dartling_T4": "PlasmaAcceleratorUpgradeIcon", "dartling_T5": "RayOfDoomUpgradeIcon", "dartling_M3": "HydraRocketsUpgradeIcon", "dartling_M4": "RocketStormUpgradeIcon", "dartling_M5": "MadUpgradeIcon", "dartling_B3": "BuckshotUpgradeIcon", "dartling_B4": "BloonAreaDenialSystemUpgradeIcon", "dartling_B5": "BloonExclusionZoneUpgradeIcon", "desperado_T3": "300UpgradeIcon", "desperado_T4": "400UpgradeIcon", "desperado_T5": "500UpgradeIcon", "desperado_M3": "030UpgradeIcon", "desperado_M4": "040UpgradeIcon", "desperado_M5": "050UpgradeIcon", "desperado_B3": "003UpgradeIcon", "desperado_B4": "004UpgradeIcon", "desperado_B5": "005UpgradeIcon", "village_T3": "PrimaryTrainingUpgradeIcon", "village_T4": "PrimaryMentoringUpgradeIcon", "village_T5": "PrimaryExpertiseUpgradeIcon", "village_M3": "MonkeyIntelligenceBureauUpgradeIcon", "village_M4": "CallToArmsUpgradeIcon", "village_M5": "HomelandDefenseUpgradeIcon", "village_B3": "MonkeyTownUpgradeIcon", "village_B4": "MonkeyCityUpgradeIcon", "village_B5": "MonkeyNomicsUpgradeIcon"};
 const PATH_NAME = { T: 'Top path', M: 'Middle path', B: 'Bottom path' };
 const PATH_BONUS = { T: '+25% damage', M: '+20% attack speed', B: '+1 pierce, +25% vs MOABs & bosses' };
+// support towers don't deal damage, so their paths give their own buffs; the level-7 upgrade is a capstone for the path picked at level 5
+const SUPPORT_PATHS = {
+  farm: {
+    T: 'Every harvest grows +2 bananas, bananas heal +20%',
+    M: 'Every harvest also banks $8 gold per banana (grows with your level)',
+    B: 'Bananas fly straight to you and give +100% XP',
+    cap: { T: 'Banana Central: bananas heal x2, harvests 30% faster', M: 'Monkey-Nomics: harvest gold x3, +15% gold from pops', B: 'Monkey Wall Street: bananas give x5 XP' },
+  },
+  village: {
+    T: 'All towers +12% attack speed and +1 pierce',
+    M: 'All towers +15% damage and +25% vs MOABs & bosses',
+    B: '+30% gold from pops, chests 10% cheaper',
+    cap: { T: 'Primary Expertise: all towers +25% more attack speed and +2 pierce', M: 'Homeland Defense: every 30s all towers +60% attack speed for 8s', B: 'Monkeyopolis: +60% more gold from pops, chests 20% cheaper' },
+  },
+};
+const pathBonus = (sk, L) => SUPPORT_PATHS[sk.id] ? SUPPORT_PATHS[sk.id][L] : PATH_BONUS[L];
+const capstone = (sk, L) => !!sk && sk.lv >= 7 && sk.path5 === L && !!SUPPORT_PATHS[sk.id];
+const pc = (sk, L) => sk && sk.lv >= 3 ? pathCount(sk, L) : 0;
 // which path drives this skill's look right now ('' = base line)
 function curPath(sk) { return sk.lv >= 5 && sk.path5 ? sk.path5 : sk.lv >= 3 && sk.path3 ? sk.path3 : ''; }
 function pathCount(sk, L) { return (sk.path3 === L) + (sk.path5 === L); }
@@ -345,7 +363,7 @@ const SKILLS = {
     lv: ['Larger Potions: +1s duration', 'Acidic Mixture Dip: +10% buff power', 'Berserker Brew: -1.5s cooldown', 'Stronger Stimulant: +1s duration', 'Permanent Brew: +10% buff power', 'Total Transformation: always active'],
     desc: 'Periodically empowers you: +35% damage & attack speed for 4s.' },
   farm: { name: 'Banana Farm', icon: ['BananaFarmIcon'], tags: ['buff'], cd: 6, dmg: 0,
-    lv: ['Increased Production: +1 banana', 'Greater Production: +30% healing', 'Banana Plantation: -1s cooldown', 'Banana Research Facility: +1 banana', 'Valuable Bananas: +30% healing', 'Monkey Wall Street: bananas give big XP'],
+    lv: ['Increased Production: +1 banana', 'Greater Production: +30% healing', 'Faster Harvest: -1s cooldown', 'Bigger Bunches: +1 banana', 'Valuable Bananas: +30% healing', 'Tier 5: your path\'s capstone'],
     desc: 'Grows bananas nearby that heal you and grant XP.' },
   sub: { name: 'Monkey Sub', icon: ['MonkeySubIcon'], tags: ['proj', 'area'], cd: 2.2, dmg: 9,
     lv: ['Longer Range: +1 torpedo', 'Advanced Intel: +30% radius', 'Barbed Darts: +30% damage', 'Twin Guns: +1 torpedo', 'Ballistic Missile: +30% attack speed', 'Pre-emptive Strike: missiles hit the strongest bloons'],
@@ -366,7 +384,7 @@ const SKILLS = {
     lv: ['Sharper Prongs: +3 pierce', 'Echosense: +1 wave', 'Riptide Champion: +40% damage', 'Arctic Knight: waves slow bloons', 'Abyss Dweller: +30% wave size', 'Lord of the Abyss: waves freeze, x2 damage'],
     desc: 'Throws trident waves that slice through lines of bloons.' },
   village: { name: 'Monkey Village', icon: ['MonkeyVillageIcon'], tags: ['buff'], cd: 1, dmg: 0,
-    lv: ['Bigger Radius: +5% damage', 'Jungle Drums: +10% attack speed', 'Primary Training: +1 pierce', 'Monkey Commerce: +25% gold', 'Monkey Intelligence Bureau: +10% damage', 'Monkey City: +50% gold, chests 15% cheaper'],
+    lv: ['Bigger Radius: +5% damage', 'Jungle Drums: +10% attack speed', 'Radar Scanner: +1 pierce', 'Monkey Commerce: +25% gold', 'Grow Blocker: +10% damage', 'Tier 5: your path\'s capstone'],
     desc: 'A village travels with you: +10% damage and +15% gold from pops.' },
   beast: { name: 'Beast Handler', icon: ['BeastHandlerIcon'], tags: ['summon'], cd: 0.6, dmg: 9,
     lv: ['Velociraptor: raptor grows, +30% damage', 'Golden Eagle: a bird of prey joins the hunt', 'Eagle Talons: bigger eagle, bites stun', 'Giant Condor: alpha raptor, +40% speed, condor joins', 'Tyrannosaurus Rex + Pouakai: +50% damage', 'Giganotosaurus: x3 vs MOABs, + Pouakai and a raptor pack'],
@@ -729,12 +747,12 @@ function addSkill(id) {
 }
 const hasSkill = id => G.skills.find(s => s.id === id);
 const villageSk = () => G.skills.find(s => s.id === 'village');
-function villageDmg() { const v = villageSk(); return v ? 1.1 + (lvAt(v, 2) ? 0.05 : 0) + (lvAt(v, 6) ? 0.1 : 0) : 1; }
-function goldMult() { const v = villageSk(); return G.stats.gold * (v ? 1.15 + (lvAt(v, 5) ? 0.25 : 0) + (lvAt(v, 7) ? 0.5 : 0) : 1); }
+function villageDmg() { const v = villageSk(); return v ? 1.1 + (lvAt(v, 2) ? 0.05 : 0) + (lvAt(v, 6) ? 0.1 : 0) + 0.15 * pc(v, 'M') : 1; }
+function goldMult() { const v = villageSk(), f = G.skills.find(s => s.id === 'farm'); return G.stats.gold * (v ? 1.15 + (lvAt(v, 5) ? 0.25 : 0) + 0.3 * pc(v, 'B') + (capstone(v, 'B') ? 0.6 : 0) : 1) * (capstone(f, 'M') ? 1.15 : 1); }
 // Soulstone-style escalating chest price: each chest costs more than the last
 function chestCost(n = G.chestsOpened) {
   const v = villageSk();
-  const disc = (1 - G.stats.chestDisc) * (v && lvAt(v, 7) ? 0.85 : 1);
+  const disc = (1 - G.stats.chestDisc) * Math.pow(0.9, pc(v, 'B')) * (capstone(v, 'B') ? 0.8 : 1);
   return Math.max(25, Math.round(100 * (n + 1) * Math.pow(1.25, n) * disc / 10) * 10);
 }
 function tagMult(tags) { let m = 1; for (const t of tags) m *= (G.stats.tag[t] || 1); return m; }
@@ -750,7 +768,7 @@ function skillDmg(sk, mult = 1) {
 }
 function cdOf(sk, base) {
   let as = 1 + G.stats.cdr;
-  if (sk && !sk.hero && sk.lv >= 3) as *= Math.pow(1.2, pathCount(sk, 'M')); const vs = villageSk(); if (vs && lvAt(vs, 3)) as += 0.1;
+  if (sk && !sk.hero && sk.lv >= 3) as *= Math.pow(1.2, pathCount(sk, 'M')); const vs = villageSk(); if (vs && lvAt(vs, 3)) as += 0.1; if (vs) as += 0.12 * pc(vs, 'T') + (capstone(vs, 'T') ? 0.25 : 0); if (G.villageCall > 0) as *= 1.6;
   if (G.player.buffT > 0) as *= G.brewPow || 1.35;
   if (G.buf.as > 0) as *= 1.6;                                  // Naval Tactics / Kinetic Charge
   if (G.drainT > 0) as *= 0.75;
@@ -815,7 +833,7 @@ function shoot(o) {
   // generic projectile
   const p = Object.assign({ x: G.player.x, y: G.player.y, vx: 0, vy: 0, r: 0.25, dmg: 1, pierce: 1, life: 1.6, tags: ['proj'], hits: new Set(), kind: 'dart', rot: 0, t: 0 }, o);
   if (o.a !== undefined) { p.vx = Math.cos(o.a) * o.speed; p.vy = Math.sin(o.a) * o.speed; p.rot = o.a; }
-  const vs = villageSk(); if (vs && lvAt(vs, 4) && !o.onHit) p.pierce += 1;
+  const vs = villageSk(); if (vs && !o.onHit) p.pierce += (lvAt(vs, 4) ? 1 : 0) + pc(vs, 'T') + (capstone(vs, 'T') ? 2 : 0);
   if (p.spr === undefined && CUR_SK) p.spr = projSprite(CUR_SK, p.kind);
   if (CUR_SK && !CUR_SK.hero && CUR_SK.lv >= 3) p.pierce += pathCount(CUR_SK, 'B');
   p.src = o.src || SRC;
@@ -1175,12 +1193,21 @@ const CAST = {
     return true;
   },
   farm(sk) {
-    const n = 1 + (lvAt(sk, 2) ? 1 : 0) + (lvAt(sk, 5) ? 1 : 0);
+    if (!G.summons.some(s => s.kind === 'farm')) G.summons.push({ kind: 'farm', x: G.player.x + 2, y: G.player.y + 1, sk });
+    const n = 1 + (lvAt(sk, 2) ? 1 : 0) + (lvAt(sk, 5) ? 1 : 0) + 2 * pc(sk, 'T');
+    const heal = 6 * (lvAt(sk, 3) ? 1.3 : 1) * (lvAt(sk, 6) ? 1.3 : 1) * (1 + 0.2 * pc(sk, 'T')) * (capstone(sk, 'T') ? 2 : 1);
+    const xp = 2 * (1 + pc(sk, 'B')) * (capstone(sk, 'B') ? 5 : 1), vac = pc(sk, 'B') > 0;
     for (let i = 0; i < n; i++) {
       const pos = G.arena.randomCellNear(G.player.x, G.player.y, 2, 6, 15); if (!pos) continue;
-      G.pickups.push({ kind: 'banana', x: pos[0], y: pos[1], v: 6 * (lvAt(sk, 3) ? 1.3 : 1) * (lvAt(sk, 6) ? 1.3 : 1), xp: lvAt(sk, 7) ? 12 : 2, t: 0 });
+      G.pickups.push({ kind: 'banana', x: pos[0], y: pos[1], v: heal, xp, t: 0, vac });
     }
-    sk.cd = sk.def.cd - (lvAt(sk, 4) ? 1 : 0);
+    // Monkey Bank path: harvests also pay out gold
+    if (pc(sk, 'M')) {
+      const cash = Math.round(8 * n * pc(sk, 'M') * (1 + 0.04 * (G.level - 1)) * (capstone(sk, 'M') ? 3 : 1));
+      G.gold += cash; G.goldEarned += cash; rs('farm').gold += cash;
+      G.texts.push({ x: G.player.x, y: G.player.y - 1.5, s: '+$' + cash, t: 0, life: 1.2, gold: true });
+    }
+    sk.cd = (sk.def.cd - (lvAt(sk, 4) ? 1 : 0)) * (capstone(sk, 'T') ? 0.7 : 1);
     return true;
   },
   sub(sk) {
@@ -1285,7 +1312,14 @@ const CAST = {
   },
   village(sk) {
     if (!G.summons.some(s => s.kind === 'village')) G.summons.push({ kind: 'village', x: G.player.x - 2, y: G.player.y + 1, sk });
-    sk.cd = 1e9;
+    // Homeland Defense capstone: a 30s cycle of 8s call-to-arms
+    if (capstone(sk, 'M')) {
+      G.villageCall = 8; sk.cd = 30;
+      G.effects.push({ kind: 'ring', x: G.player.x, y: G.player.y, r: 6, t: 0, life: 0.7, color: '#ffd34d' });
+      toast('HOMELAND DEFENSE! Towers +60% attack speed', '#ffd34d'); play('UpgradeParagonDartMonkey', { vol: 0.4 });
+      return true;
+    }
+    sk.cd = 1;   // re-checked each second so the capstone kicks in as soon as it's taken
     return true;
   },
   beast(sk) {
@@ -1390,7 +1424,7 @@ function damage(b, dmg, tags, opts = {}) {
   let crit = false;
   if (Math.random() < G.stats.crit + (opts.critBonus || 0)) { d *= G.stats.critMult; crit = true; }
   if (b.def && b.def.resist) for (const t of tags) if (b.def.resist[t]) d *= b.def.resist[t];
-  if ((b.def && b.def.moab) || b.isBoss) { d *= (opts.moabMult || 1); const ps = G.skillOf && G.skillOf[SRC]; if (ps && ps.lv >= 3) d *= Math.pow(1.25, pathCount(ps, 'B')); }
+  if ((b.def && b.def.moab) || b.isBoss) { d *= (opts.moabMult || 1); const ps = G.skillOf && G.skillOf[SRC]; if (ps && ps.lv >= 3) d *= Math.pow(1.25, pathCount(ps, 'B')); const vv = villageSk(); if (vv) d *= Math.pow(1.25, pc(vv, 'M')); }
   if (b.isBoss && (b.shield || b.shieldT > 0)) d *= 0.25;
   rs().dmg += Math.min(d, Math.max(0, b.hp)); if (opts.burn) b.burnSrc = SRC;
   if (b.net) NET.queueDmg(b, d); else { b.lastOwner = NET_OWNER; b.lastSrc = SRC; }
@@ -1723,7 +1757,7 @@ function update(dt) {
   if (p.dashT > 0) { p.dashT -= dt; moveCircle(p, p.dashX * 30 * dt, p.dashY * 30 * dt); if (Math.random() < 0.8) G.effects.push({ kind: 'ghost', x: p.x, y: p.y, t: 0, life: 0.25, face: p.face }); }
   else moveCircle(p, p.vx * dt, p.vy * dt);
   p.inv -= dt; p.hurtT -= dt; p.buffT -= dt;
-  G.abilCd -= dt; for (const k in G.buf) G.buf[k] -= dt; G.drainT -= dt; G.blindT -= dt; G.towerStunT -= dt;
+  G.abilCd -= dt; for (const k in G.buf) G.buf[k] -= dt; G.drainT -= dt; G.villageCall = (G.villageCall || 0) - dt; G.blindT -= dt; G.towerStunT -= dt;
   if (p.dashN === undefined) p.dashN = s.dashes;
   if (p.dashN < s.dashes) { p.dashCd -= dt; if (p.dashCd <= 0) { p.dashN++; p.dashCd = p.dashN < s.dashes ? 2.2 * (1 - (s.dashCdr || 0)) : 0; } } else p.dashCd = 0;
   META.tick(dt);
@@ -2034,9 +2068,11 @@ function update(dt) {
         G.effects.push({ kind: 'spark', x: tx.x, y: tx.y, r: 0.7, t: 0, life: 0.15, color: '#ff3a3a' });
         play('HitCeramic0*', { vol: 0.2, gap: 0.06, key: 'bite' });
       }
-    } else if (sm.kind === 'village') {
-      const dx = p.x - 2.2 - sm.x, dy = p.y + 1.6 - sm.y;
+    } else if (sm.kind === 'village' || sm.kind === 'farm') {
+      // the village trails behind-left of you, the banana farm behind-right
+      const dx = p.x + (sm.kind === 'farm' ? 2.2 : -2.2) - sm.x, dy = p.y + 1.6 - sm.y;
       sm.x += dx * Math.min(1, dt * 2); sm.y += dy * Math.min(1, dt * 2);
+      if (sm.kind === 'farm' && sm.harvest !== sm.sk.fired) { sm.harvest = sm.sk.fired; sm.anim = 'attack'; }
     }
   }
   G.summons = G.summons.filter(sm => sm.kind !== 'sentry' || sm.t < sm.life);
@@ -2688,13 +2724,13 @@ function cardInfo(o) {
   if (o.type === 'up') {
     const sk = o.sk, mult = R.m;
     if ((sk.lv === 2 || sk.lv === 4) && PATHS[sk.id]) return { title: sk.def.name, kind: `Skill · Level ${sk.lv} → ${sk.lv + 1} · PATH CHOICE`, desc: sk.def.lv[sk.lv - 1] + `<br><br><span style="color:#7fd8ff">Choose a top, middle or bottom BTD6 path</span>`, icon: sk.def.icon, tags: sk.def.tags };
-    return { title: sk.def.name, kind: `Skill · Level ${sk.lv} → ${sk.lv + 1}`, desc: sk.def.lv[sk.lv - 1] + (o.rar > 0 ? `<br><br><span style="color:var(--gold2)">+${Math.round((mult - 1) * 15)}% skill damage</span>` : ''), icon: sk.def.icon, tags: sk.def.tags };
+    return { title: sk.def.name, kind: `Skill · Level ${sk.lv} → ${sk.lv + 1}`, desc: (sk.lv === 6 && SUPPORT_PATHS[sk.id] && sk.path5 ? SUPPORT_PATHS[sk.id].cap[sk.path5] : sk.def.lv[sk.lv - 1]) + (o.rar > 0 ? `<br><br><span style="color:var(--gold2)">+${Math.round((mult - 1) * 15)}% skill damage</span>` : ''), icon: sk.def.icon, tags: sk.def.tags };
   }
   if (o.type === 'new') { const d = SKILLS[o.id]; return { title: d.name, kind: 'New Skill', desc: d.desc, icon: d.icon, tags: d.tags }; }
   if (o.type === 'path') {
     const names = PATHS[o.sk.id][{ T: 0, M: 1, B: 2 }[o.L]], t = o.tier === 0 ? 0 : 1;
     const line = names.slice(t).map((n, i) => i ? `<span style="color:var(--dim)">→ ${n}</span>` : `<b>${n}</b>`).join('<br>');
-    return { title: names[t], kind: `${o.sk.def.name} · ${PATH_NAME[o.L]}`, desc: `${line}<br><br><span style="color:var(--gold2)">${PATH_BONUS[o.L]}</span>`, icon: o.sk.def.icon, upg: PATH_ICON[`${o.sk.id}_${o.L}${o.tier === 0 ? 3 : 4}`], tags: o.sk.def.tags };
+    return { title: names[t], kind: `${o.sk.def.name} · ${PATH_NAME[o.L]}`, desc: `${line}<br><br><span style="color:var(--gold2)">${pathBonus(o.sk, o.L)}</span>` + (SUPPORT_PATHS[o.sk.id] && o.tier === 1 ? `<br><span style="color:#7fd8ff">Tier 5: ${SUPPORT_PATHS[o.sk.id].cap[o.L]}</span>` : ''), icon: o.sk.def.icon, upg: PATH_ICON[`${o.sk.id}_${o.L}${o.tier === 0 ? 3 : 4}`], tags: o.sk.def.tags };
   }
   if (o.type === 'paragon') return { title: PARAGONS[o.sk.id], kind: `PARAGON · merge ${o.sk.def.name}`, desc: `Your three maxed towers lend their power: ${o.sk.def.name} becomes its Paragon.<br><br><span style="color:var(--gold2)">x3 damage · 40% faster attacks · Paragon model</span>`, icon: o.sk.def.icon, tags: o.sk.def.tags };
   const v = o.c.v * R.m;
@@ -3000,24 +3036,28 @@ function applyAudio() {
   if (MUSIC) MUSIC.volume = Math.min(1, 0.6 * m * AUDIOSET.music / 100 * (MUSIC.fade ?? 1));
   for (const a of RUNMUS) a.volume = Math.min(1, 0.55 * m * AUDIOSET.music / 100 * a.fade);
 }
-// ---- Bloons TD 6 music in runs: each map has its own track, each boss has its own theme while it's alive
+// ---- run music: each map plays the Soulstone Survivors biome theme that fits it (rendered from the game's interactive
+// music: intro, then a looping body); each boss plays its own Bloons TD 6 theme while it's alive
 const MAP_MUSIC = {
-  20: 'MusicTribesJaloonMix', 22: 'MusicTropicalOctopusMix', 13: 'MusicSunshineFiestaMix', 19: 'MusicTropicalClassyBrassMix', 15: 'MusicSunset64Mix',
-  16: 'MusicFiestaHeliumHeightsMix', 24: 'MusicWinterTonkMix', 26: 'MusicWinterChilledMix', 14: 'MusicLegendsFrontierMain', 9: 'MusicLegendsRogueMain',
+  20: 'SS_Forest1', 22: 'SS_Forest2', 13: 'SS_Desert1', 19: 'SS_Desert2', 15: 'SS_Cavern1',
+  16: 'SS_Cavern2', 24: 'SS_Snow1', 26: 'SS_Snow2', 14: 'SS_Cathedral1', 9: 'SS_VoidKingLevel',
 };
+// where each Soulstone track loops back to after its intro (seconds)
+const MUSIC_LOOP = { SS_Forest1: 48, SS_Forest2: 12, SS_Cavern1: 52.364, SS_Snow2: 236.308, SS_Cathedral1: 13.714 };
 const BOSS_MUSIC = {
   bloonarius: 'MusicBossBloonarius', lych: 'MusicHaunted', vortex: 'MusicBossOnslaught', dreadbloon: 'MusicBossOnslaught',
   phayze: 'MusicBossOnslaughtGlitch', blastapopoulos: 'MusicBossOnslaughtGlitch',
 };
 function runMusicTick(dt) {
   const want = !G || G.state === 'loading' || G.state === 'end' ? null
-    : (G.boss && !G.boss.dead && BOSS_MUSIC[G.boss.def.id]) || MAP_MUSIC[G.mapId] || 'MusicLegendsRogueMain';
+    : (G.boss && !G.boss.dead && BOSS_MUSIC[G.boss.def.id]) || MAP_MUSIC[G.mapId] || 'SS_Forest1';
   if (want !== runTrack) {
     runTrack = want;
     for (const a of RUNMUS) a.target = 0;
     if (want) {
       let a = RUNMUS.find(x => x.track === want);
-      if (!a) { a = new Audio('assets/music/' + want + '.ogg'); a.loop = true; a.track = want; a.fade = 0; RUNMUS.push(a); }
+      if (!a) { a = new Audio('assets/music/' + want + '.ogg'); a.track = want; a.fade = 0; RUNMUS.push(a);
+        if (want in MUSIC_LOOP || want.startsWith('SS_')) { const lp = MUSIC_LOOP[want] || 0; a.addEventListener('ended', () => { a.currentTime = lp; if (a.target) a.play().catch(() => { }); }); } else a.loop = true; }
       else if (a.target === 0 && a.fade < 0.05) a.currentTime = 0;   // a boss theme starts from the top each time
       a.target = 1; if (a.paused) a.play().catch(() => { });
     }
