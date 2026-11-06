@@ -1448,7 +1448,7 @@ function spawnBloon(type, pos, parent) {
     Object.assign(b, { type: 'golden', def: gd, r: gd.r, hp, maxhp: hp, spd: gd.spd, hopT: 1.5, hop: 0, camo: false, regrow: false, fort: false });
     toast('A GOLDEN BLOON appeared!', '#ffd700'); play('LegendsItemCollected', { vol: 0.7 });
   }
-  G.bloons.push(b); PROG.seen('b', b.type);
+  b.bornT = 0.35; G.bloons.push(b); PROG.seen('b', b.type);
   return b;
 }
 function damage(b, dmg, tags, opts = {}) {

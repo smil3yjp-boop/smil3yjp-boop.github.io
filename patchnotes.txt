@@ -17,6 +17,10 @@ v0.3.4 | Nov 5, 2026
 - Co-op: the Continue portal now needs every player to be ready, with a ready counter above the portal
 - Co-op: players who join mid-run now stay on the main menu and can press Spectate Run next to Patch Notes
 - Co-op: the run gets easier again when a player leaves
+- Co-op: fixed bosses only dying when the host landed the killing blow
+- Co-op: bloons no longer vanish and pop back in for non-host players when they pop a layer
+- New bloons now grow in when they spawn instead of appearing at full size
+- Co-op: the world now updates 15 times a second for other players (was 10), for smoother bloons
 - Co-op: every player now shows as a coloured blip on the minimap (blinking red while down)
 - Co-op: party panel at the top left during a run with each player's Discord avatar, name and health
 

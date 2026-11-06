@@ -762,7 +762,8 @@ const R3 = (() => {
     const seen = new Set();
     for (const b of G.bloons) {
       if (b.dead) continue;
-      const s = b.r * 2.3;
+      if (b.bornT > 0) b.bornT -= dt;
+      const s = b.r * 2.3 * (b.bornT > 0 ? 1 - 0.8 * b.bornT / 0.35 : 1);   // new bloons grow in instead of appearing at full size
       if (b.def.moab) {
         seen.add(b); drawBig(b, G, dt); continue;
       }

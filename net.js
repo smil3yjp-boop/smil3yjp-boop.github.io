@@ -381,7 +381,8 @@ var NET = (() => {
     else if (b.type === 'ceramic') play('CeramicDestroyed0*', { vol: 0.45, gap: 0.05 });
     else sfxPop(false);
   }
-  function pendSum(b, now) { let s = 0; b.pend = b.pend.filter(q => now - q[0] < 400); for (const q of b.pend) s += q[1]; return s; }
+  const PEND_MS = 900;   // how long my own hits count before the host's numbers must include them (covers slow round trips)
+  function pendSum(b, now) { let s = 0; b.pend = b.pend.filter(q => now - q[0] < PEND_MS); for (const q of b.pend) s += q[1]; return s; }
   function applyWorld(w) {
     if (!G || G.state === 'loading') return;
     if (w.map !== G.mapIdx) return;                     // portal transition in progress
@@ -402,14 +403,20 @@ var NET = (() => {
       const id = B[i], type = BT[B[i + 1]]; if (!type) continue;
       seen.add(id);
       let b = netBloons.get(id);
-      if (!b) { b = makeBloon(id, type); b.x = B[i + 2]; b.y = B[i + 3]; netBloons.set(id, b); PROG.seen('b', type); }
-      if (b.type !== type) {                              // lost a layer
-        if (!b.dead) popFx(b);
-        const def = BLOONS[type]; b.type = type; b.def = def; b.r = def.r; b.spd = bloonSpd(def); b.pend = []; b.dead = false;
+      if (!b) { b = makeBloon(id, type); b.x = B[i + 2]; b.y = B[i + 3]; b.bornT = 0.35; netBloons.set(id, b); PROG.seen('b', type); }
+      // I popped this layer myself a moment ago and the host hasn't caught up: keep showing my predicted layer
+      const behind = b.predUntil > now && b.shed && b.shed.includes(type);
+      if (!behind && b.type !== type) {                   // lost a layer (or the host popped further than I predicted)
+        if (!b.dead && !(b.shed && b.shed.includes(type))) popFx(b);   // no pop effect when the host is undoing a pop I predicted
+        const def = BLOONS[type]; b.type = type; b.def = def; b.r = def.r; b.spd = bloonSpd(def); b.pend = []; b.dead = false; b.shed = null; b.predUntil = 0;
       }
-      b.tx = B[i + 2]; b.ty = B[i + 3]; b.maxhp = B[i + 5];
-      const hp = B[i + 4] - pendSum(b, now);
-      b.hp = hp; if (hp > 0 && b.dead && !b.pend.length) b.dead = false;
+      if (!behind && b.type === type && b.predUntil && b.shed) { b.shed = null; b.predUntil = 0; }   // host confirmed my prediction
+      b.tx = B[i + 2]; b.ty = B[i + 3];
+      if (!behind) {
+        b.maxhp = B[i + 5];
+        const hp = B[i + 4] - pendSum(b, now);
+        b.hp = hp; if (hp > 0 && b.dead && !b.pend.length) b.dead = false;
+      }
       const f = B[i + 6];
       b.camo = !!(f & 1); b.regrow = !!(f & 2); b.fort = !!(f & 4); b.phased = !!(f & 64); b.elite = !!(f & 128); b.minion = !!(f & 256); b.slime = !!(f & 512); b.wind = !!(f & 1024); b.phase = !!(f & 2048);
       // status baselines (local skills raise these; the difference is sent to the host)
@@ -426,13 +433,13 @@ var NET = (() => {
     if (w.bo) {
       const [id, x, y, hp, mhp, r, sh, phase, sk, intro, ch, drain, anim, spd, atkT, mechT, blimpSkull, das] = w.bo;
       let b = G.boss;
-      if (!b || b.def.id !== id || b.dead) {
+      if (!b || b.def.id !== id || (b.dead && !b.localDead)) {
         const def = BOSSES.find(d => d.id === id);
         b = G.boss = { isBoss: true, net: true, nid: -1, def, x, y, r, hp, maxhp: mhp, spd, dead: false, hitT: 0, slowT: 0, frozenT: 0, stunT: 0, burnT: 0, burnD: 0, atkT, phase, wob: 0, kx: 0, ky: 0, shield: false,
           skulls: [0.75, 0.5, 0.25].slice(3 - sk), blimpSkull, dashAtSpawn: G.dashesUsed || 0, pend: [] };
         G.bossIntro = intro; play(BOSS_SFX[id][0], { vol: 1 }); shake(0.6); PROG.seen('x', id);
       }
-      b.tx = x; b.ty = y; b.r = r; b.maxhp = mhp; b.hp = hp - pendSum(b, now); b.shieldT = sh ? 0.2 : 0; b.phase = phase; b.spd = spd; b.atkT = atkT; b.mechT = mechT;
+      b.tx = x; b.ty = y; b.r = r; b.maxhp = mhp; b.hp = Math.max(1, hp - pendSum(b, now)); b.dead = false; b.localDead = false;   // only the host ends a boss b.shieldT = sh ? 0.2 : 0; b.phase = phase; b.spd = spd; b.atkT = atkT; b.mechT = mechT;
       while (b.skulls.length > sk) b.skulls.shift();
       b.charge = ch ? { a: ch[0], t: ch[1], tele: ch[2], dur: ch[3] } : null; b.drainFx = drain; if (anim) b.anim = anim;
       b.base = { slowT: b.slowT, frozenT: b.frozenT, stunT: b.stunT, burnT: b.burnT, hexT: b.hexT || 0 };
@@ -488,11 +495,25 @@ var NET = (() => {
     (b.qd = b.qd || { d: 0, src: SRC }).d += d; b.qd.src = SRC;
     if (!b.queued) { b.queued = true; dmgQ.push(b); }
   };
-  N.localPop = b => { b.dead = true; popFx(b); };
+  N.localPop = b => {
+    if (b.isBoss) { b.hp = Math.max(1, b.hp); b.localDead = true; return; }   // the host decides when a boss dies (my damage is on its way)
+    popFx(b);
+    // shed the layer locally exactly like the host does, so the bloon doesn't vanish while the host catches up
+    let over = -b.hp;
+    while (!b.def.moab && b.def.kids && b.def.kids.length) {
+      (b.shed = b.shed || []).push(b.type);
+      const k = b.def.kids[0][0], def = BLOONS[k], hp = def.hp * hpScale(def);
+      b.type = k; b.def = def; b.r = def.r; b.spd = bloonSpd(def); b.fort = false; b.maxhp = hp; b.hp = hp - over * 0.5; b.hitT = 0;
+      b.predUntil = performance.now() + PEND_MS; b.pend = [];
+      if (b.hp > 0) return;
+      over = -b.hp; popFx(b);
+    }
+    b.dead = true;
+  };
   // collect damage + status changes since the last send
   function flushDamage() {
     const list = [];
-    const all = G.bloons.concat(G.boss && !G.boss.dead ? [G.boss] : []);
+    const all = G.bloons.concat(G.boss && (!G.boss.dead || G.boss.queued) ? [G.boss] : []);
     for (const b of all) {
       const base = b.base; let st = null;
       if (base) {
@@ -581,7 +602,7 @@ var NET = (() => {
     if (N.host) {
       if (G.state === 'play' && !N.worldHeld()) hostPickups(dt);
       if (worldT <= 0) {
-        worldT = 0.1;
+        worldT = 1 / 15;   // world updates to the other players: 15 per second
         send('*', worldPacket());
         for (const [to, o] of owed) send(to, Object.assign({ t: 'e' }, o));
         owed.clear();
