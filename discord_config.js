@@ -4,4 +4,6 @@
 window.DISCORD_CFG = {
   clientId: '1244100266580770827',
   api: '/.proxy/api',
+  // the same save server reached directly, for the website (GitHub Pages) sign-in
+  webApi: 'https://bloon-saves.nick-j-peterson9.workers.dev',
 };

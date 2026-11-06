@@ -335,7 +335,8 @@ input[type=range]{width:100%;accent-color:#f0a93a}
 .pnv ul{margin:0;padding-left:20px}.pnv li{margin:3px 0;line-height:1.35}
 .rvver{align-self:flex-end;font-size:12px;color:var(--dim);letter-spacing:1px;margin-top:-6px}
 .mfoot{gap:8px}
-#specbtn.hidden{display:none}
+#specbtn.hidden,#dsbtn.hidden{display:none}
+.dsbtn{background:linear-gradient(#7984f5,#5865f2);border-color:#3c45a5;color:#fff}.dsbtn b{color:#fff;opacity:.85}
 
 /* crosshair */
 body.xhair, body.xhair canvas{cursor:none!important}
