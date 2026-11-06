@@ -540,7 +540,7 @@ const R3 = (() => {
     if (color && p.mesh.instanceColor !== undefined) p.mesh.setColorAt(p.n, color);
     p.n++;
   }
-  const ENEMY_HZ = /^(slime|magma|bossSlam|chargeLine)$/;
+  const ENEMY_HZ = /^(slime|magma|bossSlam|chargeLine|cyclone)$/;
   const IDQ = new THREE.Quaternion();
   const FLATQ = new THREE.Quaternion().setFromEuler(new THREE.Euler(-Math.PI / 2, 0, 0));
   let bloonMats = {};
@@ -930,6 +930,9 @@ const R3 = (() => {
         const c = h.kind === 'bossSlam' ? tmpC.setRGB(1, 0.15, 0.15) : tmpC.setRGB(1, 0.65, 0.2);
         push('ring', w(h.x, h.y, 0.08), FLATQ, tmpS.set(h.r, h.r, 1), c);
         push('discAdd', w(h.x, h.y, 0.07), FLATQ, tmpS.set(h.r * k, h.r * k, 1), tmpC.copy(c).multiplyScalar(0.35));
+      } else if (h.kind === 'cyclone') {   // Vortex's enraged pull: spinning rings closing in
+        for (let i = 0; i < 3; i++) { const f = 1 - ((h.t * 0.9 + i / 3) % 1); push('ring', w(h.x, h.y, 0.09 + i * 0.01), FLATQ, tmpS.set(h.r * f, h.r * f, 1), tmpC.setRGB(0.35, 0.8, 1).multiplyScalar(0.4 + 0.6 * (1 - f))); }
+        for (let i = 0; i < 8; i++) { const a = -h.t * 4 + i * 0.785, rr = h.r * (0.25 + 0.7 * ((i * 0.37 + h.t) % 1)); push('glow', w(h.x + Math.cos(a) * rr, h.y + Math.sin(a) * rr, 0.5 + (i % 3) * 0.5), camQ, tmpS.setScalar(0.6), tmpC.setRGB(0.5, 0.9, 1)); }
       } else if (h.kind === 'chargeLine') {
         const steps = 12;
         for (let i = 0; i <= steps; i++) { const d = h.len * i / steps; push('discAdd', w(h.x + Math.cos(h.a) * d, h.y + Math.sin(h.a) * d, 0.07), FLATQ, tmpS.set(h.w / 2, h.w / 2, 1), tmpC.setRGB(0.25 + 0.3 * k, 0.03, 0.03)); }
@@ -1003,7 +1006,16 @@ const R3 = (() => {
     let d = want - m.rotation.y; d = Math.atan2(Math.sin(d), Math.cos(d));
     m.rotation.y += d * Math.min(1, dt * 3);
     const flash = b.hitT > 0 && (performance.now() / 70 | 0) % 2 ? 0.14 : 0;
-    if (m.userData.flash !== flash) { m.userData.flash = flash; m.traverse(o => { if (o.material && o.material.emissive) o.material.emissive.setScalar(flash); }); }
+    const fk = flash + (b.enraged ? 1 : 0);
+    if (m.userData.flash !== fk) { m.userData.flash = fk; m.traverse(o => { if (o.material && o.material.emissive) { if (b.enraged) o.material.emissive.setRGB(0.22 + flash, 0.05 + flash, 0.34 + flash); else o.material.emissive.setScalar(flash); } }); }
+    // ENRAGED boss: the purple phasing glow, pulsing, with sparks rising off it
+    if (b.enraged) {
+      const t = performance.now() / 1000, pu = 1 + 0.08 * Math.sin(t * 4);
+      push('glow', w(b.x, b.y, len * 0.4), camera.quaternion, tmpS.set(len * 1.35 * pu, len * 1.1 * pu, 1), tmpC.setRGB(0.22, 0.07, 0.42));
+      push('discAdd', w(b.x, b.y, 0.06), FLATQ, tmpS.set(len * 0.6 * pu, len * 0.6 * pu, 1), tmpC.setRGB(0.16, 0.05, 0.3));
+      push('ring', w(b.x, b.y, 0.08), FLATQ, tmpS.set(len * 0.62, len * 0.62, 1), tmpC.setRGB(0.7, 0.3, 1));
+      for (let i = 0; i < 7; i++) { const f = (t * 0.7 + i / 7) % 1, a = t * 1.5 + i * 0.9, rr = len * (0.35 + 0.1 * Math.sin(i * 2.3)); push('glow', w(b.x + Math.cos(a) * rr, b.y + Math.sin(a) * rr, 0.4 + f * len * 0.9), camera.quaternion, tmpS.setScalar(0.45 * (1 - f * 0.5)), tmpC.setRGB(0.7, 0.3, 1).multiplyScalar(1.1 - f * 0.8)); }
+    }
     if (b.frozenT > 0 || b.stunT > 0) push('glow', w(b.x, b.y, 1), camera.quaternion, tmpS.setScalar(len), tmpC.setRGB(0.3, 0.5, 0.8));
     push('shadow', w(b.x, b.y, 0.04), FLATQ, tmpS.set(len * 0.7, len * 0.7, 1));
   }

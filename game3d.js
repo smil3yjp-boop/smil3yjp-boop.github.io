@@ -816,7 +816,8 @@ function nearestBloon(x, y, maxd = 22, exclude) {
 }
 function aimDir(maxd = 22) {
   const p = G.player;
-  if (G.manualAim) {
+  if (PAD.aim !== null && INPUT === 'pad') return { a: PAD.aim, target: null };   // controller: right stick aims while held
+  if (G.manualAim && INPUT === 'kb') {
     const g = R3.screenToGame(mouse.x / DPR, mouse.y / DPR);
     if (!g) return null;
     const a = Math.atan2(g[1] - p.y, g[0] - p.x); return { a, target: null };
@@ -1593,10 +1594,24 @@ function spawnBoss() {
   const hp = def.hp * G.chaos.hp * (1 + G.t / 600) * Math.pow(1.7, G.loop) * (1 + 0.6 * ((G.coopN || 1) - 1));
   G.boss = { isBoss: true, def, x: pos[0], y: pos[1], r: def.r, hp, maxhp: hp, spd: def.spd, dead: false, hitT: 0, slowT: 0, frozenT: 0, stunT: 0, burnT: 0, burnD: 0, atkT: 3, phase: 1, wob: 0, kx: 0, ky: 0, shield: false,
     skulls: [0.75, 0.5, 0.25], blimpSkull: rint(0, 2), dashAtSpawn: G.dashesUsed || 0 };
+  if (G.loop >= ENRAGE_LOOP) {
+    const B = G.boss; B.enraged = true; B.spd *= 1.2; B.enrT = 7;
+    setTimeout(() => { if (G && G.boss === B && !B.dead) toast(`☠ ENRAGED ${def.name}: ${ENRAGED[def.id].move} — ${ENRAGED[def.id].desc.toLowerCase()}`, '#c070ff'); }, 3100);
+  }
   G.bossIntro = 3; PROG.seen('x', def.id);
   play(BOSS_SFX[def.id][0], { vol: 1 });
   shake(0.6);
 }
+// later loops: bosses come back ENRAGED (purple glow, faster, plus one extra signature attack)
+const ENRAGE_LOOP = 2;   // from the 3rd boss of a run
+const ENRAGED = {
+  bloonarius: { move: 'Slime Flood', desc: 'Leaves a trail of slime and bursts slime all around you' },
+  lych: { move: 'Soul Spiral', desc: 'Fires spiralling waves of soul orbs' },
+  vortex: { move: 'Cyclone', desc: 'Drags you into a cyclone that bursts in the middle' },
+  dreadbloon: { move: 'Iron Shell', desc: 'Hardens its armour and drops a line of rockfalls toward you' },
+  phayze: { move: 'Phase Shift', desc: 'Teleports right on top of you' },
+  blastapopoulos: { move: 'Meteor Rain', desc: 'Rains meteors that leave magma behind' },
+};
 const SKULL_SFX = { bloonarius: 'BossBloonariusVomit', lych: 'BossLychEtherealize', vortex: 'VortexTornado0*', dreadbloon: 'BossDreadBloonReArmour', phayze: 'BossPhayzeSummonPortal', blastapopoulos: 'BossBlastapopoulosFormRocks0*' };
 function bossSkull(b, idx) {
   const p = G.player, id = b.def.id;
@@ -1641,11 +1656,12 @@ function bossAI(b, dt) {
   if (b.shieldT > 0) b.shieldT -= dt;
   // living Mini-Lychs feed the Lych
   if (b.def.id === 'lych') { const minis = G.bloons.filter(o => !o.dead && o.type === 'lychmini').length; if (minis) b.hp = Math.min(bossHealCap(b), b.hp + b.maxhp * 0.004 * minis * dt); }
-  if (b.hp < b.maxhp * 0.5 && b.phase === 1) { b.phase = 2; toast(`${b.def.name} is ENRAGED!`, '#ff4040'); b.spd *= 1.3; }
+  if (b.hp < b.maxhp * 0.5 && b.phase === 1) { b.phase = 2; toast(`${b.def.name} is FURIOUS!`, '#ff4040'); b.spd *= 1.3; }
   bossMechanic(b, dt);
+  if (b.enraged) enragedTick(b, dt);
   b.atkT -= dt;
   if (b.atkT > 0) return;
-  const enr = (b.phase === 2 ? 0.7 : 1) * (1 - 0.18 * (3 - b.skulls.length));   // each skull broken makes it attack faster
+  const enr = (b.phase === 2 ? 0.7 : 1) * (1 - 0.18 * (3 - b.skulls.length)) * (b.enraged ? 0.85 : 1);   // each skull broken makes it attack faster
   const roll = Math.random();
   b.anim = 'attack';
   if (roll < 0.35) { // slam circles at/around player
@@ -1703,6 +1719,56 @@ function bossMechanic(b, dt) {
     play('VortexTornado0*', { vol: 0.7 }); toast('☠ Vortex shorts out your towers!', '#9fd6ff');
   } else b.mechT = 99;
 }
+// the extra attack an ENRAGED boss gets (everything it makes is a normal enemy hazard/shot, so co-op sees it too)
+function enragedTick(b, dt) {
+  const id = b.def.id, dm = G.chaos.dmg, A = G.arena;
+  if (id === 'bloonarius') { b.trailT = (b.trailT || 0) - dt; if (b.trailT <= 0) { b.trailT = 0.8; G.hazards.push({ kind: 'slime', x: b.x, y: b.y, r: 2, t: 0, life: 9 }); } }
+  b.enrT -= dt; if (b.enrT > 0) return;
+  if (b.charge) { b.enrT = 0.5; return; }   // not in the middle of a charge
+  b.enrT = (b.phase === 2 ? 9 : 11) * (0.85 + Math.random() * 0.3);
+  const p = nearestPlayer(b.x, b.y);
+  const slam = (x, y, r, life, d, leave) => { if (A.isWalk(x, y)) G.hazards.push({ kind: 'bossSlam', x, y, r, t: 0, life, dmg: d * dm, leave }); };
+  b.anim = 'attack';
+  G.effects.push({ kind: 'ring', x: b.x, y: b.y, r: b.r + 4, t: 0, life: 0.6, color: '#b04cff', enemy: true });
+  if (id === 'bloonarius') {   // Slime Flood: a ring of slime bursts around you
+    for (let i = 0; i < 8; i++) { const a = i * TAU / 8 + rnd(0.3); slam(p.x + Math.cos(a) * 3.6, p.y + Math.sin(a) * 3.6, 1.8, 1.3, 16, { kind: 'slime', r: 2.2, life: 7 }); }
+    slam(p.x, p.y, 1.8, 1.5, 16, { kind: 'slime', r: 2.2, life: 7 });
+    play('BossBloonariusVomit', { vol: 0.8, gap: 0 });
+  } else if (id === 'lych') {   // Soul Spiral: three rotating waves of slow orbs
+    const off = rnd(TAU);
+    for (let w = 0; w < 3; w++) setTimeout(() => { if (!G || b.dead) return; for (let i = 0; i < 12; i++) { const a = off + w * 0.26 + i * TAU / 12; G.eproj.push({ x: b.x, y: b.y, vx: Math.cos(a) * 6, vy: Math.sin(a) * 6, r: 0.45, life: 4.5, dmg: 13 * dm }); } }, w * 380);
+    play('BossLychEtherealize', { vol: 0.8, gap: 0 });
+  } else if (id === 'vortex') {   // Cyclone: pulls you in, then bursts in the middle
+    G.hazards.push({ kind: 'cyclone', x: p.x, y: p.y, r: 7, t: 0, life: 2.2 });
+    slam(p.x, p.y, 2.8, 2.2, 26);
+    play('VortexTornado0*', { vol: 0.8, gap: 0 });
+  } else if (id === 'dreadbloon') {   // Iron Shell: armoured for a few seconds + a line of rockfalls toward you
+    b.shieldT = 3.5;
+    const a = Math.atan2(p.y - b.y, p.x - b.x);
+    for (let i = 1; i <= 7; i++) slam(b.x + Math.cos(a) * (b.r + i * 2.2), b.y + Math.sin(a) * (b.r + i * 2.2), 1.7, 0.8 + i * 0.12, 20);
+    play('BossDreadBloonReArmour', { vol: 0.8, gap: 0 });
+  } else if (id === 'phayze') {   // Phase Shift: marks a spot next to you, then teleports there
+    let dest = null;
+    for (let k = 0; k < 10 && !dest; k++) { const a = rnd(TAU), d = rnd(1.5, 3.5), x = p.x + Math.cos(a) * d, y = p.y + Math.sin(a) * d; if (A.free(x, y, b.r * 0.6)) dest = [x, y]; }
+    if (dest) {
+      slam(dest[0], dest[1], b.r + 1.2, 1.2, 24);
+      G.effects.push({ kind: 'ring', x: dest[0], y: dest[1], r: b.r + 2, t: 0, life: 1.2, color: '#b04cff', enemy: true });
+      play('BossPhayzeSummonPortal', { vol: 0.8, gap: 0 });
+      setTimeout(() => {
+        if (!G || b.dead || G.boss !== b) return;
+        G.effects.push({ kind: 'ring', x: b.x, y: b.y, r: b.r + 3, t: 0, life: 0.5, color: '#b04cff', enemy: true });
+        b.x = dest[0]; b.y = dest[1]; b.charge = null;
+        for (let i = 0; i < 14; i++) { const a = i * TAU / 14; G.eproj.push({ x: b.x, y: b.y, vx: Math.cos(a) * 7, vy: Math.sin(a) * 7, r: 0.45, life: 3, dmg: 13 * dm }); }
+        play('BossPhayzeWarp', { vol: 0.8 });
+      }, 1200);
+    }
+  } else {   // blastapopoulos: Meteor Rain, each meteor leaves a magma pool
+    slam(p.x, p.y, 2.2, 1.5, 20, { kind: 'magma', r: 1.8, life: 6, tick: 0 });
+    for (let i = 0; i < 6; i++) { const a = rnd(TAU), d = rnd(2.5, 7); slam(p.x + Math.cos(a) * d, p.y + Math.sin(a) * d, 2.2, 1.3 + rnd(0.6), 20, { kind: 'magma', r: 1.8, life: 6, tick: 0 }); }
+    play('BossBlastapopoulosFormRocks0*', { vol: 0.8, gap: 0 });
+  }
+  toast(`☠ ${b.def.name}: ${ENRAGED[id].move}!`, '#c070ff');
+}
 function killBoss(b) {
   const fx0 = G.effects.length; try { killBoss0(b); } finally { for (let i = fx0; i < G.effects.length; i++) G.effects[i].enemy = true; }
 }
@@ -1719,7 +1785,7 @@ function killBoss0(b) {
   for (const o of G.bloons) if (!o.dead) { o.dead = true; G.effects.push({ kind: 'pop', x: o.x, y: o.y, r: o.r, t: 0, life: 0.16, color: o.def.color }); }
   G.eproj.length = 0; G.hazards = G.hazards.filter(h => h.kind === 'spikes' || h.kind === 'glue');
   for (const q of G.pickups) if (q.kind === 'soul') q.vac = true;
-  setTimeout(() => G && toast(`${b.def.name} DEFEATED!  Stand in a portal and press ${keyName(SETTINGS.keys.interact)}`, '#ffe39a'), 600);
+  setTimeout(() => G && toast(`${b.def.name} DEFEATED!  Stand in a portal and ${pressWord().toLowerCase()} ${btnName('interact')}`, '#ffe39a'), 600);
   setTimeout(() => {
     if (!G) return;
     const P = G.player, mid = (G.spawnPortals || []).find(q => q.kind === 'moab');
@@ -1750,6 +1816,14 @@ function tryDash() {
   p.dashN = (p.dashN ?? 1) - 1; if (p.dashCd <= 0) p.dashCd = 2.2 * (1 - (G.stats.dashCdr || 0)); META.dash();
   play('UIPropMagicWoosh', { vol: 0.45, gap: 0.05 });
 }
+// Vortex's enraged Cyclone: drags a player toward its middle (walking or dashing away still gets you out)
+function cyclonePull(p, h, dt) {
+  if (!p || p.down) return;
+  const dx = h.x - p.x, dy = h.y - p.y, d = Math.hypot(dx, dy);
+  if (d < 0.3 || d > h.r) return;
+  const f = 4.2 * dt * (0.6 + 0.4 * (1 - d / h.r));
+  moveCircle(p, dx / d * f, dy / d * f);
+}
 function moveCircle(o, dx, dy) {
   const A = G.arena;
   if (A.free(o.x + dx, o.y, o.r)) o.x += dx;
@@ -1759,7 +1833,7 @@ function hurtPlayer(dmg) {
   const p = G.player;
   if (p.inv > 0 || G.state !== 'play' || p.down) return;
   const d = Math.max(1, dmg - G.stats.armor);
-  p.hp -= d; p.inv = 0.45; p.hurtT = 0.25; G.tookDmg = true;
+  p.hp -= d; p.inv = 0.45; p.hurtT = 0.25; G.tookDmg = true; if (INPUT === 'pad') padRumble(Math.min(1, 0.3 + d / Math.max(1, G.stats.maxhp) * 3), 140);
   shake(0.25);
   G.texts.push({ x: p.x, y: p.y - 1, s: '-' + Math.round(d), t: 0, life: 0.7, hurt: true });
   play('ShieldDamaged0*', { vol: 0.55, gap: 0.12, key: 'hurt' });
@@ -2029,7 +2103,8 @@ function update(dt) {
     } else if (h.kind === 'bossSlam' && h.t >= h.life) {
       G.effects.push({ kind: 'boom', x: h.x, y: h.y, r: h.r, t: 0, life: 0.4, color: '#ff3030', enemy: true }); shake(0.3);
       if (Math.hypot(p.x - h.x, p.y - h.y) < h.r + p.r * 0.5) hurtPlayer(h.dmg);
-    }
+      if (h.leave) G.hazards.push(Object.assign({ x: h.x, y: h.y, t: 0 }, h.leave));   // enraged slime / magma left behind
+    } else if (h.kind === 'cyclone') cyclonePull(p, h, dt);
   }
   G.hazards = G.hazards.filter(h => h.t < h.life);
 
@@ -2186,7 +2261,7 @@ function render(dt = 0.016) {
   } else R3.frame(G, dt);
   // floating damage numbers
   ctx.textAlign = 'center';
-  const u = H / 1080;
+  const u = hudU();
   for (const t of G.texts) {
     const p = R3.project(t.x, t.y, 1.6 + t.t * 1.2, W, H); if (!p) continue;
     const a = 1 - t.t / t.life;
@@ -2248,7 +2323,7 @@ function render(dt = 0.016) {
     }
     text(cont ? 'CONTINUE' : co ? 'LEAVE RUN' : 'END RUN', q[0], q[1], 22 * u, cont ? '#7fd8ff' : '#ff8a7a', 'center');
     text(cont ? (co ? `Everyone must be ready · Loop ${G.loop + 2}` : `${MAP_POOL.length > 1 ? 'New arena' : 'Next loop'} · Loop ${G.loop + 2} · stronger bloons`) : co ? 'Finish with your score · others keep playing' : 'Finish with your score', q[0], q[1] + 20 * u, 13 * u, '#e8e0d0', 'center');
-    if (pt.near) text(`Press ${keyName(SETTINGS.keys.interact)} to ${cont ? (co ? (NET.cont.has(NET.me.id) ? 'cancel ready' : 'ready up') : 'enter') : co ? 'leave the run' : 'end the run'}`, q[0], q[1] + 42 * u, 17 * u + Math.sin(G.t * 6) * u, '#ffe39a', 'center');
+    if (pt.near) text(`${pressWord()} ${btnName('interact')} to ${cont ? (co ? (NET.cont.has(NET.me.id) ? 'cancel ready' : 'ready up') : 'enter') : co ? 'leave the run' : 'end the run'}`, q[0], q[1] + 42 * u, 17 * u + Math.sin(G.t * 6) * u, '#ffe39a', 'center');
   }
   if (G.grace > 0 && G.state === 'play') {
     text('GET READY', W / 2, H * 0.36, 34 * u, '#ffe39a', 'center');
@@ -2278,12 +2353,12 @@ function render(dt = 0.016) {
   if (G.spec) {
     ctx.fillStyle = 'rgba(0,0,0,.6)'; roundRect(W / 2 - 330 * u, H - 92 * u, 660 * u, 64 * u, 14 * u); ctx.fill();
     text(`👀 SPECTATING ${NET.specName()}`, W / 2, H - 62 * u, 24 * u, '#7fd8ff', 'center');
-    text(`Press ${keyName(SETTINGS.keys.dash)} to switch player · ${keyName(SETTINGS.keys.pause)} to leave · you'll join the next run`, W / 2, H - 38 * u, 14 * u, '#e8e0d0', 'center');
+    text(`${pressWord()} ${btnName('dash')} to switch player · ${btnName('pause')} to leave · you'll join the next run`, W / 2, H - 38 * u, 14 * u, '#e8e0d0', 'center');
     return;
   }
   drawHUD();
   // crosshair in place of the mouse cursor while playing (style/size/colour in Settings)
-  const xhOn = G.state === 'play' && mouse.inside && !mouse.touch && SETTINGS.xh && SETTINGS.xh.on !== false;
+  const xhOn = G.state === 'play' && mouse.inside && !mouse.touch && INPUT === 'kb' && SETTINGS.xh && SETTINGS.xh.on !== false;
   document.body.classList.toggle('xhair', xhOn);
   if (xhOn) drawCrosshair(ctx, mouse.x, mouse.y, DPR, SETTINGS.xh);
 }
@@ -2472,9 +2547,15 @@ function drawEffect(e, toS) {
 }
 
 // ---------------------------------------------------------------- HUD
+// HUD scale: 1 at 1080p; phones and other short screens get a bigger HUD so it stays readable
+function hudU() {
+  const base = H / 1080;
+  if (!(TOUCH_DEV || innerHeight < 600)) return base;
+  return Math.max(base, Math.min(H / 800, W / 1500));
+}
 function uiImg(n) { const i = img('ui/' + n); return i.complete && i.naturalWidth ? i : null; }
 function drawHUD() {
-  const p = G.player, s = G.stats, u = H / 1080; // ui scale
+  const p = G.player, s = G.stats, u = hudU(); // ui scale
   ctx.setTransform(1, 0, 0, 1, 0, 0);
   // Phayze blind: darkness closing in around the hero
   if (G.blindT > 0) {
@@ -2535,7 +2616,7 @@ function drawHUD() {
   ctx.restore();
   if (G.stats.dashes > 1) text('x' + p.dashN, dx + ds - 2 * u, dy + 14 * u, 15 * u, '#9fe8ff', 'right');
   if (p.dashN < 1 && p.dashCd > 0) { ctx.fillStyle = 'rgba(0,0,0,.5)'; ctx.beginPath(); ctx.moveTo(dx + ds / 2, dy + ds / 2); ctx.arc(dx + ds / 2, dy + ds / 2, ds / 2, -Math.PI / 2, -Math.PI / 2 + TAU * p.dashCd / 2.2); ctx.fill(); }
-  text(keyName(SETTINGS.keys.dash).toUpperCase(), dx + ds / 2, dy + ds + 12 * u, 11 * u, '#ccc', 'center');
+  if (INPUT !== 'touch') text(btnName('dash').toUpperCase(), dx + ds / 2, dy + ds + 12 * u, 11 * u, '#ccc', 'center');
   // hero ability (R), right of the dash
   const HA = HERO_ABIL[G.ch.id];
   if (HA) {
@@ -2543,7 +2624,7 @@ function drawHUD() {
     ctx.save(); if (!ready) ctx.globalAlpha = 0.5; if (ai) ctx.drawImage(ai, ax, ay, as, as); ctx.restore();
     if (!ready) { const k2 = clamp(G.abilCd / HA.cd, 0, 1); ctx.fillStyle = 'rgba(0,0,0,.5)'; ctx.beginPath(); ctx.moveTo(ax + as / 2, ay + as / 2); ctx.arc(ax + as / 2, ay + as / 2, as / 2, -Math.PI / 2, -Math.PI / 2 + TAU * k2); ctx.fill(); text(String(Math.ceil(G.abilCd)), ax + as / 2, ay + as / 2 + 7 * u, 20 * u, '#fff', 'center'); }
     else { ctx.strokeStyle = 'rgba(127,216,255,' + (0.5 + 0.5 * Math.sin(G.t * 5)) + ')'; ctx.lineWidth = 3 * u; ctx.beginPath(); ctx.arc(ax + as / 2, ay + as / 2, as / 2 + 2 * u, 0, TAU); ctx.stroke(); }
-    text(keyName(SETTINGS.keys.ability).toUpperCase(), ax + as / 2, ay + as + 12 * u, 11 * u, '#ccc', 'center');
+    if (INPUT !== 'touch') text(btnName('ability').toUpperCase(), ax + as / 2, ay + as + 12 * u, 11 * u, '#ccc', 'center');
   }
   // boss debuffs
   const deb = [G.drainT > 0 && `DRAINED ${Math.ceil(G.drainT)}s`, G.towerStunT > 0 && `TOWERS STUNNED ${Math.ceil(G.towerStunT)}s`, G.buf.dmg > 0 && `ROAR ${Math.ceil(G.buf.dmg)}s`, G.buf.as > 0 && `HASTE ${Math.ceil(G.buf.as)}s`, G.buf.heroDmg > 0 && `AP SHELLS ${Math.ceil(G.buf.heroDmg)}s`].filter(Boolean);
@@ -2596,7 +2677,7 @@ function drawHUD() {
   // top-left info
   text(`${G.arena.def.name}`, 22 * u, 34 * u, 18 * u, '#ffe39a');
   text(`Chaos ${G.chaos.n}  ·  Popped ${G.kills}`, 22 * u, 58 * u, 14 * u, '#cbbfa8');
-  text((G.manualAim ? 'Aim: MOUSE (' : 'Aim: AUTO (') + keyName(SETTINGS.keys.aim) + ')', 22 * u, 80 * u, 13 * u, '#9b8f7a');
+  if (INPUT !== 'touch') text(INPUT === 'pad' ? 'Aim: AUTO (right stick to aim)' : (G.manualAim ? 'Aim: MOUSE (' : 'Aim: AUTO (') + keyName(SETTINGS.keys.aim) + ')', 22 * u, 80 * u, 13 * u, '#9b8f7a');
   const fps = R3.stats();
   text(`${fps.fps} FPS · ${fps.quality} · ${Math.round(fps.scale * 100)}% res`, 22 * u, 100 * u, 13 * u, fps.fps < 40 ? '#ff8a6a' : '#7fdc8a');
   drawParty(u);
@@ -2618,7 +2699,8 @@ function drawBossBar(B, u) {
   B.shownHp = B.shownHp === undefined ? k : Math.max(k, B.shownHp - 0.004);
   // frame
   ctx.fillStyle = 'rgba(12,8,6,.85)'; roundRect(bx - 6 * u, by - 6 * u, bw + 12 * u, bh + 12 * u, 10 * u); ctx.fill();
-  ctx.strokeStyle = '#e8c27a'; ctx.lineWidth = 3 * u; roundRect(bx - 6 * u, by - 6 * u, bw + 12 * u, bh + 12 * u, 10 * u); ctx.stroke();
+  ctx.strokeStyle = B.enraged ? '#b04cff' : '#e8c27a'; ctx.lineWidth = 3 * u; roundRect(bx - 6 * u, by - 6 * u, bw + 12 * u, bh + 12 * u, 10 * u); ctx.stroke();
+  if (B.enraged) { ctx.save(); ctx.shadowColor = '#b04cff'; ctx.shadowBlur = (14 + 6 * Math.sin(performance.now() / 250)) * u; ctx.stroke(); ctx.restore(); }
   ctx.save(); roundRect(bx, by, bw, bh, 6 * u); ctx.clip();
   ctx.fillStyle = '#1a0f0c'; ctx.fillRect(bx, by, bw, bh);
   // delayed damage trail
@@ -2655,15 +2737,15 @@ function drawBossBar(B, u) {
   if (pm) { const a = pm.naturalWidth / pm.naturalHeight; ctx.drawImage(pm, mx + ms * 0.06, my + ms * 0.1, ms * 0.88, ms * 0.88 / a); }
   const sk = uiImg('btd_BossSkullLarge');
   if (sk && B.phase === 2) ctx.drawImage(sk, bx + bw + 8 * u, by + bh / 2 - 22 * u, 50 * u, 44 * u);
-  text(`${B.def.name}${B.phase === 2 ? '  — ENRAGED' : ''}`, bx + 8 * u, by - 14 * u, 22 * u, '#fff');
+  text(`${B.enraged ? 'ENRAGED ' : ''}${B.def.name}${B.phase === 2 ? '  — FURIOUS' : ''}`, bx + 8 * u, by - 14 * u, 22 * u, B.enraged ? '#e0b0ff' : '#fff');
   text(`${Math.ceil(B.hp).toLocaleString()}`, bx + bw - 8 * u, by + bh * 0.7, 16 * u, '#fff', 'right');
   if (G.bossIntro > 0) {
     const t = 1 - Math.abs(G.bossIntro - 1.5) / 1.5;
     ctx.globalAlpha = clamp(t * 2, 0, 1);
     const tf = uiImg('BossTitle_Frame'); const tw = 900 * u, th = tw * 368 / 1024;
     if (tf) ctx.drawImage(tf, (W - tw) / 2, H * 0.32 - th / 2, tw, th);
-    text(B.def.name, W / 2, H * 0.32 + 8 * u, 64 * u, '#fff', 'center');
-    text(B.def.title, W / 2, H * 0.32 + 52 * u, 24 * u, '#ffb0b0', 'center');
+    text((B.enraged ? 'ENRAGED ' : '') + B.def.name, W / 2, H * 0.32 + 8 * u, (B.enraged ? 54 : 64) * u, B.enraged ? '#e0b0ff' : '#fff', 'center');
+    text(B.enraged ? `${B.def.title} · new attack: ${ENRAGED[B.def.id].move}` : B.def.title, W / 2, H * 0.32 + 52 * u, 24 * u, B.enraged ? '#d49cff' : '#ffb0b0', 'center');
     ctx.globalAlpha = 1;
   }
 }

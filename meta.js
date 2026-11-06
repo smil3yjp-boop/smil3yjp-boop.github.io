@@ -30,66 +30,196 @@ function moveAxis() {
   return [mx, my];
 }
 
+// ================================================================ which input you're using (keyboard/mouse, controller or touch) for on-screen prompts
+let INPUT = 'kb';
+const TOUCH_DEV = (window.matchMedia && matchMedia('(pointer: coarse)').matches) || (navigator.maxTouchPoints > 0 && 'ontouchstart' in window);
+if (TOUCH_DEV) INPUT = 'touch';
+function setInput(m) { if (INPUT === m) return; INPUT = m; document.body.classList.toggle('padmode', m === 'pad'); document.body.classList.toggle('touchmode', m === 'touch'); }
+addEventListener('keydown', () => setInput('kb'), true);
+addEventListener('mousemove', e => { if (e.movementX || e.movementY) setInput('kb'); });
+addEventListener('touchstart', () => setInput('touch'), { capture: true, passive: true });
+if (TOUCH_DEV) document.body.classList.add('touchmode');
+const PAD_NAME = { dash: 'A', ability: 'X', interact: 'B', aim: 'R-Stick', pause: 'Start', up: 'L-Stick', down: 'L-Stick', left: 'L-Stick', right: 'L-Stick' };
+const TOUCH_NAME = { dash: 'DASH', ability: 'ABILITY', interact: 'USE', aim: '—', pause: '❚❚', up: 'stick', down: 'stick', left: 'stick', right: 'stick' };
+// the name of the button for an action, matching what you're playing with
+function btnName(action) { return INPUT === 'pad' ? PAD_NAME[action] : INPUT === 'touch' ? TOUCH_NAME[action] : keyName(SETTINGS.keys[action]); }
+const pressWord = () => INPUT === 'touch' ? 'Tap' : 'Press';
+
 // ================================================================ gamepad
-const PAD = { mx: 0, my: 0, prev: [], sel: 0 };
+// A dash · X hero ability · B use/enter portal · Y toggle aim · Start pause · right stick aims while held
+// menus: d-pad / left stick moves, A picks, B goes back; main menu: LB/RB hero, up/down Chaos rank, A or Start begins
+const PAD = { mx: 0, my: 0, prev: [], sel: 0, aim: null, nav: 0, navT: 0, focus: null, lastAx: [] };
+function padRumble(strong = 0.5, ms = 120) {
+  try { const gp = [...(navigator.getGamepads ? navigator.getGamepads() : [])].find(Boolean); const v = gp && gp.vibrationActuator; if (v && v.playEffect) v.playEffect('dual-rumble', { duration: ms, strongMagnitude: strong, weakMagnitude: strong * 0.6 }); } catch (e) { }
+}
+// the top-most open menu window (not the main menu, the HUD or the loading screen)
+function padOverlay() {
+  const ids = ['hsname', 'buyskin', 'runview', 'scores', 'setpage', 'pnpage', 'histpage', 'codexpage', 'achpage', 'knowpage', 'pause', 'end'];
+  for (const id of ids) { const el = document.getElementById(id); if (el && !el.classList.contains('hidden')) return el; }
+  return null;
+}
+function padButtons(root) {
+  return [...root.querySelectorAll('button, .chip, .crow, .htile, .skin, input[type=range], .hsrow .nm, [data-padnav]')].filter(el => el.offsetParent !== null && !el.disabled && el.getBoundingClientRect().width > 0);
+}
+function padFocus(el) {
+  if (PAD.focus === el) return;
+  if (PAD.focus) PAD.focus.classList.remove('padfocus');
+  PAD.focus = el; if (el) { el.classList.add('padfocus'); el.scrollIntoView({ block: 'nearest', inline: 'nearest' }); }
+}
+// move the highlight to the nearest button in that direction
+function padMove(list, dx, dy) {
+  if (!list.length) return;
+  if (!PAD.focus || !list.includes(PAD.focus)) return padFocus(list[0]);
+  const r0 = PAD.focus.getBoundingClientRect(), cx = r0.left + r0.width / 2, cy = r0.top + r0.height / 2;
+  let best = null, bd = 1e9;
+  for (const el of list) {
+    if (el === PAD.focus) continue;
+    const r = el.getBoundingClientRect(), ex = r.left + r.width / 2 - cx, ey = r.top + r.height / 2 - cy;
+    const along = ex * dx + ey * dy; if (along <= 4) continue;
+    const side = Math.abs(ex * dy - ey * dx), d = along + side * 2.5;
+    if (d < bd) { bd = d; best = el; }
+  }
+  if (best) padFocus(best);
+}
+function padClick(el) {
+  if (!el) return;
+  if (el.matches('input[type=range]')) return;
+  el.click(); play('UIClick01', { vol: 0.4 });
+}
+function padBack(ov) {
+  const close = ov.querySelector('[id$=close], .close, #resume, #hsnskip, #endmenu');
+  if (ov.id === 'pause') return togglePause();
+  if (close) close.click();
+}
 function pollPad() {
   const pads = navigator.getGamepads ? [...navigator.getGamepads()].filter(Boolean) : [];
-  const gp = pads[0]; if (!gp) { PAD.mx = PAD.my = 0; return; }
+  const gp = pads[0]; if (!gp) { PAD.mx = PAD.my = 0; PAD.aim = null; return; }
   const dz = v => Math.abs(v) < 0.2 ? 0 : v;
-  PAD.mx = dz(gp.axes[0] || 0); PAD.my = dz(gp.axes[1] || 0);
-  if (gp.buttons[14] && gp.buttons[14].pressed) PAD.mx = -1; if (gp.buttons[15] && gp.buttons[15].pressed) PAD.mx = 1;
-  if (gp.buttons[12] && gp.buttons[12].pressed) PAD.my = -1; if (gp.buttons[13] && gp.buttons[13].pressed) PAD.my = 1;
-  const down = i => gp.buttons[i] && gp.buttons[i].pressed && !PAD.prev[i];
-  // A=0 B=1 X=2 Y=3 LB=4 RB=5 Back=8 Start=9
-  if (G && G.state === 'levelup') {
+  const btn = i => !!(gp.buttons[i] && gp.buttons[i].pressed);
+  const down = i => btn(i) && !PAD.prev[i];
+  const ax = gp.axes.map(v => v || 0);
+  if (gp.buttons.some((b, i) => b.pressed && !PAD.prev[i]) || ax.some((v, i) => Math.abs(v) > 0.5 && Math.abs(PAD.lastAx[i] || 0) <= 0.5)) setInput('pad');
+  PAD.lastAx = ax;
+  PAD.mx = dz(ax[0]); PAD.my = dz(ax[1]);
+  if (btn(14)) PAD.mx = -1; if (btn(15)) PAD.mx = 1; if (btn(12)) PAD.my = -1; if (btn(13)) PAD.my = 1;
+  // right stick: aim while held
+  const rx = ax[2] || 0, ry = ax[3] || 0;
+  PAD.aim = Math.hypot(rx, ry) > 0.4 ? Math.atan2(ry, rx) : null;
+  // menu direction with key-repeat (d-pad or left stick)
+  let nx = btn(14) ? -1 : btn(15) ? 1 : Math.abs(ax[0]) > 0.6 ? Math.sign(ax[0]) : 0;
+  let ny = btn(12) ? -1 : btn(13) ? 1 : Math.abs(ax[1]) > 0.6 ? Math.sign(ax[1]) : 0;
+  const dir = nx || ny ? nx + ',' + ny : '';
+  const now = performance.now(); let step = null;
+  if (dir && (dir !== PAD.nav || now > PAD.navT)) { step = [nx, ny]; PAD.navT = now + (dir !== PAD.nav ? 380 : 140); }
+  PAD.nav = dir;
+  const ov = padOverlay();
+  if (G && G.state === 'levelup' && !ov) {
     const cards = [...document.querySelectorAll('#cards .card')];
-    if (down(14) || (gp.axes[0] < -0.6 && !PAD.stickL)) PAD.sel = Math.max(0, PAD.sel - 1);
-    if (down(15) || (gp.axes[0] > 0.6 && !PAD.stickR)) PAD.sel = Math.min(cards.length - 1, PAD.sel + 1);
-    PAD.stickL = gp.axes[0] < -0.6; PAD.stickR = gp.axes[0] > 0.6;
+    if (step && step[0]) PAD.sel = Math.max(0, Math.min(cards.length - 1, PAD.sel + step[0]));
+    PAD.sel = Math.min(PAD.sel, cards.length - 1);
     cards.forEach((c, i) => c.classList.toggle('padsel', i === PAD.sel));
     if (down(0) && cards[PAD.sel]) cards[PAD.sel].click();
-    if (down(2)) $('reroll').click();
-  } else if (G && G.state === 'play') {
+    if (down(2)) { const r = $('reroll'); if (r && r.offsetParent) r.click(); }
+  } else if (G && G.state === 'play' && !ov) {
     if (down(0) || down(5)) tryDash();
     if (down(2) || down(4)) useAbility();
     if (down(1)) G.useKey = true;
-    if (down(3)) { G.manualAim = !G.manualAim; toast(G.manualAim ? 'Mouse aim ON' : 'Auto aim ON'); }
-  } else if (!G && !$('menu').classList.contains('hidden') && down(9)) $('start').click();
-  if (down(9) && G && (G.state === 'play' || G.state === 'paused')) togglePause();
+    if (down(3)) { G.manualAim = !G.manualAim; toast(G.manualAim ? 'Aim: right stick / mouse' : 'Auto aim ON'); }
+    if (down(9)) togglePause();
+    if (PAD.focus) padFocus(null);
+  } else if (ov) {
+    // any open window: move a highlight between its buttons
+    const list = padButtons(ov);
+    if (!PAD.focus || !list.includes(PAD.focus)) padFocus(list.find(el => el.id === 'resume' || el.classList.contains('sel')) || list[0] || null);
+    if (step) padMove(list, step[0], step[1]);
+    if (PAD.focus && PAD.focus.matches('input[type=range]') && step && step[0]) { const r = PAD.focus; r.value = +r.value + step[0] * (+r.step || 5) * (r.max > 10 ? 1 : 0.05); r.dispatchEvent(new Event('input')); r.dispatchEvent(new Event('change')); }
+    if (down(0)) padClick(PAD.focus);
+    if (down(1)) padBack(ov);
+    if (down(9) && ov.id === 'pause') togglePause();
+  } else if (!G && !$('menu').classList.contains('hidden')) {
+    // main menu: LB/RB pick hero, up/down Chaos rank, A/Start begin, Y highscores, X settings
+    const tiles = [...document.querySelectorAll('#chars .htile')], ranks = [...document.querySelectorAll('#chaos .crow')];
+    const ti = tiles.findIndex(t => t.classList.contains('sel')), ri = ranks.findIndex(t => t.classList.contains('sel'));
+    if (down(4) || down(5) || (step && step[0])) { const d = down(4) ? -1 : down(5) ? 1 : step[0]; const t = tiles[(ti + d + tiles.length) % tiles.length]; if (t) { t.click(); t.scrollIntoView({ block: 'nearest' }); } }
+    if (step && step[1]) { const t = ranks[Math.max(0, Math.min(ranks.length - 1, ri + step[1]))]; if (t) { t.click(); t.scrollIntoView({ block: 'nearest' }); } }
+    if (down(0) || down(9)) $('start').click();
+    if (down(3)) { const b = $('hsbtn'); if (b) b.click(); }
+    if (down(2)) { const b = document.querySelector('.mtopr [id^=set], #setbtn'); if (b) b.click(); }
+  }
   if (G && G.state === 'end' && down(0) && !$('hsname').classList.contains('hidden')) $('hsnok').click();
   PAD.prev = gp.buttons.map(b => b.pressed);
 }
+addEventListener('gamepadconnected', () => { setInput('pad'); toast('🎮 Controller connected', '#9fe8ff'); });
 
-// ================================================================ touch: left half = floating stick, buttons on the right
-const TOUCH = { on: false, stick: null, id: null, btns: [] };
-function touchButtons() { const u = H / 1080, r = 62 * u; return [{ id: 'dash', x: W - 150 * u, y: H - 300 * u, r }, { id: 'ability', x: W - 300 * u, y: H - 210 * u, r }, { id: 'interact', x: W - 150 * u, y: H - 450 * u, r: r * 0.8 }, { id: 'pause', x: W - 70 * u, y: 70 * u, r: r * 0.6 }]; }
+// ================================================================ touch: left side = floating stick, buttons on the right
+const TOUCH = { on: TOUCH_DEV, stick: null, id: null, btns: [] };
+function touchButtons() {
+  const u = hudU(), r = 58 * u, out = [];
+  out.push({ id: 'dash', x: W - 120 * u, y: H - 250 * u, r: r * 1.15 });
+  if (G && HERO_ABIL[G.ch.id]) out.push({ id: 'ability', x: W - 265 * u, y: H - 175 * u, r });
+  if (G && G.portals && G.portals.some(pt => pt.near)) out.push({ id: 'interact', x: W - 120 * u, y: H - 420 * u, r: r * 0.95 });
+  const mw = 210 * u, mh = G && G.arena ? mw * G.arena.rows / G.arena.cols : mw;
+  out.push({ id: 'pause', x: W - 48 * u, y: 20 * u + mh + 46 * u, r: r * 0.55 });
+  return out;
+}
 function touchXY(t) { return [t.clientX * DPR, t.clientY * DPR]; }
-cv.addEventListener('touchstart', e => {
-  if (!G || G.state !== 'play') return;
+// touches land on the 3D view (#gl) under the HUD canvas, so listen on the window and ignore touches on menus/buttons
+const onGame = e => e.target === cv || (e.target && e.target.id === 'gl');
+addEventListener('touchstart', e => {
+  if (!G || (G.state !== 'play' && !G.spec) || !onGame(e)) return;
   TOUCH.on = true; e.preventDefault();
   for (const t of e.changedTouches) {
     const [x, y] = touchXY(t);
-    const b = touchButtons().find(b => Math.hypot(x - b.x, y - b.y) < b.r * 1.2);
-    if (b) { if (b.id === 'dash') tryDash(); else if (b.id === 'ability') useAbility(); else if (b.id === 'interact') G.useKey = true; else togglePause(); continue; }
-    if (x < W * 0.55 && TOUCH.id === null) { TOUCH.id = t.identifier; TOUCH.stick = { x0: x, y0: y, x, y, dx: 0, dy: 0 }; }
+    const b = touchButtons().find(b => Math.hypot(x - b.x, y - b.y) < b.r * 1.25);
+    if (b) {
+      b.pressT = performance.now(); TOUCH.press = b.id;
+      if (b.id === 'dash') tryDash(); else if (b.id === 'ability') useAbility(); else if (b.id === 'interact') G.useKey = true; else togglePause();
+      continue;
+    }
+    if (x < W * 0.6 && TOUCH.id === null) { TOUCH.id = t.identifier; TOUCH.stick = { x0: x, y0: y, x, y, dx: 0, dy: 0 }; }
   }
 }, { passive: false });
-cv.addEventListener('touchmove', e => {
+addEventListener('touchmove', e => {
+  if (TOUCH.id === null) return;
   for (const t of e.changedTouches) if (t.identifier === TOUCH.id && TOUCH.stick) {
-    const [x, y] = touchXY(t), s = TOUCH.stick, R = 70 * H / 1080; s.x = x; s.y = y;
-    let dx = (x - s.x0) / R, dy = (y - s.y0) / R; const l = Math.hypot(dx, dy); if (l > 1) { dx /= l; dy /= l; }
-    s.dx = Math.abs(dx) < 0.15 ? 0 : dx; s.dy = Math.abs(dy) < 0.15 ? 0 : dy;
+    const [x, y] = touchXY(t), s = TOUCH.stick, R = 70 * hudU();
+    // the stick base follows your thumb if you drag past its edge
+    let ox = x - s.x0, oy = y - s.y0; const ol = Math.hypot(ox, oy); if (ol > R * 1.4) { s.x0 = x - ox / ol * R * 1.4; s.y0 = y - oy / ol * R * 1.4; ox = x - s.x0; oy = y - s.y0; }
+    s.x = x; s.y = y;
+    let dx = ox / R, dy = oy / R; const l = Math.hypot(dx, dy); if (l > 1) { dx /= l; dy /= l; }
+    s.dx = Math.hypot(dx, dy) < 0.15 ? 0 : dx; s.dy = Math.hypot(dx, dy) < 0.15 ? 0 : dy;
   }
   e.preventDefault();
 }, { passive: false });
 const endTouch = e => { for (const t of e.changedTouches) if (t.identifier === TOUCH.id) { TOUCH.id = null; TOUCH.stick = null; } };
-cv.addEventListener('touchend', endTouch); cv.addEventListener('touchcancel', endTouch);
+addEventListener('touchend', endTouch); addEventListener('touchcancel', endTouch);
 function drawTouch(u) {
-  if (!TOUCH.on || !G || G.state !== 'play') return;
-  ctx.save(); ctx.globalAlpha = 0.55;
-  const s = TOUCH.stick;
-  if (s) { ctx.strokeStyle = '#fff'; ctx.lineWidth = 3 * u; ctx.beginPath(); ctx.arc(s.x0, s.y0, 70 * u, 0, TAU); ctx.stroke(); ctx.fillStyle = '#ffe39a'; ctx.beginPath(); ctx.arc(s.x0 + s.dx * 70 * u, s.y0 + s.dy * 70 * u, 30 * u, 0, TAU); ctx.fill(); }
-  for (const b of touchButtons()) { ctx.fillStyle = 'rgba(20,12,30,.7)'; ctx.beginPath(); ctx.arc(b.x, b.y, b.r, 0, TAU); ctx.fill(); ctx.strokeStyle = '#ffe39a'; ctx.stroke(); text({ dash: 'DASH', ability: 'ABILITY', interact: 'E', pause: 'II' }[b.id], b.x, b.y + 6 * u, 16 * u, '#fff', 'center'); }
+  if (!TOUCH.on || INPUT !== 'touch' || !G || G.state !== 'play') return;
+  ctx.save();
+  const s = TOUCH.stick, R = 70 * u;
+  if (s) {
+    ctx.globalAlpha = 0.5; ctx.fillStyle = 'rgba(10,6,18,.55)'; ctx.beginPath(); ctx.arc(s.x0, s.y0, R, 0, TAU); ctx.fill();
+    ctx.strokeStyle = '#fff'; ctx.lineWidth = 3 * u; ctx.stroke();
+    ctx.globalAlpha = 0.85; ctx.fillStyle = '#ffe39a'; ctx.beginPath(); ctx.arc(s.x0 + s.dx * R, s.y0 + s.dy * R, 30 * u, 0, TAU); ctx.fill();
+  } else {   // a faint hint where the stick goes
+    ctx.globalAlpha = 0.18; ctx.strokeStyle = '#fff'; ctx.lineWidth = 2 * u; ctx.beginPath(); ctx.arc(W * 0.16, H * 0.72, R, 0, TAU); ctx.stroke();
+    ctx.beginPath(); ctx.arc(W * 0.16, H * 0.72, 26 * u, 0, TAU); ctx.stroke();
+  }
+  const P = G.player, HA = HERO_ABIL[G.ch.id];
+  for (const b of touchButtons()) {
+    const pressed = TOUCH.press === b.id && performance.now() - (b.pressT || 0) < 150;
+    ctx.globalAlpha = 0.8; ctx.fillStyle = pressed ? 'rgba(80,50,110,.85)' : 'rgba(20,12,30,.65)'; ctx.beginPath(); ctx.arc(b.x, b.y, b.r, 0, TAU); ctx.fill();
+    ctx.lineWidth = 3 * u; ctx.strokeStyle = '#ffe39a'; ctx.stroke();
+    let ready = 1, img = null;
+    if (b.id === 'dash') { img = uiImg('Dash_Icon'); if (P.dashN < 1) ready = 1 - clamp(P.dashCd / 2.2, 0, 1); }
+    if (b.id === 'ability' && HA) { img = uiImg('abil/' + HA.icon); if (G.abilCd > 0) ready = 1 - clamp(G.abilCd / HA.cd, 0, 1); }
+    ctx.globalAlpha = ready < 1 ? 0.45 : 1;
+    if (img) { const sz = b.r * 1.3; ctx.drawImage(img, b.x - sz / 2, b.y - sz / 2, sz, sz); }
+    else text({ interact: 'USE', pause: '❚❚' }[b.id] || '', b.x, b.y + 6 * u, (b.id === 'pause' ? 18 : 20) * u, '#fff', 'center');
+    ctx.globalAlpha = 1;
+    if (ready < 1) { ctx.fillStyle = 'rgba(0,0,0,.5)'; ctx.beginPath(); ctx.moveTo(b.x, b.y); ctx.arc(b.x, b.y, b.r, -Math.PI / 2, -Math.PI / 2 + TAU * (1 - ready)); ctx.fill(); }
+    if (b.id === 'dash' && G.stats.dashes > 1) text('x' + P.dashN, b.x + b.r * 0.7, b.y - b.r * 0.6, 16 * u, '#9fe8ff', 'center');
+  }
   ctx.restore();
 }
 

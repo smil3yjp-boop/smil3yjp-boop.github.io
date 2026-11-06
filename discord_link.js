@@ -171,6 +171,8 @@
     let step = 'connecting to Discord';
     try {
       await ready;
+      // phones: ask Discord to keep the Activity sideways (landscape)
+      if (q.get('platform') === 'mobile') cmd('SET_ORIENTATION_LOCK_STATE', { lock_state: 3, picture_in_picture_lock_state: 3, grid_lock_state: 3 }).catch(e => console.warn('orientation lock not available', e));
       step = 'authorizing';
       const { code } = await cmd('AUTHORIZE', { client_id: CFG.clientId, response_type: 'code', state: '', prompt: 'none', scope: ['identify'] });
       step = 'logging in (token)';

@@ -5,7 +5,7 @@
 var NET = (() => {
   const BT = Object.keys(BLOONS);                       // bloon type <-> index
   const PK = ['soul', 'heart', 'chest', 'relic', 'banana'];
-  const HZ = ['slime', 'magma', 'bossSlam', 'chargeLine'];
+  const HZ = ['slime', 'magma', 'bossSlam', 'chargeLine', 'cyclone'];
   const ENEMY_HZ = new Set(HZ);
   const PERSONAL_PK = new Set(['relic', 'banana']);
   const r2 = v => Math.round(v * 100) / 100, r1 = v => Math.round(v * 10) / 10;
@@ -306,7 +306,7 @@ var NET = (() => {
       t: 'w', tt: r1(G.t), lv: G.level, xp: r1(G.xp), xn: G.xpNext, pops: G.pops, goal: G.goal, gs: G.goalStart, loop: G.loop, map: G.mapIdx, bk: G.bossKills, kills: G.kills,
       bl: r2(G.blindT), bm: G.blindMax || 0, ts: r2(G.towerStunT), es: G.elitesSpawned, bd: G.bossDone ? 1 : 0, gr: r1(G.grace), pz: pausedBy(),
       po: G.portals ? G.portals.map(q => [q.kind, r2(q.x), r2(q.y), r2(q.t)]) : null,
-      bo: B ? [B.def.id, r2(B.x), r2(B.y), r1(B.hp), r1(B.maxhp), r2(B.r), (B.shield || B.shieldT > 0) ? 1 : 0, B.phase, B.skulls.length, r2(G.bossIntro || 0), B.charge ? [r2(B.charge.a), r2(B.charge.t), B.charge.tele, B.charge.dur] : 0, r2(B.drainFx || 0), B.anim || 0, r2(B.spd), r2(B.atkT), r2(B.mechT ?? 8), B.blimpSkull, B.dashAtSpawn || 0] : null,
+      bo: B ? [B.def.id, r2(B.x), r2(B.y), r1(B.hp), r1(B.maxhp), r2(B.r), (B.shield || B.shieldT > 0) ? 1 : 0, B.phase, B.skulls.length, r2(G.bossIntro || 0), B.charge ? [r2(B.charge.a), r2(B.charge.t), B.charge.tele, B.charge.dur] : 0, r2(B.drainFx || 0), B.anim || 0, r2(B.spd), r2(B.atkT), r2(B.mechT ?? 8), B.blimpSkull, B.dashAtSpawn || 0, B.enraged ? 1 : 0] : null,
       b, e: G.eproj.map(q => [r2(q.x), r2(q.y), r1(q.vx), r1(q.vy), r2(q.r), r1(q.dmg), r2(q.life)]),
       h: G.hazards.filter(h => ENEMY_HZ.has(h.kind)).map(h => [HZ.indexOf(h.kind), r2(h.x), r2(h.y), r2(h.r || 0), r2(h.t), r2(h.life), r1(h.dmg || 0), r2(h.a || 0), r2(h.len || 0), r2(h.w || 0)]),
       k: pk,
@@ -434,7 +434,7 @@ var NET = (() => {
     G.bloons = [...netBloons.values()];
     // boss
     if (w.bo) {
-      const [id, x, y, hp, mhp, r, sh, phase, sk, intro, ch, drain, anim, spd, atkT, mechT, blimpSkull, das] = w.bo;
+      const [id, x, y, hp, mhp, r, sh, phase, sk, intro, ch, drain, anim, spd, atkT, mechT, blimpSkull, das, enr] = w.bo;
       let b = G.boss;
       if (!b || b.def.id !== id || (b.dead && !b.localDead)) {
         const def = BOSSES.find(d => d.id === id);
@@ -444,6 +444,7 @@ var NET = (() => {
       }
       b.tx = x; b.ty = y; b.r = r; b.maxhp = mhp; b.hp = Math.max(1, hp - pendSum(b, now)); b.dead = false; b.localDead = false;   // only the host ends a boss b.shieldT = sh ? 0.2 : 0; b.phase = phase; b.spd = spd; b.atkT = atkT; b.mechT = mechT;
       while (b.skulls.length > sk) b.skulls.shift();
+      b.enraged = !!enr;
       b.charge = ch ? { a: ch[0], t: ch[1], tele: ch[2], dur: ch[3] } : null; b.drainFx = drain; if (anim) b.anim = anim;
       b.base = { slowT: b.slowT, frozenT: b.frozenT, stunT: b.stunT, burnT: b.burnT, hexT: b.hexT || 0 };
     } else if (G.boss && !G.boss.dead) { G.boss.dead = true; setTimeout(() => { if (G && G.boss && G.boss.dead) G.boss = null; }, 2500); }
@@ -488,6 +489,7 @@ var NET = (() => {
       if (p.down) continue;
       if (h.kind === 'slime') { if (Math.hypot(p.x - h.x, p.y - h.y) < h.r) p.slowT = 0.3; }
       else if (h.kind === 'magma') { h.tick = (h.tick || 0) - dt; if (h.tick <= 0 && Math.hypot(p.x - h.x, p.y - h.y) < h.r + p.r * 0.5) { h.tick = 0.5; hurtPlayer(8 * G.chaos.dmg); } }
+      else if (h.kind === 'cyclone') cyclonePull(p, h, dt);
       else if (h.kind === 'bossSlam' && h.t >= h.life && !h.done) { h.done = true; G.effects.push({ kind: 'boom', x: h.x, y: h.y, r: h.r, t: 0, life: 0.4, color: '#ff3030', net: true, enemy: true }); if (Math.hypot(p.x - h.x, p.y - h.y) < h.r + p.r * 0.5) hurtPlayer(h.dmg); }
     }
     for (const q of G.pickups) if (q.net && q.tx !== undefined) { q.x += (q.tx - q.x) * k; q.y += (q.ty - q.y) * k; q.t += dt; if (q.kind === 'chest') q.afford = q.free || G.gold >= chestCost(); }
@@ -576,7 +578,7 @@ var NET = (() => {
     if (G.boss) G.boss.dead = true;
     shake(1); play(BOSS_SFX[def.id][1], { vol: 1 });
     G.effects.push({ kind: 'expl', x: m.x, y: m.y, r: 4, t: 0, life: 0.9, net: true, enemy: true });
-    setTimeout(() => G && toast(`${def.name} DEFEATED!  Stand in a portal and press ${keyName(SETTINGS.keys.interact)}`, '#ffe39a'), 600);
+    setTimeout(() => G && toast(`${def.name} DEFEATED!  Stand in a portal and ${pressWord().toLowerCase()} ${btnName('interact')}`, '#ffe39a'), 600);
   }
 
   // ------------------------------------------------------------------ host takes over
@@ -586,7 +588,7 @@ var NET = (() => {
     // turn the mirrored world into a real one
     for (const b of G.bloons) { b.net = false; b.spd = bloonSpd(b.def) * (b.jit || 1); b.anc = b.anc || []; b.slowT = b.slowT || 0; if (b.tx !== undefined) { b.x = b.tx; b.y = b.ty; } }
     G.bloons = G.bloons.filter(b => !b.dead);
-    if (G.boss && !G.boss.dead) { const B = G.boss; B.net = false; B.mechT = B.mechT ?? 8; B.atkT = B.atkT ?? 3; B.skulls = B.skulls || []; B.blimpSkull = B.blimpSkull ?? 0; }
+    if (G.boss && !G.boss.dead) { const B = G.boss; B.net = false; B.mechT = B.mechT ?? 8; B.atkT = B.atkT ?? 3; B.enrT = B.enrT ?? 6; B.skulls = B.skulls || []; B.blimpSkull = B.blimpSkull ?? 0; }
     G.pickups = G.pickups.map(q => { q.net = false; if (q.owner && q.owner !== N.me.id) q.dead = true; if (q.kind === 'soul' && !q.v) q.v = 1; return q; }).filter(q => !q.dead);
     G.hazards = G.hazards.concat((G.netHaz || []).map(h => Object.assign(h, { net: false })));
     G.netHaz = [];

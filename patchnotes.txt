@@ -1,4 +1,4 @@
-v0.3.4 | Nov 5, 2026
+v0.3.4 | Nov 6, 2026
 - Lych heals half as much when it absorbs its bloons
 - Bosses can no longer heal back past a skull they've already dropped (75%, 50%, 25%)
 - Hero levels need even more XP from level 100 onward (x4 instead of x2)
@@ -23,6 +23,7 @@ v0.3.4 | Nov 5, 2026
 - Co-op: the world now updates 15 times a second for other players (was 10), for smoother bloons
 - Co-op: every player now shows as a coloured blip on the minimap (blinking red while down)
 - Co-op: party panel at the top left during a run with each player's Discord avatar, name and health
+- Highscores now have Solo and Co-op tabs
 - Co-op leaderboard: best party runs by Team Damage, Level, Loops, Bosses and Time Survived, with every player's avatar
 - Click a party on the Co-op leaderboard to see each player's own end-of-run card (MVP marked)
 - Co-op runs now count on the leaderboard even when players leave through the End Run portal or Quit at different times
@@ -32,6 +33,19 @@ v0.3.4 | Nov 5, 2026
 - Monkey Sub nerf: torpedoes deal 8 damage (was 9) and the torpedo itself now only does about a third of that on impact before it explodes (the blast is unchanged)
 - New boss theme: every boss now plays the same new track
 - Music volume now starts at 10% (only changes it if you haven't set your own music volume)
+- ENRAGED bosses: from the 3rd boss of a run, bosses come back enraged, glowing purple, moving 20% faster and attacking more often
+- Each enraged boss gets a new attack: Bloonarius Slime Flood, Lych Soul Spiral, Vortex Cyclone (pulls you in), Dreadbloon Iron Shell, Phayze Phase Shift (teleports onto you), Blastapopoulos Meteor Rain
+- A boss dropping below half health is now called FURIOUS instead of enraged
+- Touch controls fixed: the on-screen stick and buttons never responded before; they now work and show from the start of a run on phones and tablets
+- New touch buttons: Dash, hero ability (with cooldown), Use (only near a portal) and Pause
+- Phones: compact menu layout when held sideways, bigger in-run HUD, and a reminder to turn the phone sideways
+- On Discord mobile the Activity now asks to stay in landscape
+- Controller: full menu support (LB/RB pick a hero, up/down pick a Chaos rank, A or Start begins, Y opens Highscores, X opens Settings)
+- Controller: move through any menu window with the d-pad or stick, A to pick, B to go back
+- Controller: right stick aims while held, rumble when you take damage, and Start now opens and closes the pause menu
+- On-screen prompts now show the button for what you're playing with (keyboard, controller or touch)
+- Faster first load: the menu now downloads about 9 MB less (smaller sprite sheets, menu music streams in)
+- Removed old unused music and images from the game files
 
 v0.3.3 | Nov 5, 2026
 - Map music is now Soulstone Survivors' music, matched to each map (forest, desert, cavern, snow, cathedral and Void King themes)
