@@ -183,7 +183,7 @@ const CHARS = [
   { id: 'striker', name: 'Striker Jones', spr: ['StrikerJonesIcon'], model: 'h_StrikerJones', vo: 'Jones', skill: 'mortar', hp: 120, spd: 6.2, desc: 'Artillery commander. +20% area damage.', bonus: { area: 0.1 }, tagBonus: { area: 0.2 } },
   { id: 'obyn', name: 'Obyn Greenfoot', spr: ['ObynGreenFootIcon'], model: 'h_Obyn', vo: 'Obyn', skill: 'spike', hp: 110, spd: 6.4, desc: 'Forest guardian. +20% trap damage.', bonus: {}, tagBonus: { trap: 0.2 } },
   { id: 'rosalia', name: 'Rosalia', spr: ['RosaliaIcon'], model: 'h_Rosalia', vo: 'Rosalia', skill: 'dartling', hp: 105, spd: 6.8, desc: 'Jetpack engineer. +10% attack speed.', bonus: { cdr: 0.1 }, tagBonus: { proj: 0.1 } },
-  { id: 'churchill', name: 'Captain Churchill', spr: ['CaptainChurchillIcon'], model: 'h_Churchill', vo: 'Churchill', skill: 'bomb', hp: 150, spd: 5.6, desc: 'Tank commander. +2 armor, +15% area.', bonus: { armor: 2, area: 0.15 } },
+  { id: 'churchill', name: 'Captain Churchill', spr: ['CaptainChurchillIcon'], model: 'h_Churchill', vo: 'Churchill', skill: 'bomb', hp: 150, spd: 5.6, desc: 'Tank commander. +2 armor, +10% area.', bonus: { armor: 2, area: 0.1 } },
   { id: 'benjamin', name: 'Benjamin', spr: ['BenjaminIcon'], model: 'h_Benjamin', vo: 'Benjamin', skill: 'sentry', hp: 95, spd: 6.4, desc: 'Hacker. +40% gold from pops.', bonus: { gold: 0.4 }, tagBonus: { summon: 0.1 } },
   { id: 'pat', name: 'Pat Fusty', spr: ['PatFustyIcon'], model: 'h_PatFusty', vo: 'Pat', skill: 'tack', hp: 170, spd: 5.8, desc: 'Big brawler. +3 armor, huge health.', bonus: { armor: 3 } },
   { id: 'ezili', name: 'Ezili', spr: ['EziliIcon'], model: 'h_Ezili', vo: 'Ezili', skill: 'glue', hp: 100, spd: 6.4, desc: 'Voodoo hexer. +25% effect duration.', bonus: { dur: 0.25 }, tagBonus: { area: 0.1 } },
@@ -204,7 +204,7 @@ const HERO_ATK = {
   striker:   { name: 'Artillery Shells', type: 'proj', tags: ['proj', 'area'], cd: 1.1, dmg: 10, kind: 'bomb', speed: 18, explode: 2.0, desc: 'Lobs explosive shells.' },
   obyn:      { name: 'Nature Bolts', type: 'proj', tags: ['proj'], cd: 0.8, dmg: 6, kind: 'orb', color: '#7dff6a', speed: 16, homing: 8, pierce: 2, desc: 'Homing bolts of nature magic.' },
   rosalia:   { name: 'Laser Blaster', type: 'beam', tags: ['proj'], cd: 0.55, dmg: 7, color: '#ff4040', range: 16, desc: 'Instant laser blasts.' },
-  churchill: { name: 'Tank Shells', type: 'proj', tags: ['proj', 'area'], cd: 1.2, dmg: 14, kind: 'bomb', speed: 22, explode: 2.4, desc: 'Heavy explosive tank shells.' },
+  churchill: { name: 'Tank Shells', type: 'proj', tags: ['proj', 'area'], cd: 1.35, dmg: 11, kind: 'bomb', speed: 22, explode: 2.1, desc: 'Heavy explosive tank shells.' },
   benjamin:  { name: 'Code Bolts', type: 'proj', tags: ['proj'], cd: 0.45, dmg: 4, kind: 'orb', color: '#40ff80', speed: 24, pierce: 1, desc: 'Rapid streams of hostile code.' },
   pat:       { name: 'Big Slap', type: 'melee', tags: ['area'], cd: 0.9, dmg: 14, range: 2.8, arc: 1.7, stun: 0.4, desc: 'Massive close-range slaps that stun.' },
   ezili:     { name: 'Hex Bolts', type: 'proj', tags: ['proj'], cd: 0.75, dmg: 5, kind: 'orb', color: '#c040ff', speed: 18, pierce: 2, burn: 2.5, desc: 'Cursed bolts that keep damaging.' },
@@ -371,7 +371,7 @@ const SKILLS = {
   farm: { name: 'Banana Farm', icon: ['BananaFarmIcon'], tags: ['buff'], cd: 6, dmg: 0,
     lv: ['Increased Production: +1 banana', 'Greater Production: +30% healing', 'Faster Harvest: -1s cooldown', 'Bigger Bunches: +1 banana', 'Valuable Bananas: +30% healing', 'Tier 5: your path\'s capstone'],
     desc: 'Grows bananas nearby that heal you and grant XP.' },
-  sub: { name: 'Monkey Sub', icon: ['MonkeySubIcon'], tags: ['proj', 'area'], cd: 2.2, dmg: 9,
+  sub: { name: 'Monkey Sub', icon: ['MonkeySubIcon'], tags: ['proj', 'area'], cd: 2.2, dmg: 8,
     lv: ['Longer Range: +1 torpedo', 'Advanced Intel: +30% radius', 'Barbed Darts: +30% damage', 'Twin Guns: +1 torpedo', 'Ballistic Missile: +30% attack speed', 'Pre-emptive Strike: missiles hit the strongest bloons'],
     desc: 'Fires straight torpedoes that explode on impact.' },
   desperado: { name: 'Desperado', icon: ['DesperadoIcon'], tags: ['proj'], cd: 0.6, dmg: 6,
@@ -1250,7 +1250,7 @@ const CAST = {
     for (let i = 0; i < n; i++) {
       let a = aim.a + (i - (n - 1) / 2) * 0.25;
       if (lvAt(sk, 7)) { const strong = G.bloons.filter(b => !b.dead).sort((x, y) => y.hp - x.hp)[i]; if (strong) a = Math.atan2(strong.y - G.player.y, strong.x - G.player.x); }
-      shoot({ a, speed: 17, dmg: dm, pierce: 1, kind: 'torpedo', r: 0.3, life: 1.6, tags: sk.def.tags, onHit: p => explode(p.x, p.y, rad, dm, sk.def.tags, { color: '#7fe3ff' }) });
+      shoot({ a, speed: 17, dmg: dm * 0.35, pierce: 1, kind: 'torpedo', r: 0.3, life: 1.6, tags: sk.def.tags, onHit: p => explode(p.x, p.y, rad, dm, sk.def.tags, { color: '#7fe3ff' }) });
     }
     sk.cd = cdOf(sk, sk.def.cd * (lvAt(sk, 6) ? 0.7 : 1));
     return true;
@@ -1387,7 +1387,7 @@ const HERO_ABIL = {
   rosalia: { name: 'Kinetic Charge', icon: 'KineticChargeAA', cd: 40, desc: 'Fires a volley of homing grenades.', fn() {
     for (let i = 0; i < 12; i++) setTimeout(() => { if (!G) return; const t = nearestBloon(G.player.x, G.player.y, 20); const a = t ? Math.atan2(t.y - G.player.y, t.x - G.player.x) + rnd(-0.5, 0.5) : rnd(TAU);
       shoot({ a, speed: 16, dmg: abilDmg(0.6), pierce: 1, kind: 'bomb', r: 0.3, life: 1.6, homing: 7, tags: ['area'], src: 'hero', onHit: q => explode(q.x, q.y, 2, abilDmg(0.6), ['area'], { color: '#ff9a40' }) }); }, i * 70); } },
-  churchill: { name: 'Armor Piercing Shells', icon: 'ArmorPiercingShellsAA', cd: 35, desc: 'Double hero damage for 10 seconds.', fn() { G.buf.heroDmg = 10; } },
+  churchill: { name: 'Armor Piercing Shells', icon: 'ArmorPiercingShellsAA', cd: 45, desc: 'Double hero damage for 10 seconds.', fn() { G.buf.heroDmg = 10; } },
   benjamin: { name: 'Syphon Funding', icon: 'SyphonfundsIconAA', cd: 45, desc: 'Hacks nearby bloons down a layer and pockets the cash.', fn() {
     const p = G.player; let n = 0; for (const b of G.bloons.slice()) { if (b.dead || b.def.moab || (b.x - p.x) ** 2 + (b.y - p.y) ** 2 > 144) continue; damage(b, b.hp + 0.01, ['proj'], { quiet: true }); n++; }
     const cash = 40 + n * 3; G.gold += cash; G.goldEarned += cash; rs('hero').gold += cash; G.texts.push({ x: p.x, y: p.y - 1.5, s: '+$' + cash, t: 0, life: 1.4, gold: true });

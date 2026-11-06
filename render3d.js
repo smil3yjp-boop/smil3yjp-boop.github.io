@@ -914,9 +914,10 @@ const R3 = (() => {
         case 'wave': { const r = pr.r || 0.7; push('glow', pos, camQ, tmpS.set(r * 3, r * 3, 1), tmpC.setRGB(0.25, 0.75, 1)); push('glow', pos, camQ, tmpS.set(r * 1.3, r * 1.3, 1), tmpC.setRGB(0.8, 0.95, 1)); push('ring', w(pr.x, pr.y, 0.15), FLATQ, tmpS.set(r * 1.2, r * 1.2, 1), tmpC.setRGB(0.3, 0.8, 1)); break; }
       }
     }
+    DIM = false;
+    // enemy shots (the pink orbs) always show at full strength, whatever the Skill Effects slider says
     for (const e of G.eproj) { const pos = w(e.x, e.y, 0.9); push('glow', pos, camQ, tmpS.setScalar(e.r * 3.5), tmpC.setRGB(1, 0.2, 0.35)); push('glow', pos, camQ, tmpS.setScalar(e.r * 1.2), white); }
 
-    DIM = false;
     // hazards (players' traps dim; boss slime/magma/slams/charges always show)
     for (const h of G.hazards.concat(G.netHaz || [])) {
       const k = h.t / h.life;
