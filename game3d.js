@@ -115,7 +115,13 @@ function sfxPop(big = false) {
 }
 function sfxHit(b) {
   if (b.def && b.def.golden) { play('HitGolden0*', { vol: 0.5, gap: 0.06, key: 'hitgold' }); return; }
-  if (b.isBoss || (b.def && b.def.moab)) play('HitMoab0*', { vol: 0.5, gap: 0.07, key: 'hitmoab' });
+  if (b.isBoss || (b.def && b.def.moab)) {
+    play('HitMoab0*', { vol: 0.8, gap: 0.09, key: 'hitmoab', rate: b.isBoss ? 0.85 : 1 });
+    // blimps groan as their hull breaks through each quarter of health
+    const st = b.maxhp > 0 ? Math.floor(4 * Math.max(0, b.hp) / b.maxhp) : 4;
+    if (b.dmgStage === undefined) b.dmgStage = st;
+    else if (st < b.dmgStage) { b.dmgStage = st; if (st > 0) play('RemovableMetalGroan0*', { vol: b.isBoss ? 0.9 : 0.6, gap: 0.4, key: 'groan', rate: b.isBoss ? 0.8 : 1 + Math.random() * 0.15 }); }
+  }
   else if (b.type === 'ceramic') play('HitCeramic0*', { vol: 0.35, gap: 0.06, key: 'hitcer' });
   else if (b.type === 'lead') play('HitMetal0*', { vol: 0.35, gap: 0.08, key: 'hitmetal' });
 }
@@ -470,7 +476,9 @@ addEventListener('keydown', e => {
   if (G.state === 'levelup' && /Digit[1-5]/.test(e.code)) { const b = document.querySelectorAll('.card')[+e.code.slice(5) - 1]; b && b.click(); }
 });
 addEventListener('keyup', e => keys[e.code] = false);
-addEventListener('mousemove', e => { mouse.x = e.clientX * DPR; mouse.y = e.clientY * DPR; });
+addEventListener('mousemove', e => { mouse.x = e.clientX * DPR; mouse.y = e.clientY * DPR; mouse.inside = true; });
+document.addEventListener('mouseleave', () => { mouse.inside = false; });
+addEventListener('pointerdown', e => { mouse.touch = e.pointerType === 'touch'; });
 addEventListener('blur', () => { for (const k in keys) keys[k] = false; if (G && G.state === 'play') togglePause(); });
 
 // ---------------------------------------------------------------- map
@@ -655,7 +663,7 @@ let BEST = {};
 try { BEST = JSON.parse(localStorage.getItem('bss_best') || '{}'); } catch (e) { }
 
 async function newGame(opts = {}) {
-  const ch = CHARS[menuSel.char], G0MAP = opts.map ?? Math.floor(Math.random() * MAPS.length), mapDef = MAPS[G0MAP], chaos = CHAOS[menuSel.chaos];
+  const ch = CHARS[menuSel.char], G0MAP = opts.map ?? pickMap(), mapDef = MAPS[G0MAP], chaos = CHAOS[menuSel.chaos];
   show('menu', false); show('loading', true);
   const setMsg = m => { document.querySelector('#loading .lvtitle').textContent = m; };
   try {
@@ -689,6 +697,7 @@ async function newGame(opts = {}) {
     netHaz: [], coopN: NET.on ? 1 + NET.runIds.size : 1,
   };
   META.start(stats, G);
+  G.spawnPortals = makeSpawnPortals(arena); startSpot(G.player);
   coopSpread(G.player);
   if (opts.spectate) { G.spec = true; G.player.hidden = true; G.player.inv = 1e9; show('menu', false); toast('Spectating — you\'ll join the next run', '#7fd8ff'); return; }
   const hsk = { id: 'hero', hero: true, def: Object.assign({ icon: ch.spr, lv: [] }, HERO_ATK[ch.id]), lv: 1, cd: 0.6, t: 0, state: {} };
@@ -704,7 +713,7 @@ async function newGame(opts = {}) {
 async function continueRun(forceIdx) {
   G.portals = null; G.state = 'loading';
   play('BossPhayzeWarp', { vol: 0.8 });
-  let idx = forceIdx ?? G.mapIdx; if (forceIdx === undefined && MAPS.length > 1) while (idx === G.mapIdx) idx = Math.floor(Math.random() * MAPS.length);
+  let idx = forceIdx ?? pickMap(G.mapIdx);
   if (NET.guest) NET.resetWorld();
   const mapDef = MAPS[idx];
   show('loading', true);
@@ -713,7 +722,7 @@ async function continueRun(forceIdx) {
   try { await R3.buildArena(mapDef.id, setMsg); } catch (e) { setMsg('Could not load arena: ' + e.message); console.error(e); return; }
   show('loading', false);
   G.mapIdx = idx; G.arena = new Arena(mapDef);
-  const P = G.player; P.x = mapDef.spawn[0]; P.y = mapDef.spawn[1]; P.vx = P.vy = 0; G.cam.x = P.x; G.cam.y = P.y; coopSpread(P);
+  const P = G.player; P.x = mapDef.spawn[0]; P.y = mapDef.spawn[1]; P.vx = P.vy = 0; G.spawnPortals = makeSpawnPortals(G.arena); startSpot(P); G.cam.x = P.x; G.cam.y = P.y; coopSpread(P);
   G.bloons = []; G.projs = []; G.eproj = []; G.hazards = []; G.effects = []; G.texts = []; G.netHaz = [];
   if (P.down) { P.down = false; P.rev = 0; P.hp = G.stats.maxhp * 0.4; }
   const freeLeft = G.pickups.filter(q => q.kind === 'chest' && q.free && (!q.owner || q.owner === (NET.me && NET.me.id))).length;
@@ -729,6 +738,8 @@ async function continueRun(forceIdx) {
   toast(`${mapDef.name} — Loop ${G.loop + 1}: bloons are stronger!`, '#ffcf5a');
   if (freeLeft) { G.pendingChest = (G.pendingChest || 0) + freeLeft; openLevelUp(true); }   // unopened boss chest comes with you
 }
+// start a little south of the MOAB portal in the middle
+function startSpot(P) { for (let d = 7; d > 0; d -= 1) if (G.arena.free(P.x, P.y + d, 0.8)) { P.y += d; break; } }
 // co-op: each player starts at their own spot around the spawn point
 function coopSpread(P) {
   if (!NET.on || !NET.me) return;
@@ -736,7 +747,28 @@ function coopSpread(P) {
   for (let r = 2.2; r > 0.4; r -= 0.4) { const x = P.x + Math.cos(a) * r, y = P.y + Math.sin(a) * r; if (G.arena.free(x, y, 0.7)) { P.x = x; P.y = y; break; } }
   G.cam.x = P.x; G.cam.y = P.y;
 }
-function xpFor(l) { return Math.floor((6 + l * 5 + Math.pow(l, 1.55) * 2.2) * (l >= 50 ? 2 : 1)); }
+// maps runs can use (the rest stay in maps.js for later): Overlord's Ring only for now
+const MAP_POOL = MAPS.map((m, i) => i).filter(i => MAPS[i].id === 9);
+function pickMap(not) { const pool = MAP_POOL.length ? MAP_POOL : MAPS.map((m, i) => i); const opts = pool.length > 1 ? pool.filter(i => i !== not) : pool; return opts[Math.floor(Math.random() * opts.length)]; }
+// bloon spawn portals: four around the edge (N, S, E, W) and one in the middle for MOAB-class bloons and bosses
+function makeSpawnPortals(A) {
+  const c = A.def.spawn, out = [];
+  for (const [dx, dy, dir] of [[0, -1, 'N'], [0, 1, 'S'], [1, 0, 'E'], [-1, 0, 'W']]) {
+    let last = 0;
+    for (let d = 2; d < 200; d += 0.5) { const x = c[0] + dx * d, y = c[1] + dy * d; if (!A.isWalk(x, y)) break; if (A.free(x, y, 1.3)) last = d; }
+    const d = Math.max(4, last - 3.5);
+    out.push({ kind: 'bloon', dir, x: c[0] + dx * d, y: c[1] + dy * d, t: 0 });
+  }
+  out.push({ kind: 'moab', dir: 'C', x: c[0], y: c[1], t: 0 });
+  return out;
+}
+function spawnPick(moab) {
+  const P = G.spawnPortals; if (!P || !P.length) return null;
+  const pt = moab ? P.find(q => q.kind === 'moab') : pick(P.filter(q => q.kind === 'bloon'));
+  for (let k = 0; k < 8; k++) { const x = pt.x + rnd(-1.4, 1.4), y = pt.y + rnd(-1.4, 1.4); if (G.arena.free(x, y, 0.6)) return [x, y]; }
+  return [pt.x, pt.y];
+}
+function xpFor(l) { return Math.floor((6 + l * 5 + Math.pow(l, 1.55) * 2.2) * (l >= 100 ? 4 : l >= 50 ? 2 : 1)); }   // x2 from 50, x4 from 100
 
 // ---------------------------------------------------------------- skills
 function addSkill(id) {
@@ -1393,6 +1425,8 @@ function useAbility() {
   for (const k of [].concat(ABIL_SND[G.ch.id] || [])) play(k, { vol: 1, gap: 0, bus: /VO|^Activated(?!.*NoVO)/.test(k) ? 'vo' : undefined });
 }
 // ---------------------------------------------------------------- bloons
+// a boss can never heal back past a skull it has already broken (75% / 50% / 25%)
+function bossHealCap(b) { return b.maxhp * [1, 0.75, 0.5, 0.25][Math.min(3, 3 - ((b.skulls && b.skulls.length) ?? 3))]; }
 function hpScale(def) { return G.chaos.hp * (1 + G.t / 240) * (def.moab ? 1 + G.t / 400 : 1) * Math.pow(1.6, G.loop) * (1 + 0.5 * ((G.coopN || 1) - 1)); }
 // co-op: a random living player (bloons spawn around everyone)
 function anyPlayer() { const all = [G.player].concat(NET.on ? NET.alivePeers() : []).filter(q => !q.down); return all.length ? pick(all) : G.player; }
@@ -1400,7 +1434,7 @@ function nearestPlayer(x, y) { let best = G.player.down ? null : G.player, bd = 
 function spawnBloon(type, pos, parent) {
   const def = BLOONS[type];
   const p = anyPlayer();
-  if (!pos) { pos = G.arena.randomCellNear(p.x, p.y, 17, 28); if (!pos) return null; }
+  if (!pos) { pos = spawnPick(def.moab) || G.arena.randomCellNear(p.x, p.y, 17, 28); if (!pos) return null; }
   const hpS = hpScale(def);
   const b = {
     type, def, x: pos[0], y: pos[1], r: def.r, hp: def.hp * hpS, maxhp: def.hp * hpS, jit: def.sm ? 0.96 + rnd(0.08) : 0.92 + rnd(0.16), anc: [], quiet: 0,
@@ -1429,8 +1463,10 @@ function damage(b, dmg, tags, opts = {}) {
   rs().dmg += Math.min(d, Math.max(0, b.hp)); if (opts.burn) b.burnSrc = SRC;
   if (b.net) NET.queueDmg(b, d); else { b.lastOwner = NET_OWNER; b.lastSrc = SRC; }
   b.hp -= d; b.hitT = 0.08; b.quiet = 0;
+  const big = b.isBoss || (b.def && b.def.moab);
+  if (big && opts.quiet) sfxHit(b);   // blimps and bosses always sound hit (the sound itself is rate-limited)
   if (!opts.quiet || Math.random() < 0.15) {
-    sfxHit(b);
+    if (!(big && opts.quiet)) sfxHit(b);
     if ((b.isBoss || (b.def && b.def.moab) || b.type === 'ceramic' || b.type === 'lead') && Math.random() < 0.5)
       G.effects.push({ kind: 'spark', x: b.x + rnd(-b.r, b.r) * 0.6, y: b.y + rnd(-b.r, b.r) * 0.6, h: b.isBoss || b.def.moab ? 1.4 : 0.8, r: b.isBoss || b.def.moab ? 0.9 : 0.5, t: 0, life: 0.14, color: b.type === 'lead' ? '#dfe6ee' : b.type === 'ceramic' ? '#ffb070' : '#fff1b0' });
   }
@@ -1532,7 +1568,7 @@ function spawnDirector(dt) {
     const cost = Math.sqrt(COST[type]) * groupN;
     if (cost > G.spawnBudget + 6) { G.spawnBudget -= 1; setProps(spawnBloon(avail[0]), rollProps(avail[0])); continue; }
     G.spawnBudget -= cost;
-    const sp0 = anyPlayer(), pos = G.arena.randomCellNear(sp0.x, sp0.y, 17, 26);
+    const sp0 = anyPlayer(), pos = spawnPick(BLOONS[type].moab) || G.arena.randomCellNear(sp0.x, sp0.y, 17, 26);
     if (!pos) break;
     const props = rollProps(type);   // a group shares its properties, like a BTD round
     for (let i = 0; i < groupN; i++) setProps(spawnBloon(type, [pos[0] + rnd(-1, 1), pos[1] + rnd(-1, 1)]), props);
@@ -1553,7 +1589,7 @@ function checkMilestones() {
 // ---------------------------------------------------------------- boss (Soulstone-style telegraphed attacks)
 function spawnBoss() {
   const def = BOSSES[(G.mapIdx + G.chaosIdx + G.loop) % BOSSES.length];
-  const pos = G.arena.randomCellNear(G.player.x, G.player.y, 12, 18) || [G.player.x + 10, G.player.y];
+  const pos = spawnPick(true) || G.arena.randomCellNear(G.player.x, G.player.y, 12, 18) || [G.player.x + 10, G.player.y];
   const hp = def.hp * G.chaos.hp * (1 + G.t / 600) * Math.pow(1.7, G.loop) * (1 + 0.6 * ((G.coopN || 1) - 1));
   G.boss = { isBoss: true, def, x: pos[0], y: pos[1], r: def.r, hp, maxhp: hp, spd: def.spd, dead: false, hitT: 0, slowT: 0, frozenT: 0, stunT: 0, burnT: 0, burnD: 0, atkT: 3, phase: 1, wob: 0, kx: 0, ky: 0, shield: false,
     skulls: [0.75, 0.5, 0.25], blimpSkull: rint(0, 2), dashAtSpawn: G.dashesUsed || 0 };
@@ -1604,7 +1640,7 @@ function bossAI(b, dt) {
   while (b.skulls.length && b.hp / b.maxhp <= b.skulls[0]) bossSkull(b, 3 - b.skulls.length), b.skulls.shift();
   if (b.shieldT > 0) b.shieldT -= dt;
   // living Mini-Lychs feed the Lych
-  if (b.def.id === 'lych') { const minis = G.bloons.filter(o => !o.dead && o.type === 'lychmini').length; if (minis) b.hp = Math.min(b.maxhp, b.hp + b.maxhp * 0.004 * minis * dt); }
+  if (b.def.id === 'lych') { const minis = G.bloons.filter(o => !o.dead && o.type === 'lychmini').length; if (minis) b.hp = Math.min(bossHealCap(b), b.hp + b.maxhp * 0.004 * minis * dt); }
   if (b.hp < b.maxhp * 0.5 && b.phase === 1) { b.phase = 2; toast(`${b.def.name} is ENRAGED!`, '#ff4040'); b.spd *= 1.3; }
   bossMechanic(b, dt);
   b.atkT -= dt;
@@ -1650,7 +1686,7 @@ function bossMechanic(b, dt) {
     if (p.buffT > 0 && p.buffT < 1e8) { p.buffT = 0; stole.push('brew'); }
     for (const k in G.buf) if (G.buf[k] > 0) { G.buf[k] = 0; stole.push(k); }
     G.drainT = ph2 ? 8 : 6; b.drainFx = G.drainT;
-    b.hp = Math.min(b.maxhp, b.hp + b.maxhp * (0.015 + 0.005 * stole.length));
+    b.hp = Math.max(b.hp, Math.min(bossHealCap(b), b.hp + b.maxhp * (0.0075 + 0.0025 * stole.length)));
     G.effects.push({ kind: 'ring', x: p.x, y: p.y, r: 3, t: 0, life: 0.6, color: '#a040ff' });
     play('BossLychEtherealize', { vol: 0.7 }); toast('☠ The Lych drains your power!' + (stole.length ? ' (buffs stolen)' : ''), '#c070ff');
   } else if (id === 'phayze') {
@@ -1686,8 +1722,11 @@ function killBoss0(b) {
   setTimeout(() => G && toast(`${b.def.name} DEFEATED!  Stand in a portal and press ${keyName(SETTINGS.keys.interact)}`, '#ffe39a'), 600);
   setTimeout(() => {
     if (!G) return;
-    const P = G.player, spots = [[-3.5, -2], [3.5, -2], [-4, 2], [4, 2], [0, -4], [0, 4]].map(([dx, dy]) => [P.x + dx, P.y + dy]).filter(([x, y]) => G.arena.free(x, y, 1));
-    const a = spots[0] || [P.x - 3, P.y], c = spots.find(q => Math.hypot(q[0] - a[0], q[1] - a[1]) > 4) || [P.x + 3, P.y];
+    const P = G.player, mid = (G.spawnPortals || []).find(q => q.kind === 'moab');
+    // either side of the middle portal (falls back to around the player)
+    const side = (sx) => { if (!mid) return null; for (let d = 4.5; d < 9; d += 0.5) { const x = mid.x + sx * d, y = mid.y; if (G.arena.free(x, y, 1)) return [x, y]; } return null; };
+    const spots = [[-3.5, -2], [3.5, -2], [-4, 2], [4, 2], [0, -4], [0, 4]].map(([dx, dy]) => [P.x + dx, P.y + dy]).filter(([x, y]) => G.arena.free(x, y, 1));
+    const a = side(-1) || spots[0] || [P.x - 3, P.y], c = side(1) || spots.find(q => Math.hypot(q[0] - a[0], q[1] - a[1]) > 4) || [P.x + 3, P.y];
     G.portals = [{ kind: 'continue', x: a[0], y: a[1], t: 0 }, { kind: 'end', x: c[0], y: c[1], t: 0 }];
     play('BossPhayzeWarp', { vol: 0.8 });
   }, 2600);
@@ -1732,7 +1771,7 @@ function hurtPlayer(dmg) {
   }
 }
 function gainXp(v) {
-  if (NET.guest) { NET.send(NET.hostId, { t: 'xp', v: v * G.stats.xp }); return; }
+  if (NET.guest) { NET.send(NET.runHost, { t: 'xp', v: v * G.stats.xp }); return; }
   G.xp += v * G.stats.xp * G.chaos.xp;
   while (G.xp >= G.xpNext) {
     G.xp -= G.xpNext; G.level++; G.xpNext = xpFor(G.level); G.pendingLevels++;
@@ -1770,6 +1809,7 @@ function update(dt) {
   if (G.flowT <= 0 && !NET.guest) { const tg = [G.player].concat(NET.on ? NET.alivePeers() : []).filter(q => !q.down); G.arena.computeFlow(tg.length ? tg : [p]); G.flowT = 0.25; }
 
   if (G.grace > 0) G.grace -= dt;
+  for (const sp of G.spawnPortals || []) sp.t += dt;
   if (G.portals) {
     for (const pt of G.portals) {
       pt.t += dt;
@@ -1778,8 +1818,8 @@ function update(dt) {
       if (pt.near && G.useKey) {
         G.useKey = false;
         if (G.spec) break;
-        if (NET.guest) { NET.send(NET.hostId, { t: 'portal', k: pt.kind }); toast('Asked the host to ' + (pt.kind === 'continue' ? 'continue' : 'end the run'), '#ffe39a'); break; }
-        if (NET.host) { NET.usePortal(pt.kind); return; }
+        // co-op: CONTINUE marks you ready (everyone must be), END RUN takes only you out of the run
+        if (NET.on) { if (pt.kind === 'continue') { NET.toggleReady(); break; } NET.leave(true); return; }
         if (pt.kind === 'continue') { continueRun(); return; }
         G.portals = null; endRun(true, true); return;
       }
@@ -2199,9 +2239,16 @@ function render(dt = 0.016) {
   // portal labels
   if (G.portals) for (const pt of G.portals) {
     const q = R3.project(pt.x, pt.y, 3.6, W, H); if (!q) continue;
-    text(pt.kind === 'continue' ? 'CONTINUE' : 'END RUN', q[0], q[1], 22 * u, pt.kind === 'continue' ? '#7fd8ff' : '#ff8a7a', 'center');
-    text(pt.kind === 'continue' ? `New arena · Loop ${G.loop + 2} · stronger bloons` : 'Finish with your score', q[0], q[1] + 20 * u, 13 * u, '#e8e0d0', 'center');
-    if (pt.near) text(`Press ${keyName(SETTINGS.keys.interact)} to ${pt.kind === 'continue' ? 'enter' : 'end the run'}`, q[0], q[1] + 42 * u, 17 * u + Math.sin(G.t * 6) * u, '#ffe39a', 'center');
+    const co = NET.on && !G.spec, cont = pt.kind === 'continue';
+    if (co && cont) {   // ready counter above the portal
+      const rc = NET.readyCount(), n = NET.runSize(), wait = NET.readyNames();
+      ctx.fillStyle = 'rgba(0,0,0,.6)'; roundRect(q[0] - 110 * u, q[1] - 82 * u, 220 * u, 56 * u, 10 * u); ctx.fill();
+      text(`READY ${rc}/${n}`, q[0], q[1] - 58 * u, 22 * u, rc === n ? '#7dff8a' : '#ffe39a', 'center');
+      if (wait.length) text('Waiting for ' + wait.join(', '), q[0], q[1] - 36 * u, 13 * u, '#e8e0d0', 'center');
+    }
+    text(cont ? 'CONTINUE' : co ? 'LEAVE RUN' : 'END RUN', q[0], q[1], 22 * u, cont ? '#7fd8ff' : '#ff8a7a', 'center');
+    text(cont ? (co ? `Everyone must be ready · Loop ${G.loop + 2}` : `${MAP_POOL.length > 1 ? 'New arena' : 'Next loop'} · Loop ${G.loop + 2} · stronger bloons`) : co ? 'Finish with your score · others keep playing' : 'Finish with your score', q[0], q[1] + 20 * u, 13 * u, '#e8e0d0', 'center');
+    if (pt.near) text(`Press ${keyName(SETTINGS.keys.interact)} to ${cont ? (co ? (NET.cont.has(NET.me.id) ? 'cancel ready' : 'ready up') : 'enter') : co ? 'leave the run' : 'end the run'}`, q[0], q[1] + 42 * u, 17 * u + Math.sin(G.t * 6) * u, '#ffe39a', 'center');
   }
   if (G.grace > 0 && G.state === 'play') {
     text('GET READY', W / 2, H * 0.36, 34 * u, '#ffe39a', 'center');
@@ -2235,6 +2282,10 @@ function render(dt = 0.016) {
     return;
   }
   drawHUD();
+  // crosshair in place of the mouse cursor while playing (style/size/colour in Settings)
+  const xhOn = G.state === 'play' && mouse.inside && !mouse.touch && SETTINGS.xh && SETTINGS.xh.on !== false;
+  document.body.classList.toggle('xhair', xhOn);
+  if (xhOn) drawCrosshair(ctx, mouse.x, mouse.y, DPR, SETTINGS.xh);
 }
 function pickSpr(list) { for (const n of list) if (sprite(n)) return n; return list[0]; }
 function glowDot(x, y, r, rgb) {
@@ -2548,6 +2599,7 @@ function drawHUD() {
   text((G.manualAim ? 'Aim: MOUSE (' : 'Aim: AUTO (') + keyName(SETTINGS.keys.aim) + ')', 22 * u, 80 * u, 13 * u, '#9b8f7a');
   const fps = R3.stats();
   text(`${fps.fps} FPS · ${fps.quality} · ${Math.round(fps.scale * 100)}% res`, 22 * u, 100 * u, 13 * u, fps.fps < 40 ? '#ff8a6a' : '#7fdc8a');
+  drawParty(u);
   drawMinimap(u);
   if (B && !B.dead) drawBossBar(B, u);
   // toast
@@ -2616,6 +2668,30 @@ function drawBossBar(B, u) {
   }
 }
 let miniCanvas = null, miniFor = null;
+// co-op: party panel under the top-left info (avatar, name, health)
+function drawParty(u) {
+  if (!NET.on) return;
+  const party = NET.party(); if (!party.length) return;
+  const x0 = 18 * u, rowH = 44 * u, w = 230 * u, av = 34 * u;
+  let y = 116 * u;
+  for (const q of party) {
+    ctx.fillStyle = 'rgba(10,6,16,.7)'; roundRect(x0, y, w, rowH - 6 * u, 8 * u); ctx.fill();
+    ctx.strokeStyle = q.col; ctx.lineWidth = 2 * u; roundRect(x0, y, w, rowH - 6 * u, 8 * u); ctx.stroke();
+    const cx = x0 + 4 * u + av / 2, cy = y + (rowH - 6 * u) / 2;
+    ctx.save(); ctx.beginPath(); ctx.arc(cx, cy, av / 2, 0, TAU); ctx.closePath();
+    if (q.img) { ctx.clip(); ctx.drawImage(q.img, cx - av / 2, cy - av / 2, av, av); }
+    else { ctx.fillStyle = q.col; ctx.fill(); ctx.restore(); ctx.save(); text((q.name || '?')[0].toUpperCase(), cx, cy + 6 * u, 16 * u, '#10101a', 'center'); }
+    ctx.restore();
+    if (q.down) { ctx.fillStyle = 'rgba(255,40,40,.45)'; ctx.beginPath(); ctx.arc(cx, cy, av / 2, 0, TAU); ctx.fill(); }
+    const tx = cx + av / 2 + 8 * u, bw = w - (tx - x0) - 10 * u;
+    text((q.name || '').slice(0, 16) + (q.me ? ' (you)' : ''), tx, y + 15 * u, 13 * u, q.down ? '#ff8a7a' : '#fff');
+    const f = Math.max(0, Math.min(1, q.hp / Math.max(1, q.mhp)));
+    ctx.fillStyle = 'rgba(0,0,0,.6)'; roundRect(tx, y + 21 * u, bw, 10 * u, 4 * u); ctx.fill();
+    if (!q.down) { ctx.fillStyle = f > 0.5 ? '#5fd35f' : f > 0.25 ? '#ffc94a' : '#ff5a4a'; roundRect(tx, y + 21 * u, Math.max(2 * u, bw * f), 10 * u, 4 * u); ctx.fill(); }
+    text(q.down ? (q.me ? 'DOWN — wait for a revive' : 'DOWN — revive them!') : `${Math.ceil(Math.max(0, q.hp))}/${Math.round(q.mhp)}`, tx + bw / 2, y + 30 * u, 9 * u, '#fff', 'center');
+    y += rowH;
+  }
+}
 function drawMinimap(u) {
   const A = G.arena;
   if (miniFor !== A) {
@@ -2628,9 +2704,17 @@ function drawMinimap(u) {
   const k = mw / A.w;
   ctx.fillStyle = 'rgba(255,70,70,.8)';
   for (let i = 0; i < G.bloons.length; i += 3) { const b = G.bloons[i]; ctx.fillRect(mx + b.x * k - 1, my + b.y * k - 1, b.def.moab ? 4 : 2, b.def.moab ? 4 : 2); }
+  for (const sp of G.spawnPortals || []) { ctx.strokeStyle = sp.kind === 'moab' ? '#ff5a3a' : '#c070ff'; ctx.lineWidth = 2 * u; ctx.beginPath(); ctx.arc(mx + sp.x * k, my + sp.y * k, (sp.kind === 'moab' ? 5 : 4) * u, 0, TAU); ctx.stroke(); }
   if (G.boss && !G.boss.dead) { ctx.fillStyle = '#ff2'; ctx.beginPath(); ctx.arc(mx + G.boss.x * k, my + G.boss.y * k, 5 * u, 0, TAU); ctx.fill(); }
   for (const pk of G.pickups) if (pk.kind === 'chest') { ctx.fillStyle = '#ffcf5a'; ctx.fillRect(mx + pk.x * k - 3, my + pk.y * k - 3, 6, 6); }
-  ctx.fillStyle = '#5ff'; ctx.beginPath(); ctx.arc(mx + G.player.x * k, my + G.player.y * k, 4 * u, 0, TAU); ctx.fill();
+  // teammates: a blip each in their party colour (blinking red while down)
+  if (NET.on) for (const q of NET.party()) {
+    if (q.me) continue;
+    const px = mx + q.x * k, py = my + q.y * k;
+    ctx.fillStyle = q.down && (performance.now() / 300 | 0) % 2 ? '#ff3a3a' : q.col;
+    ctx.beginPath(); ctx.arc(px, py, 4 * u, 0, TAU); ctx.fill(); ctx.strokeStyle = '#000'; ctx.lineWidth = 1.2 * u; ctx.stroke();
+  }
+  if (!G.spec) { ctx.fillStyle = '#5ff'; ctx.beginPath(); ctx.arc(mx + G.player.x * k, my + G.player.y * k, 4 * u, 0, TAU); ctx.fill(); ctx.strokeStyle = '#fff'; ctx.lineWidth = 1.2 * u; ctx.stroke(); }
   // view rect
   ctx.strokeStyle = 'rgba(255,255,255,.4)'; ctx.lineWidth = 1;
   ctx.beginPath(); ctx.arc(mx + G.player.x * k, my + G.player.y * k, 18 * k, 0, TAU); ctx.stroke();
@@ -2948,7 +3032,7 @@ function renderStats(el, extra = []) {
   el.innerHTML = rows.map(([a, b]) => `<span>${a}</span><b>${b}</b>`).join('');
 }
 $('resume').onclick = togglePause;
-$('quit').onclick = () => { show('pause', false); if (NET.host) NET.send('*', { t: 'end', win: false, quit: true }); endRun(false, true); };
+$('quit').onclick = () => { show('pause', false); if (NET.on && !G.spec) NET.leave(false); else endRun(false, true); };
 function endRun(win, quit = false) {
   if (G.state === 'end') return;
   if (G.spec) return NET.stopSpectating();
@@ -2970,7 +3054,7 @@ function endRun(win, quit = false) {
   const runRec = runRecord(win, quit, mm);
   if (NET.on) META.ach('coop1');
   if (NET.on) NET.shareFinal({ hero: G.ch.name, icon: (selectedSkin(G.ch) || {}).icon || HERO_ICON[G.ch.id], rows: [['Level', G.level], ['Damage dealt', Math.round(G.dmgDealt).toLocaleString()], ['Bloons popped', Object.values(G.runStats || {}).reduce((a, r) => a + (r.pops || 0), 0).toLocaleString()], ['Gold earned', '$' + Math.round(G.goldEarned).toLocaleString()], ['Chests opened', G.chests], ['Relics', (G.relics || []).length], ['Times downed', G.downs || 0], ['Revived teammates', G.revives || 0], ['Monkey Money', '+' + mm]], dmg: Math.round(G.dmgDealt), result: eb.textContent });
-  else setTimeout(() => askName(runRec), win ? 400 : 1100);
+  else if (!G.coop) setTimeout(() => askName(runRec), win ? 400 : 1100);   // co-op runs never go to the highscores
   setTimeout(() => show('end', true), win ? 200 : 900);
 }
 $('again').onclick = () => { show('end', false); G = null; R3.resetRun(); if (NET.inRun) NET.leaveRun(); buildMenu(); show('menu', true); startMenuMusic(); };
@@ -3246,7 +3330,7 @@ function saveSel() { try { localStorage.setItem('bss_sel', JSON.stringify(menuSe
 $('start').onclick = () => {
   audio();
   if (NET.ready && NET.others.length && !NET.amHost) return;   // guests wait for the host
-  const map = Math.floor(Math.random() * MAPS.length);
+  const map = pickMap();
   if (NET.ready && NET.amHost && NET.others.length) NET.startRun(map);
   stopMenuMusic(); newGame({ map });
 };

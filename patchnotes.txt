@@ -1,3 +1,25 @@
+v0.3.4 | Nov 5, 2026
+- Lych heals half as much when it absorbs its bloons
+- Bosses can no longer heal back past a skull they've already dropped (75%, 50%, 25%)
+- Hero levels need even more XP from level 100 onward (x4 instead of x2)
+- Runs now always take place on Overlord's Ring (the other maps are kept for later)
+- Bloons now come out of four portals at the north, south, east and west of the arena instead of around you
+- MOAB-class bloons and bosses come out of a portal in the middle of the arena
+- After a boss, the Continue and End Run portals open on either side of the middle portal
+- The spawn portals are shown on the minimap
+- The mouse cursor is now a crosshair during runs (the normal cursor comes back on menus, cards and pause)
+- New Crosshair settings: style (cross, dot, circle, circle + cross, T), colour (presets or any custom colour), size, thickness, center gap, opacity, outline and center dot, with a live preview
+- Blimps and bosses now always make their hit sound when damaged, and groan as their hull breaks at 75%, 50% and 25% health
+- Fixed the Skill Effects slider: it now dims your own and other players' skill effects (it wasn't applying before)
+- Fixed Dartling Gunner models that only showed their base: Ray of Doom, Buckshot, Bloon Area Denial System and Bloon Exclusion Zone now show the monkey and gun
+- Fixed the Sniper Paragon not holding its rifle
+- Co-op: ending the run or quitting now only takes you out of the run; everyone else keeps playing (if you were running the world, the next player takes over)
+- Co-op: the Continue portal now needs every player to be ready, with a ready counter above the portal
+- Co-op: players who join mid-run now stay on the main menu and can press Spectate Run next to Patch Notes
+- Co-op: the run gets easier again when a player leaves
+- Co-op: every player now shows as a coloured blip on the minimap (blinking red while down)
+- Co-op: party panel at the top left during a run with each player's Discord avatar, name and health
+
 v0.3.3 | Nov 5, 2026
 - Map music is now Soulstone Survivors' music, matched to each map (forest, desert, cavern, snow, cathedral and Void King themes)
 - Boss themes are unchanged

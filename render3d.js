@@ -788,6 +788,15 @@ const R3 = (() => {
     if (G.boss && !G.boss.dead) { seen.add(G.boss); drawBig(G.boss, G, dt); }
     for (const [b, m] of big) if (!seen.has(b)) { scene.remove(m); big.delete(b); }
 
+    // bloon spawn portals: purple swirls at the edges, a bigger red one in the middle for MOABs and bosses
+    for (const sp of G.spawnPortals || []) {
+      const big = sp.kind === 'moab', R = big ? 2.4 : 1.8, c = big ? tmpC2.setRGB(1, 0.3, 0.2) : tmpC2.setRGB(0.7, 0.3, 1), t = sp.t || 0;
+      push('discAdd', w(sp.x, sp.y, 0.05), FLATQ, tmpS.set(R, R, 1), tmpC.copy(c).multiplyScalar(0.35 + 0.1 * Math.sin(t * 3)));
+      push('ring', w(sp.x, sp.y, 0.07), FLATQ, tmpS.set(R * 1.05, R * 1.05, 1), c);
+      push('ring', w(sp.x, sp.y, 0.08), FLATQ, tmpS.set(R * (0.4 + 0.6 * ((t * 0.6) % 1)), R * (0.4 + 0.6 * ((t * 0.6) % 1)), 1), tmpC.copy(c).multiplyScalar(1 - ((t * 0.6) % 1)));
+      for (let i = 0; i < 5; i++) { const a = -t * 2.2 + i * 1.2566, rr = R * 0.75; push('glow', w(sp.x + Math.cos(a) * rr, sp.y + Math.sin(a) * rr, 0.35 + ((t * 0.8 + i / 5) % 1) * 1.2), camQ, tmpS.setScalar(0.5), c); }
+      push('glow', w(sp.x, sp.y, 0.6), camQ, tmpS.set(R * 1.6, R * 1.2, 1), tmpC.copy(c).multiplyScalar(0.5));
+    }
     // Soulstone-style portals after a boss kill
     if (G.portals) for (const pt of G.portals) {
       const c = pt.kind === 'continue' ? tmpC2.setRGB(0.3, 0.75, 1) : tmpC2.setRGB(1, 0.35, 0.25), gk = Math.min(1, pt.t * 2);
@@ -873,7 +882,7 @@ const R3 = (() => {
     if (bs && bs.lv >= 7) for (let i = 0; i < 2; i++) { const a = (bs.state.oa || 0) + i * Math.PI; tmpQ.setFromEuler(new THREE.Euler(0, a * 3, 0)); if (pools.ps_GlaiveLordGlaive) push('ps_GlaiveLordGlaive', w(P.x + Math.cos(a) * 2.6, P.y + Math.sin(a) * 2.6, 0.9), tmpQ, tmpS.set(1.5, 1, 1.5)); else push('glaive', w(P.x + Math.cos(a) * 2.6, P.y + Math.sin(a) * 2.6, 0.9), tmpQ, tmpS.set(1.6, 1.6, 1.6)); }
 
     // projectiles (all of them are the players' skills)
-    fxA = Math.max(0, Math.min(1, window.SETTINGS && SETTINGS.fx !== undefined ? SETTINGS.fx : 1));
+    fxA = Math.max(0, Math.min(1, typeof SETTINGS !== 'undefined' && SETTINGS.fx !== undefined ? SETTINGS.fx : 1));
     DIM = true;
     for (const pr of G.projs) {
       const pos = w(pr.x, pr.y, 0.9);

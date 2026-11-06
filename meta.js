@@ -5,8 +5,9 @@
 // ================================================================ settings + key bindings
 const DEFAULT_KEYS = { up: 'KeyW', down: 'KeyS', left: 'KeyA', right: 'KeyD', dash: 'Space', ability: 'KeyR', interact: 'KeyE', aim: 'KeyQ', pause: 'Escape' };
 const KEY_LABEL = { up: 'Move up', down: 'Move down', left: 'Move left', right: 'Move right', dash: 'Dash', ability: 'Hero ability', interact: 'Enter portal', aim: 'Toggle mouse aim', pause: 'Pause' };
-let SETTINGS = { shake: true, cbLabels: false, dmgNumbers: true, fx: 1, keys: Object.assign({}, DEFAULT_KEYS) };
-try { const s = JSON.parse(localStorage.getItem('bss_settings') || '{}'); SETTINGS = Object.assign(SETTINGS, s); SETTINGS.keys = Object.assign({}, DEFAULT_KEYS, s.keys || {}); } catch (e) { }
+const XH_DEFAULT = { on: true, style: 'cross', size: 12, thick: 2, gap: 4, color: '#ffffff', opacity: 0.95, outline: true, dot: true };
+let SETTINGS = { shake: true, cbLabels: false, dmgNumbers: true, fx: 1, xh: Object.assign({}, XH_DEFAULT), keys: Object.assign({}, DEFAULT_KEYS) };
+try { const s = JSON.parse(localStorage.getItem('bss_settings') || '{}'); SETTINGS = Object.assign(SETTINGS, s); SETTINGS.keys = Object.assign({}, DEFAULT_KEYS, s.keys || {}); SETTINGS.xh = Object.assign({}, XH_DEFAULT, s.xh || {}); } catch (e) { }
 function saveSettings() { try { localStorage.setItem('bss_settings', JSON.stringify(SETTINGS)); } catch (e) { } updateHint(); }
 // the controls line under the menu follows your key bindings
 function updateHint() {
@@ -263,6 +264,55 @@ function fxSlider(el) {
   r.oninput = () => { SETTINGS.fx = r.value / 100; lab.textContent = r.value + '%'; saveSettings(); };
 }
 
+// ================================================================ Crosshair (replaces the mouse cursor during runs)
+// styles: cross, dot, circle, circlecross, tcross
+function drawCrosshair(g, x, y, k, c) {
+  c = Object.assign({}, XH_DEFAULT, c || {});
+  const L = c.size * k, T = Math.max(1, c.thick * k), gap = c.gap * k, R = L + gap;
+  g.save(); g.globalAlpha = c.opacity; g.lineCap = 'butt';
+  const shapes = [];
+  const line = (x1, y1, x2, y2) => shapes.push(['l', x1, y1, x2, y2]);
+  if (c.style === 'cross' || c.style === 'circlecross' || c.style === 'tcross') {
+    if (c.style !== 'tcross') line(x, y - gap, x, y - gap - L);
+    line(x, y + gap, x, y + gap + L); line(x - gap, y, x - gap - L, y); line(x + gap, y, x + gap + L, y);
+  }
+  if (c.style === 'circle' || c.style === 'circlecross') shapes.push(['c', x, y, c.style === 'circle' ? Math.max(3 * k, L * 0.8) : R * 0.75]);
+  const dot = c.dot || c.style === 'dot', dr = Math.max(1.2 * k, T * (c.style === 'dot' ? 1.4 : 0.8));
+  const stroke = (w, col) => {
+    g.strokeStyle = col; g.lineWidth = w;
+    for (const s of shapes) { g.beginPath(); if (s[0] === 'l') { g.moveTo(s[1], s[2]); g.lineTo(s[3], s[4]); } else g.arc(s[1], s[2], s[3], 0, Math.PI * 2); g.stroke(); }
+  };
+  if (c.outline) { stroke(T + 2 * k, 'rgba(0,0,0,.85)'); if (dot) { g.fillStyle = 'rgba(0,0,0,.85)'; g.beginPath(); g.arc(x, y, dr + k, 0, Math.PI * 2); g.fill(); } }
+  stroke(T, c.color);
+  if (dot) { g.fillStyle = c.color; g.beginPath(); g.arc(x, y, dr, 0, Math.PI * 2); g.fill(); }
+  g.restore();
+}
+function xhSettings(el) {
+  if (!el) return;
+  const c = SETTINGS.xh = Object.assign({}, XH_DEFAULT, SETTINGS.xh || {});
+  const STY = [['cross', 'Cross'], ['dot', 'Dot'], ['circle', 'Circle'], ['circlecross', 'Circle + cross'], ['tcross', 'T']];
+  const SW = ['#ffffff', '#ffe34d', '#5fff6a', '#4de3ff', '#ff4d6a', '#ff5cf4', '#000000'];
+  const sl = (k, label, min, max, step, fmt) => `<div class="srow fxrow"><div><b>${label}</b></div><div class="fxs"><input type="range" data-x="${k}" min="${min}" max="${max}" step="${step}" value="${c[k]}"><span>${fmt(c[k])}</span></div></div>`;
+  const F = { size: v => v + 'px', thick: v => v + 'px', gap: v => v + 'px', opacity: v => Math.round(v * 100) + '%' };
+  el.innerHTML = `<div class="xhwrap"><canvas id="xhprev" width="180" height="120"></canvas><div class="xhopts">
+    <div class="srow"><div><b>Crosshair</b><div class="sd">Replaces the mouse cursor during runs</div></div><button class="btn small tog${c.on ? ' on' : ''}" data-xt="on">${c.on ? 'ON' : 'OFF'}</button></div>
+    <div class="chips xhsty">${STY.map(([k, n]) => `<span class="chip${c.style === k ? ' on' : ''}" data-xs="${k}">${n}</span>`).join('')}</div>
+    <div class="xhcol">${SW.map(h => `<span class="sw${c.color.toLowerCase() === h ? ' on' : ''}" data-xc="${h}" style="background:${h}"></span>`).join('')}<input type="color" value="${c.color}" data-xcp title="Custom colour"></div>
+  </div></div>` + sl('size', 'Size', 2, 40, 1, F.size) + sl('thick', 'Thickness', 1, 8, 1, F.thick) + sl('gap', 'Center gap', 0, 20, 1, F.gap) + sl('opacity', 'Opacity', 0.2, 1, 0.05, F.opacity) +
+    `<div class="srow"><div><b>Outline</b></div><button class="btn small tog${c.outline ? ' on' : ''}" data-xt="outline">${c.outline ? 'ON' : 'OFF'}</button></div>
+     <div class="srow"><div><b>Center dot</b></div><button class="btn small tog${c.dot ? ' on' : ''}" data-xt="dot">${c.dot ? 'ON' : 'OFF'}</button></div>
+     <div class="srow"><div class="sd">Back to the default crosshair</div><button class="btn small" id="xhreset">Reset crosshair</button></div>`;
+  const prev = () => { const cv = el.querySelector('#xhprev'), g = cv.getContext('2d'); g.clearRect(0, 0, cv.width, cv.height); g.fillStyle = '#3a4a2c'; g.fillRect(0, 0, cv.width, cv.height); g.fillStyle = '#6b5a44'; g.fillRect(0, cv.height * 0.6, cv.width, cv.height * 0.4); drawCrosshair(g, cv.width / 2, cv.height / 2, 1, c); };
+  const redraw = () => { saveSettings(); xhSettings(el); };
+  el.querySelectorAll('[data-x]').forEach(r => r.oninput = () => { c[r.dataset.x] = +r.value; r.nextElementSibling.textContent = F[r.dataset.x](+r.value); saveSettings(); prev(); });
+  el.querySelectorAll('[data-xt]').forEach(b => b.onclick = () => { c[b.dataset.xt] = !c[b.dataset.xt]; redraw(); });
+  el.querySelectorAll('[data-xs]').forEach(b => b.onclick = () => { c.style = b.dataset.xs; redraw(); });
+  el.querySelectorAll('[data-xc]').forEach(b => b.onclick = () => { c.color = b.dataset.xc; redraw(); });
+  const cp = el.querySelector('[data-xcp]'); cp.oninput = () => { c.color = cp.value; saveSettings(); prev(); }; cp.onchange = redraw;
+  el.querySelector('#xhreset').onclick = () => { SETTINGS.xh = Object.assign({}, XH_DEFAULT); saveSettings(); xhSettings(el); };
+  prev();
+}
+
 // ================================================================ Monkey Knowledge (permanent upgrades bought with Monkey Money)
 const KNOWLEDGE = [
   { id: 'gold', name: 'Starting Cash', icon: 'btd_Coin', costs: [150, 350, 700], desc: l => `Start runs with $${[0, 100, 250, 500][l]}`, apply: (l, s, g) => { g.gold += [0, 100, 250, 500][l]; } },
@@ -435,10 +485,10 @@ function renderAch() {
 let rebinding = null;
 function renderSettings() {
   const tog = (id, label, desc) => `<div class="srow"><div><b>${label}</b><div class="sd">${desc}</div></div><button class="btn small tog${SETTINGS[id] ? ' on' : ''}" data-s="${id}">${SETTINGS[id] ? 'ON' : 'OFF'}</button></div>`;
-  $('setlist').innerHTML = `<h3>Sound</h3><div id="setaud" class="aud"></div><h3>Graphics</h3><div id="setgfx" class="chips"></div><div id="setfx"></div><h3>Gameplay</h3>` + tog('shake', 'Screen shake', 'Camera shake on explosions and hits') + tog('cbLabels', 'Colourblind bloon labels', 'Shows a letter on nearby bloons (R, B, G, Y, P… plus c/r/f for camo, regrow, fortified)') + tog('dmgNumbers', 'Damage numbers', 'Floating damage numbers on hits') +
+  $('setlist').innerHTML = `<h3>Sound</h3><div id="setaud" class="aud"></div><h3>Graphics</h3><div id="setgfx" class="chips"></div><div id="setfx"></div><h3>Crosshair</h3><div id="setxh"></div><h3>Gameplay</h3>` + tog('shake', 'Screen shake', 'Camera shake on explosions and hits') + tog('cbLabels', 'Colourblind bloon labels', 'Shows a letter on nearby bloons (R, B, G, Y, P… plus c/r/f for camo, regrow, fortified)') + tog('dmgNumbers', 'Damage numbers', 'Floating damage numbers on hits') +
     `<h3>Controls</h3>` + Object.keys(DEFAULT_KEYS).map(a => `<div class="srow"><div><b>${KEY_LABEL[a]}</b></div><button class="btn small key${rebinding === a ? ' on' : ''}" data-k="${a}">${rebinding === a ? 'Press a key…' : keyName(SETTINGS.keys[a])}</button></div>`).join('') +
     `<div class="srow"><div class="sd">Gamepad: left stick move · A/RB dash · X/LB ability · B portal · Y aim · Start pause. Touch: drag on the left to move, buttons on the right.</div><button class="btn small" id="keyreset">Reset keys</button></div>`;
-  buildAudioUI($('setaud')); gfxChips($('setgfx')); fxSlider($('setfx'));
+  buildAudioUI($('setaud')); gfxChips($('setgfx')); fxSlider($('setfx')); xhSettings($('setxh'));
   $('setlist').querySelectorAll('[data-s]').forEach(b => b.onclick = () => { SETTINGS[b.dataset.s] = !SETTINGS[b.dataset.s]; saveSettings(); renderSettings(); play('UIClick01', { vol: 0.4 }); });
   $('setlist').querySelectorAll('[data-k]').forEach(b => b.onclick = () => { rebinding = b.dataset.k; renderSettings(); });
   $('keyreset').onclick = () => { SETTINGS.keys = Object.assign({}, DEFAULT_KEYS); saveSettings(); renderSettings(); };
@@ -456,7 +506,7 @@ $('psetbtn').onclick = () => { renderSettings(); openPage('setpage'); };
 for (const id of ['knowpage', 'achpage', 'setpage']) { $(id).onclick = e => { if (e.target.id === id) show(id, false); }; $(id).querySelector('.pclose').onclick = () => { rebinding = null; show(id, false); }; }
 
 // ================================================================ patch notes (patchnotes.txt; "vX.Y.Z | date" headers, "- " bullets)
-const GAME_VERSION = 'v0.3.3';
+const GAME_VERSION = 'v0.3.4';
 (() => {
   const $p = id => document.getElementById(id);
   if ($p('pnver')) $p('pnver').textContent = GAME_VERSION;
@@ -479,4 +529,11 @@ const GAME_VERSION = 'v0.3.3';
   }
   if ($p('pnbtn')) $p('pnbtn').onclick = () => { load(); show('pnpage', true); try { play('UIClick01', { vol: 0.5 }); } catch (e) { } };
   if ($p('pnpage')) $p('pnpage').onclick = e => { if (e.target.id === 'pnpage' || e.target.classList.contains('pclose')) show('pnpage', false); };
+})();
+
+// ================================================================ Spectate button (someone in this Activity is mid-run)
+(() => {
+  const b = document.getElementById('specbtn'); if (!b) return;
+  b.onclick = () => { if (window.NET && NET.requestSpectate) NET.requestSpectate(); };
+  setInterval(() => { const ok = !!(window.NET && NET.spectatable && NET.spectatable()); b.classList.toggle('hidden', !ok); }, 1000);
 })();

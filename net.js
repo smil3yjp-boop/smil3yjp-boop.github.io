@@ -12,6 +12,8 @@ var NET = (() => {
 
   const N = {
     ws: null, me: null, hostId: null, roster: [], lobby: {}, ready: false,
+    runHost: null,                                     // who simulates the shared world in the current run (can change mid-run)
+    cont: new Set(),                                   // run members standing ready at the CONTINUE portal
     inRun: false, role: null, runIds: new Set(),
     peers: new Map(),                                  // id -> peer view (run members except me)
     world: null,                                       // last snapshot (guest)
@@ -53,7 +55,7 @@ var NET = (() => {
   // ------------------------------------------------------------------ lobby
   function myLobby() {
     const ch = CHARS[menuSel.char], sk = selectedSkin(ch);
-    return { t: 'hi', hero: ch.id, skin: sk ? sk.key : null, icon: sk ? sk.icon : HERO_ICON[ch.id], avatar: window.CLOUD && CLOUD.user ? CLOUD.user.avatar || null : null, st: G ? (G.spec ? 'spec' : G.state === 'end' ? 'end' : 'run') : 'menu', name: N.me ? N.me.name : '' };
+    return { t: 'hi', hero: ch.id, skin: sk ? sk.key : null, icon: sk ? sk.icon : HERO_ICON[ch.id], avatar: window.CLOUD && CLOUD.user ? CLOUD.user.avatar || null : null, st: G ? (G.spec ? 'spec' : G.state === 'end' ? 'end' : 'run') : 'menu', name: N.me ? N.me.name : '', rh: N.inRun && !N.spec ? N.runHost : null };
   }
   let lastHi = '';
   N.sayHi = (force) => { const m = JSON.stringify(myLobby()); if (!force && m === lastHi) return; lastHi = m; send('*', JSON.parse(m)); };
@@ -67,11 +69,11 @@ var NET = (() => {
     N.roster = m.players; N.hostId = m.host;
     for (const id of Object.keys(N.lobby)) if (!m.players.some(p => p.id === id)) delete N.lobby[id];
     // run members who left
-    for (const id of [...N.peers.keys()]) if (!m.players.some(p => p.id === id)) { const pe = N.peers.get(id); N.peers.delete(id); N.runIds.delete(id); if (G && N.inRun) toast(`${pe.name} left the run`, '#cbbfa8'); }
-    // host migration: the longest-connected player takes over the world
-    if (N.inRun && prevHost && prevHost !== m.host && m.host === N.me.id && N.role === 'guest') promote();
-    if (N.host && G && G.state !== 'end') for (const p of m.players) if (p.id !== N.me.id && !N.runIds.has(p.id) && !specSent.has(p.id)) { specSent.add(p.id); send(p.id, { t: 'spec', map: G.mapIdx, chaos: G.chaosIdx, ids: [N.me.id, ...N.runIds] }); }
-    for (const id of [...specSent]) if (!m.players.some(p => p.id === id)) specSent.delete(id);
+    for (const id of [...N.peers.keys()]) if (!m.players.some(p => p.id === id)) { const pe = N.peers.get(id); N.peers.delete(id); N.runIds.delete(id); if (G && N.inRun) { toast(`${pe.name} left the run`, '#cbbfa8'); if (!N.spec) G.coopN = 1 + N.runIds.size; } }
+    // the world's owner disconnected: the longest-connected remaining run member takes over
+    if (N.inRun && N.runHost && !m.players.some(p => p.id === N.runHost)) migrate(N.runHost);
+    for (const id of [...N.cont]) if (!m.players.some(p => p.id === id)) N.cont.delete(id);
+    if (N.host) checkContinue();
     N.sayHi(true); lastLobby = ''; hostLobby(); refreshLobby();
   }
 
@@ -87,16 +89,18 @@ var NET = (() => {
       case 'lobby': if (from === N.hostId) { N.hostChaos = m.chaos; N.hostRunning = m.running; if (!G) { menuSel.chaos = m.chaos; } refreshLobby(); } break;
       case 'start': if (from === N.hostId) whenLoaded(() => onStart(m)); break;
       case 'p': onPeer(from, m); break;
-      case 'w': if (N.guest && from === N.hostId) applyWorld(m); break;
-      case 'e': if (N.guest && from === N.hostId) onEvents(m); break;
-      case 'mech': if (N.guest && from === N.hostId) onMech(m); break;
-      case 'bk': if (N.guest && from === N.hostId) onBossKill(m); break;
-      case 'cont': if (N.guest && from === N.hostId) continueRun(m.map); break;
-      case 'end': if (N.inRun && from === N.hostId && G) { if (N.spec) stopSpectating('The run is over — you can join the next one!'); else endRun(m.win, m.quit); } break;
-      case 'spec': if (from === N.hostId) whenLoaded(() => { if (!G && !N.inRun) startSpectating(m); }); break;
+      case 'w': if (N.guest && from === N.runHost) applyWorld(m); break;
+      case 'e': if (N.guest && from === N.runHost) onEvents(m); break;
+      case 'mech': if (N.guest && from === N.runHost) onMech(m); break;
+      case 'bk': if (N.guest && from === N.runHost) onBossKill(m); break;
+      case 'cont': if (N.guest && from === N.runHost) { N.cont.clear(); continueRun(m.map); } break;
+      case 'end': if (N.inRun && from === N.runHost && G) { if (N.spec) stopSpectating('The run is over — you can join the next one!'); else endRun(m.win, m.quit); } break;
+      case 'spec': if (N.specWant && !G && !N.inRun) { N.specWant = false; whenLoaded(() => { if (!G && !N.inRun) startSpectating(m, from); }); } break;
+      case 'specreq': if (N.host && G && G.state !== 'end') send(from, { t: 'spec', map: G.mapIdx, chaos: G.chaosIdx, ids: [N.me.id, ...N.runIds] }); break;
+      case 'leave': if (N.inRun && (N.runIds.has(from))) onLeave(from); break;
+      case 'rdy': if (N.inRun && N.runIds.has(from)) { m.v ? N.cont.add(from) : N.cont.delete(from); if (N.host) checkContinue(); } break;
       case 'd': if (N.host && N.runIds.has(from)) applyDamage(from, m.d); break;
       case 'xp': if (N.host && N.runIds.has(from)) gainXp(m.v / Math.max(0.01, G.stats.xp)); break;
-      case 'portal': if (N.host && N.runIds.has(from)) usePortal(m.k); break;
       case 'final': if (m.card && (N.runIds.has(from) || N.finals.has(from) || N.inRun)) { N.finals.set(from, m.card); renderFinals(); } break;
     }
   }
@@ -105,11 +109,13 @@ var NET = (() => {
   function whenLoaded(fn) { if ($('loading').classList.contains('hidden') && R3.hasRig('h_Quincy')) fn(); else setTimeout(() => whenLoaded(fn), 500); }
 
   // ------------------------------------------------------------------ spectating (joined while a run was going)
-  const specSent = new Set();
+  // late joiners stay in the menu; the Spectate button asks whoever runs the world to let them watch
+  N.spectatable = () => { if (!N.ready || N.inRun || G) return null; for (const p of N.roster) { const l = N.lobby[p.id]; if (p.id !== N.me.id && l && l.st === 'run' && l.rh) return l.rh; } return null; };
+  N.requestSpectate = () => { const rh = N.spectatable(); if (!rh) return; N.specWant = true; send(rh, { t: 'specreq' }); toast('Joining as a spectator…', '#7fd8ff'); setTimeout(() => { N.specWant = false; }, 8000); };
   let specIdx = 0;
-  function startSpectating(m) {
+  function startSpectating(m, from) {
     menuSel.chaos = m.chaos;
-    N.inRun = true; N.role = 'spec'; N.world = null; N.paused = []; N.finals = new Map();
+    N.inRun = true; N.role = 'spec'; N.runHost = from; N.cont.clear(); N.world = null; N.paused = []; N.finals = new Map();
     N.runIds = new Set(m.ids.filter(id => id !== N.me.id)); N.peers.clear();
     for (const id of N.runIds) N.peers.set(id, newPeer(id));
     stopMenuMusic();
@@ -136,7 +142,7 @@ var NET = (() => {
   // host pressed BEGIN RUN
   N.startRun = map => {
     const ids = N.roster.filter(p => p.id === N.me.id || (N.lobby[p.id] && N.lobby[p.id].st !== 'run')).map(p => p.id);
-    N.inRun = ids.length > 1; N.role = N.inRun ? 'host' : null;
+    N.inRun = ids.length > 1; N.role = N.inRun ? 'host' : null; N.runHost = N.me.id; N.cont.clear();
     N.runIds = new Set(ids.filter(id => id !== N.me.id)); N.peers.clear();
     for (const id of N.runIds) N.peers.set(id, newPeer(id));
     N.finals = new Map();
@@ -149,21 +155,55 @@ var NET = (() => {
     if (G) { show('end', false); G = null; R3.resetRun(); }
     show('hsname', false);
     menuSel.chaos = m.chaos;
-    N.inRun = true; N.role = 'guest'; N.world = null; N.paused = []; N.finals = new Map();
+    N.inRun = true; N.role = 'guest'; N.runHost = N.hostId; N.cont.clear(); N.world = null; N.paused = []; N.finals = new Map();
     N.runIds = new Set(m.ids.filter(id => id !== N.me.id)); N.peers.clear();
     for (const id of N.runIds) N.peers.set(id, newPeer(id));
     stopMenuMusic(); newGame({ map: m.map });
   }
-  N.leaveRun = () => { N.inRun = false; N.role = null; N.peers.clear(); N.runIds.clear(); N.world = null; N.paused = []; dmgQ.length = 0; owed.clear(); netBloons.clear(); lastLobby = ''; N.finals = new Map(); renderFinals(); setTimeout(() => { N.sayHi(true); hostLobby(); }, 50); };
-  function usePortal(k) {
-    if (!G || !G.portals) return;
-    if (k === 'continue') N.hostContinue(); else { G.portals = null; send('*', { t: 'end', win: true, quit: true }); endRun(true, true); }
-  }
-  N.usePortal = usePortal;
-  N.hostContinue = () => {
-    let idx = G.mapIdx; if (MAPS.length > 1) while (idx === G.mapIdx) idx = Math.floor(Math.random() * MAPS.length);
-    send('*', { t: 'cont', map: idx }); continueRun(idx);
+  N.leaveRun = () => { N.inRun = false; N.role = null; N.runHost = null; N.cont.clear(); N.peers.clear(); N.runIds.clear(); N.world = null; N.paused = []; dmgQ.length = 0; owed.clear(); netBloons.clear(); lastLobby = ''; N.finals = new Map(); renderFinals(); setTimeout(() => { N.sayHi(true); hostLobby(); }, 50); };
+  // CONTINUE portal: every player in the run has to stand ready before the run moves on
+  N.toggleReady = () => {
+    const v = !N.cont.has(N.me.id); v ? N.cont.add(N.me.id) : N.cont.delete(N.me.id);
+    send('*', { t: 'rdy', v: v ? 1 : 0 }); play('UIClick01', { vol: 0.5 });
+    toast(v ? 'Ready! Waiting for everyone…' : 'Not ready', v ? '#7fd8ff' : '#cbbfa8');
+    if (N.host) checkContinue();
   };
+  N.readyCount = () => [N.me.id, ...N.runIds].filter(id => N.cont.has(id)).length;
+  N.runSize = () => 1 + N.runIds.size;
+  N.readyNames = () => [N.me.id, ...N.runIds].filter(id => !N.cont.has(id)).map(id => id === N.me.id ? 'you' : (N.peers.get(id) || {}).name || '…');
+  function checkContinue() {
+    if (!N.host || !G || !G.portals || !G.portals.length || G.state === 'end') return;
+    if ([N.me.id, ...N.runIds].every(id => N.cont.has(id))) N.hostContinue();
+  }
+  N.hostContinue = () => {
+    const idx = pickMap(G.mapIdx);
+    N.cont.clear(); send('*', { t: 'cont', map: idx }); continueRun(idx);
+  };
+  // END RUN portal / Quit in co-op: only you leave; everyone else keeps playing (the world moves to someone else if it was yours)
+  N.leave = (win) => {
+    if (!N.inRun || !G) return;
+    send('*', { t: 'leave' });
+    G.coop = true; N.leaveRun(); G.portals = null; endRun(win, true);
+  };
+  function nextRunHost(exclude) {
+    const cand = new Set([...(N.spec ? [] : [N.me.id]), ...N.runIds]); cand.delete(exclude);
+    const order = N.roster.map(p => p.id).filter(id => cand.has(id));
+    return order[0] || null;
+  }
+  function migrate(gone) {
+    const nh = nextRunHost(gone);
+    if (!nh) { if (N.spec) stopSpectating('The run is over — you can join the next one!'); return; }
+    N.runHost = nh;
+    if (nh === N.me.id && N.role === 'guest') promote();
+  }
+  function onLeave(id) {
+    const pe = N.peers.get(id); N.peers.delete(id); N.runIds.delete(id); N.cont.delete(id);
+    if (G && !N.spec) G.coopN = 1 + N.runIds.size;   // the run scales back down for the players still in it
+    if (G) toast(`${pe ? pe.name : 'A player'} left the run`, '#cbbfa8');
+    if (id === N.runHost) migrate(id);
+    else if (N.spec && !N.runIds.size) stopSpectating('The run is over — you can join the next one!');
+    if (N.host) { checkContinue(); N.allDownCheck(); }
+  }
   N.allDownCheck = () => {
     if (!N.host || !G || G.state === 'end') return;
     if (!G.player.down) return;
@@ -518,7 +558,7 @@ var NET = (() => {
   // ------------------------------------------------------------------ host takes over
   function promote() {
     N.role = 'host';
-    toast('The host left — you are now hosting the run', '#ffe39a');
+    toast('You are now running the world for this run', '#ffe39a');
     // turn the mirrored world into a real one
     for (const b of G.bloons) { b.net = false; b.spd = bloonSpd(b.def) * (b.jit || 1); b.anc = b.anc || []; b.slowT = b.slowT || 0; if (b.tx !== undefined) { b.x = b.tx; b.y = b.ty; } }
     G.bloons = G.bloons.filter(b => !b.dead);
@@ -567,6 +607,25 @@ var NET = (() => {
     const path = hash ? `avatars/${id}/${hash}.png?size=128` : `embed/avatars/${n}.png`;
     return (window.CLOUD && CLOUD.inDiscord ? '/.proxy/discordcdn/' : 'https://cdn.discordapp.com/') + path;
   }
+  // party HUD + minimap: everyone in the run (me first), each with a fixed colour, their health and Discord avatar
+  const PARTY_COL = ['#5ff', '#ff9f43', '#c39bff', '#7dff8a'];
+  const avImg = new Map();
+  function avatarImg(id, hash) {
+    const url = avatarUrl(id, hash); let im = avImg.get(url);
+    if (!im) { im = new Image(); im.src = url; avImg.set(url, im); }
+    return im.complete && im.naturalWidth ? im : null;
+  }
+  N.party = () => {
+    if (!N.inRun || !N.me || !G) return [];
+    const out = [];
+    if (!N.spec) out.push({ id: N.me.id, name: N.me.name, me: true, x: G.player.x, y: G.player.y, hp: G.player.hp, mhp: G.stats.maxhp, down: !!G.player.down, img: avatarImg(N.me.id, window.CLOUD && CLOUD.user ? CLOUD.user.avatar : null) });
+    for (const id of [...N.runIds].sort()) {
+      const pe = N.peers.get(id); if (!pe || !pe.seen || pe.st === 'end') continue;
+      out.push({ id, name: pe.name, x: pe.player.x, y: pe.player.y, hp: pe.player.hp, mhp: pe.player.mhp || 1, down: pe.player.down, img: avatarImg(id, (N.lobby[id] || {}).avatar) });
+    }
+    out.forEach((q, i) => { q.col = PARTY_COL[i % PARTY_COL.length]; });
+    return out;
+  };
   N.shareFinal = card => {
     if (!N.me) return;
     card = Object.assign({ name: N.me.name, avatar: window.CLOUD && CLOUD.user ? CLOUD.user.avatar || null : null }, card);
