@@ -2704,7 +2704,7 @@ function drawMinimap(u) {
   const k = mw / A.w;
   ctx.fillStyle = 'rgba(255,70,70,.8)';
   for (let i = 0; i < G.bloons.length; i += 3) { const b = G.bloons[i]; ctx.fillRect(mx + b.x * k - 1, my + b.y * k - 1, b.def.moab ? 4 : 2, b.def.moab ? 4 : 2); }
-  for (const sp of G.spawnPortals || []) { ctx.strokeStyle = sp.kind === 'moab' ? '#ff5a3a' : '#c070ff'; ctx.lineWidth = 2 * u; ctx.beginPath(); ctx.arc(mx + sp.x * k, my + sp.y * k, (sp.kind === 'moab' ? 5 : 4) * u, 0, TAU); ctx.stroke(); }
+  for (const sp of G.spawnPortals || []) { ctx.strokeStyle = '#b04cff'; ctx.lineWidth = 2 * u; ctx.beginPath(); ctx.arc(mx + sp.x * k, my + sp.y * k, (sp.kind === 'moab' ? 5 : 4) * u, 0, TAU); ctx.stroke(); }
   if (G.boss && !G.boss.dead) { ctx.fillStyle = '#ff2'; ctx.beginPath(); ctx.arc(mx + G.boss.x * k, my + G.boss.y * k, 5 * u, 0, TAU); ctx.fill(); }
   for (const pk of G.pickups) if (pk.kind === 'chest') { ctx.fillStyle = '#ffcf5a'; ctx.fillRect(mx + pk.x * k - 3, my + pk.y * k - 3, 6, 6); }
   // teammates: a blip each in their party colour (blinking red while down)
@@ -2990,25 +2990,79 @@ function askName(rec) {
   inp.onkeydown = e => { e.stopPropagation(); if (e.key === 'Enter') done(true); else if (e.key === 'Escape') done(false); };
 }
 function toastDom(t) { const el = $('endbanner'); if (!el) return; const o = el.textContent; el.textContent = t; setTimeout(() => { el.textContent = o; }, 1600); }
-let hsCat = 'damage';
+let hsCat = 'damage', hsMode = 'solo', hsTeamCat = 'damage';
+const HS_TEAM_CATS = [
+  { id: 'damage', name: 'Team Damage', fmt: v => Math.round(v).toLocaleString() },
+  { id: 'level', name: 'Level', fmt: v => v },
+  { id: 'loops', name: 'Total Loops', fmt: v => v },
+  { id: 'bosses', name: 'Bosses', fmt: v => v },
+  { id: 'time', name: 'Time Survived', fmt: v => fmtTime(v) },
+];
+async function topTeams(cat) {
+  if (!window.CLOUD || !CLOUD.api) throw new Error('offline');
+  return CLOUD.api('/teams?cat=' + encodeURIComponent(cat));
+}
+function teamAvatar(m) {
+  return window.NET && NET.avatarUrl ? NET.avatarUrl(m.id, m.avatar) : heroIconSrc(m.icon || HERO_ICON.quincy);
+}
 async function openScores() {
   show('scores', true); play('UIClick01', { vol: 0.5 });
-  $('hsmode').textContent = (window.CLOUD && CLOUD.active) ? `Online leaderboard · signed in as ${CLOUD.user.name}` : HS.shared ? 'Shared online leaderboard' : 'Scores saved on this computer';
+  const online = window.CLOUD && CLOUD.api;
+  $('hsmode').textContent = (window.CLOUD && CLOUD.active) ? `Online leaderboard · signed in as ${CLOUD.user.name}` : online ? 'Online leaderboard · sign in with Discord to post your runs' : HS.shared ? 'Shared online leaderboard' : 'Scores saved on this computer';
+  const modes = $('hsmodes'); modes.innerHTML = '';
+  [['solo', 'Solo'], ['coop', 'Co-op']].forEach(([id, name]) => {
+    const el = document.createElement('button'); el.className = 'hsmodebtn' + (id === hsMode ? ' sel' : ''); el.textContent = name;
+    el.onclick = () => { if (hsMode !== id) { hsMode = id; openScores(); } }; modes.appendChild(el);
+  });
+  const coop = hsMode === 'coop', cats = coop ? HS_TEAM_CATS : HS_CATS, curCat = coop ? hsTeamCat : hsCat;
   const tabs = $('hstabs'); tabs.innerHTML = '';
-  HS_CATS.forEach(c => { const el = document.createElement('div'); el.className = 'chip' + (c.id === hsCat ? ' sel' : ''); el.textContent = c.name; el.onclick = () => { hsCat = c.id; openScores(); }; tabs.appendChild(el); });
+  cats.forEach(c => { const el = document.createElement('div'); el.className = 'chip' + (c.id === curCat ? ' sel' : ''); el.textContent = c.name; el.onclick = () => { if (coop) hsTeamCat = c.id; else hsCat = c.id; openScores(); }; tabs.appendChild(el); });
   const box = $('hslist'); box.innerHTML = '<div class="hsempty">Loading…</div>';
-  const cat = HS_CATS.find(c => c.id === hsCat), list = await HS.top(hsCat);
-  if (!list.length) { box.innerHTML = '<div class="hsempty">No runs yet — finish a run and submit your name!</div>'; return; }
+  const cat = cats.find(c => c.id === curCat), want = hsMode + curCat;
+  box.dataset.want = want;
+  let list;
+  if (coop) {
+    try { list = await topTeams(curCat); }
+    catch (e) { if (box.dataset.want === want) box.innerHTML = '<div class="hsempty">The Co-op leaderboard needs the online server — open the game from Discord or the website.</div>'; return; }
+  } else list = await HS.top(curCat);
+  if (box.dataset.want !== want) return;   // switched tabs while loading
+  if (!list.length) { box.innerHTML = coop ? '<div class="hsempty">No co-op runs yet — start a run with friends in the Discord Activity!</div>' : '<div class="hsempty">No runs yet — finish a run and submit your name!</div>'; return; }
   box.innerHTML = '';
   list.forEach((r, i) => {
     const el = document.createElement('div'); el.className = 'hsrow';
-    el.innerHTML = `<div class="rk">${i + 1}</div><img src="${heroIconSrc(r.icon || HERO_ICON[r.hero])}"><div><div class="nm">${esc(r.name || 'Monkey')}</div><div class="meta">${esc(r.heroName || '')} · ${esc(r.map || '')} · Chaos ${esc(r.chaos || '')}</div></div><div class="meta">${new Date(r.date).toLocaleDateString()} · ${esc(r.result || '')}</div><div class="val">${cat.fmt(r[hsCat] || 0)}</div>`;
-    el.querySelector('.nm').onclick = () => openRunView(r);
+    if (coop) {
+      const party = r.party || [];
+      el.classList.add('team');
+      el.innerHTML = `<div class="rk">${i + 1}</div><div class="hsavs">${party.map(m => `<img src="${teamAvatar(m)}" onerror="this.onerror=null;this.src='${heroIconSrc(m.icon || HERO_ICON.quincy)}'" title="${esc(m.name)}">`).join('')}</div><div><div class="nm">${party.map(m => esc(m.name || 'Monkey')).join(' & ')}</div><div class="meta">${party.length} players · ${esc(r.map || '')} · Chaos ${esc(r.chaos || '')}</div></div><div class="meta">${new Date(r.date).toLocaleDateString()} · Level ${r.level} · ${r.loops} loop${r.loops === 1 ? '' : 's'}</div><div class="val">${cat.fmt(r[curCat] || 0)}</div>`;
+      el.querySelector('.nm').onclick = () => openTeamView(r);
+    } else {
+      el.innerHTML = `<div class="rk">${i + 1}</div><img src="${heroIconSrc(r.icon || HERO_ICON[r.hero])}"><div><div class="nm">${esc(r.name || 'Monkey')}</div><div class="meta">${esc(r.heroName || '')} · ${esc(r.map || '')} · Chaos ${esc(r.chaos || '')}</div></div><div class="meta">${new Date(r.date).toLocaleDateString()} · ${esc(r.result || '')}</div><div class="val">${cat.fmt(r[curCat] || 0)}</div>`;
+      el.querySelector('.nm').onclick = () => openRunView(r);
+    }
     box.appendChild(el);
   });
 }
+// a co-op leaderboard entry: every player's own end-of-run card
+function openTeamView(r) {
+  play('UIClick01', { vol: 0.5 });
+  const party = r.party || [], top = Math.max(0, ...party.map(m => m.dmg || 0));
+  $('rvname').textContent = party.map(m => m.name || 'Monkey').join(' & ');
+  $('rvsub').textContent = `${r.map || ''} · Chaos ${r.chaos || ''} · Level ${r.level} · ${r.loops} loop${r.loops === 1 ? '' : 's'} · ${r.bosses} boss${r.bosses === 1 ? '' : 'es'} · ${fmtTime(r.time || 0)} · ${new Date(r.date).toLocaleString()}`;
+  $('rvcols').style.display = 'none';
+  const box = $('rvteam'); box.classList.remove('hidden');
+  box.innerHTML = party.map(m => {
+    const rows = m.rows && m.rows.length ? m.rows : [['Damage dealt', Math.round(m.dmg || 0).toLocaleString()]];
+    return `<div class="ccard">${party.length > 1 && top > 0 && m.dmg === top ? '<div class="mvp">MVP</div>' : ''}
+      <div class="cav"><img src="${teamAvatar(m)}" onerror="this.onerror=null;this.src='${heroIconSrc(m.icon || HERO_ICON.quincy)}'">${m.icon ? `<img class="chero" src="${heroIconSrc(m.icon)}">` : ''}</div>
+      <div class="cname">${esc(m.name || 'Monkey')}</div><div class="chn">${esc(m.hero || '')}${m.left ? 'Result not recorded' : m.result ? ' · ' + esc(m.result) : ''}</div>
+      <div class="crows">${rows.map(([k, v]) => `<div><span>${esc(k)}</span><b>${esc(v)}</b></div>`).join('')}</div></div>`;
+  }).join('');
+  $('rvver').textContent = r.ver ? 'Played on ' + r.ver : 'Played on v0.3.4 or earlier';
+  show('runview', true);
+}
 function openRunView(r) {
   play('UIClick01', { vol: 0.5 });
+  $('rvcols').style.display = ''; $('rvteam').classList.add('hidden');
   $('rvname').textContent = r.name || 'Monkey';
   $('rvsub').textContent = `${r.heroName} · ${r.map} · Chaos ${r.chaos} · ${r.result} · ${new Date(r.date).toLocaleString()}`;
   $('rvstats').innerHTML = (r.stats || []).map(([a, b]) => `<span>${esc(a)}</span><b>${esc(b)}</b>`).join('');
@@ -3052,8 +3106,9 @@ function endRun(win, quit = false) {
   renderStats($('endstats'), [['Monkey Money earned', '+' + mm + '  (total ' + Math.floor(PROFILE.mm) + ')'], ...hxRows, ['Bosses defeated', G.bossKills], ['Gold earned', '$' + Math.round(G.goldEarned).toLocaleString()], ...(rec ? [['Record', rec]] : [])]);
   renderBreakdown($('endbreak'));
   const runRec = runRecord(win, quit, mm);
-  if (NET.on) META.ach('coop1');
-  if (NET.on) NET.shareFinal({ hero: G.ch.name, icon: (selectedSkin(G.ch) || {}).icon || HERO_ICON[G.ch.id], rows: [['Level', G.level], ['Damage dealt', Math.round(G.dmgDealt).toLocaleString()], ['Bloons popped', Object.values(G.runStats || {}).reduce((a, r) => a + (r.pops || 0), 0).toLocaleString()], ['Gold earned', '$' + Math.round(G.goldEarned).toLocaleString()], ['Chests opened', G.chests], ['Relics', (G.relics || []).length], ['Times downed', G.downs || 0], ['Revived teammates', G.revives || 0], ['Monkey Money', '+' + mm]], dmg: Math.round(G.dmgDealt), result: eb.textContent });
+  const coopEnd = NET.on || G.coop;   // left through End Run / Quit counts too
+  if (coopEnd) META.ach('coop1');
+  if (coopEnd) NET.shareFinal({ hero: G.ch.name, icon: (selectedSkin(G.ch) || {}).icon || HERO_ICON[G.ch.id], rows: [['Level', G.level], ['Damage dealt', Math.round(G.dmgDealt).toLocaleString()], ['Bloons popped', Object.values(G.runStats || {}).reduce((a, r) => a + (r.pops || 0), 0).toLocaleString()], ['Gold earned', '$' + Math.round(G.goldEarned).toLocaleString()], ['Chests opened', G.chests], ['Relics', (G.relics || []).length], ['Times downed', G.downs || 0], ['Revived teammates', G.revives || 0], ['Monkey Money', '+' + mm]], dmg: Math.round(G.dmgDealt), result: eb.textContent });
   else if (!G.coop) setTimeout(() => askName(runRec), win ? 400 : 1100);   // co-op runs never go to the highscores
   setTimeout(() => show('end', true), win ? 200 : 900);
 }

@@ -789,14 +789,16 @@ const R3 = (() => {
     if (G.boss && !G.boss.dead) { seen.add(G.boss); drawBig(G.boss, G, dt); }
     for (const [b, m] of big) if (!seen.has(b)) { scene.remove(m); big.delete(b); }
 
-    // bloon spawn portals: purple swirls at the edges, a bigger red one in the middle for MOABs and bosses
+    // bloon spawn portals: same look as the Continue portal, purple with small cyan sparks (the middle MOAB/boss one is bigger)
     for (const sp of G.spawnPortals || []) {
-      const big = sp.kind === 'moab', R = big ? 2.4 : 1.8, c = big ? tmpC2.setRGB(1, 0.3, 0.2) : tmpC2.setRGB(0.7, 0.3, 1), t = sp.t || 0;
-      push('discAdd', w(sp.x, sp.y, 0.05), FLATQ, tmpS.set(R, R, 1), tmpC.copy(c).multiplyScalar(0.35 + 0.1 * Math.sin(t * 3)));
-      push('ring', w(sp.x, sp.y, 0.07), FLATQ, tmpS.set(R * 1.05, R * 1.05, 1), c);
-      push('ring', w(sp.x, sp.y, 0.08), FLATQ, tmpS.set(R * (0.4 + 0.6 * ((t * 0.6) % 1)), R * (0.4 + 0.6 * ((t * 0.6) % 1)), 1), tmpC.copy(c).multiplyScalar(1 - ((t * 0.6) % 1)));
-      for (let i = 0; i < 5; i++) { const a = -t * 2.2 + i * 1.2566, rr = R * 0.75; push('glow', w(sp.x + Math.cos(a) * rr, sp.y + Math.sin(a) * rr, 0.35 + ((t * 0.8 + i / 5) % 1) * 1.2), camQ, tmpS.setScalar(0.5), c); }
-      push('glow', w(sp.x, sp.y, 0.6), camQ, tmpS.set(R * 1.6, R * 1.2, 1), tmpC.copy(c).multiplyScalar(0.5));
+      const k = sp.kind === 'moab' ? 1.45 : 1, t = sp.t || 0, c = tmpC2.setRGB(0.68, 0.28, 1);
+      push('discAdd', w(sp.x, sp.y, 0.06), FLATQ, tmpS.set(1.6 * k, 1.6 * k, 1), tmpC.copy(c).multiplyScalar(0.45 + 0.08 * Math.sin(t * 3)));
+      push('ring', w(sp.x, sp.y, 0.08), FLATQ, tmpS.set(1.7 * k, 1.7 * k, 1), c);
+      push('glow', w(sp.x, sp.y, 1.6 * k), camQ, tmpS.set(2.6 * k, 3.8 * k, 1), tmpC.copy(c).multiplyScalar(0.9));
+      push('glow', w(sp.x, sp.y, 1.6 * k), camQ, tmpS.set(1.1 * k, 2.4 * k, 1), tmpC.setRGB(0.95, 0.85, 1));
+      for (let i = 0; i < 6; i++) { const a = t * 3 + i * 1.047, h = 0.4 + ((t * 1.5 + i / 6) % 1) * 2.6 * k; push('glow', w(sp.x + Math.cos(a) * 1.1 * k, sp.y + Math.sin(a) * 1.1 * k, h), camQ, tmpS.setScalar(0.45), c); }
+      // small cyan sparks drifting up through the middle
+      for (let i = 0; i < 5; i++) { const f = (t * 0.9 + i / 5) % 1, a = -t * 2 + i * 2.4, rr = 0.35 * k + 0.25 * Math.sin(i * 3.1); push('glow', w(sp.x + Math.cos(a) * rr, sp.y + Math.sin(a) * rr, 0.3 + f * 3.2 * k), camQ, tmpS.setScalar(0.34 * (1 - f * 0.5)), tmpC.setRGB(0.2, 1, 1).multiplyScalar(1.4 - f * 0.6)); }
     }
     // Soulstone-style portals after a boss kill
     if (G.portals) for (const pt of G.portals) {

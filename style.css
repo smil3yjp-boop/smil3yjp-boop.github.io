@@ -349,3 +349,12 @@ body.xhair, body.xhair canvas{cursor:none!important}
 .xhcol .sw.on{border-color:#fff;box-shadow:0 0 0 2px #ffd34d}
 .xhcol input[type=color]{width:34px;height:26px;border:0;background:none;padding:0;cursor:pointer}
 @media (max-width:640px){.xhwrap{flex-direction:column}}
+
+.hsmodes{display:flex;justify-content:center;gap:0;margin:-4px auto 0;border:2px solid rgba(232,194,122,.5);border-radius:12px;overflow:hidden;background:rgba(0,0,0,.35)}
+.hsmodebtn{font:inherit;font-weight:900;font-size:15px;letter-spacing:2px;text-transform:uppercase;color:var(--dim);background:none;border:0;padding:7px 34px;cursor:pointer}
+.hsmodebtn+.hsmodebtn{border-left:2px solid rgba(232,194,122,.5)}
+.hsmodebtn:hover{color:#fff}
+.hsmodebtn.sel{background:linear-gradient(#ffd56b,#e8a93a);color:#3a1d00}
+.hsrow.team{grid-template-columns:44px auto 1fr 1.1fr auto}
+.hsavs{display:flex;padding-left:10px}
+.hsrow .hsavs img{width:36px;height:36px;border-radius:50%;object-fit:cover;border:2px solid #e8c27a;background:#2a1d14;margin-left:-10px}

@@ -146,7 +146,9 @@ var NET = (() => {
     N.runIds = new Set(ids.filter(id => id !== N.me.id)); N.peers.clear();
     for (const id of N.runIds) N.peers.set(id, newPeer(id));
     N.finals = new Map();
-    if (N.inRun) send('*', { t: 'start', map, chaos: menuSel.chaos, ids });
+    // one id per co-op run so everyone's result lands on the same Co-op leaderboard entry
+    N.rid = N.me.id + '-' + Date.now(); N.crew = ids.map(id => ({ id, name: id === N.me.id ? N.me.name : ((N.roster.find(p => p.id === id) || {}).name || 'Monkey') })); N.recorded = null;
+    if (N.inRun) send('*', { t: 'start', map, chaos: menuSel.chaos, ids, rid: N.rid, crew: N.crew });
     return N.inRun;
   };
   function onStart(m) {
@@ -156,6 +158,7 @@ var NET = (() => {
     show('hsname', false);
     menuSel.chaos = m.chaos;
     N.inRun = true; N.role = 'guest'; N.runHost = N.hostId; N.cont.clear(); N.world = null; N.paused = []; N.finals = new Map();
+    N.rid = m.rid || null; N.crew = m.crew || null; N.recorded = null;
     N.runIds = new Set(m.ids.filter(id => id !== N.me.id)); N.peers.clear();
     for (const id of N.runIds) N.peers.set(id, newPeer(id));
     stopMenuMusic(); newGame({ map: m.map });
@@ -651,18 +654,12 @@ var NET = (() => {
     if (!N.me) return;
     card = Object.assign({ name: N.me.name, avatar: window.CLOUD && CLOUD.user ? CLOUD.user.avatar || null : null }, card);
     N.finals.set(N.me.id, card); send('*', { t: 'final', card }); renderFinals();
-    // the host records the party's run on the team leaderboard once everyone's card is in (or after a few seconds)
-    if (N.host && window.CLOUD && CLOUD.api && G) {
-      const info = { chaos: G.chaos.n, map: G.arena.def.name, loops: G.loop, level: G.level, time: Math.round(G.t), bosses: G.bossKills };
-      const ids = [N.me.id, ...N.runIds];
-      let sent = false;
-      const submit = () => {
-        if (sent) return; sent = true; clearInterval(iv);
-        const party = ids.map(id => { const c = N.finals.get(id), pe = N.peers.get(id); return { id, name: c ? c.name : pe ? pe.name : 'Monkey', hero: c ? c.hero : '', dmg: c ? c.dmg || 0 : 0 }; });
-        CLOUD.api('/team', { method: 'POST', body: JSON.stringify(Object.assign({ party, damage: party.reduce((a, p) => a + p.dmg, 0) }, info)) }).catch(e => console.warn('team score failed', e));
-      };
-      const iv = setInterval(() => { if (ids.every(id => N.finals.has(id))) submit(); }, 500);
-      setTimeout(submit, 6000);
+    // everyone records their own result on the Co-op leaderboard when they finish (dying, End Run portal or Quit)
+    if (N.rid && N.crew && N.recorded !== N.rid && N.crew.some(c => c.id === N.me.id) && window.CLOUD && CLOUD.active && CLOUD.api && G && !G.spec) {
+      N.recorded = N.rid;
+      const body = { rid: N.rid, crew: N.crew, me: { hero: card.hero, icon: card.icon, dmg: card.dmg || 0, result: card.result, rows: (card.rows || []).filter(r => r[0] !== 'Monkey Money') },
+        chaos: G.chaos.n, map: G.arena.def.name, loops: G.loop, level: G.level, time: Math.round(G.t), bosses: G.bossKills, ver: typeof GAME_VERSION !== 'undefined' ? GAME_VERSION : '' };
+      CLOUD.api('/team', { method: 'POST', body: JSON.stringify(body) }).catch(e => console.warn('team score failed', e));
     }
   };
   const esc = v => String(v).replace(/[<>&"]/g, c => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;', '"': '&quot;' })[c]);

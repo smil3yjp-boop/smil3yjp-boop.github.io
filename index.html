@@ -5,7 +5,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Bloonstone SurvivorS</title>
-<link rel="stylesheet" href="style.css?v=41">
+<link rel="stylesheet" href="style.css?v=42">
 </head>
 <body>
 <canvas id="gl"></canvas>
@@ -109,6 +109,7 @@
 <div id="scores" class="overlay hidden">
   <div class="pcard hsboard">
     <div class="hstop"><div class="lvtitle small">HIGHSCORES</div><button id="hsclose" class="btn">✕</button></div>
+    <div id="hsmodes" class="hsmodes"></div>
     <div id="hstabs" class="chips hstabs"></div>
     <div id="hslist" class="hslist"></div>
     <div class="hsfoot"><span id="hsmode" class="psub"></span><span class="sp"></span></div>
@@ -118,7 +119,8 @@
 <div id="runview" class="overlay hidden">
   <div class="pcard rvcard">
     <div class="hstop"><div><div id="rvname" class="lvtitle small"></div><div id="rvsub" class="psub"></div></div><button id="rvclose" class="btn">✕</button></div>
-    <div class="endcols"><div id="rvstats" class="stats"></div><div id="rvbreak" class="breakdown"></div></div>
+    <div id="rvcols" class="endcols"><div id="rvstats" class="stats"></div><div id="rvbreak" class="breakdown"></div></div>
+    <div id="rvteam" class="coopcards hidden"></div>
     <div id="rvver" class="rvver"></div>
   </div>
 </div>
@@ -144,17 +146,17 @@
 
 <div id="loading" class="overlay"><div class="lvtitle">Inflating bloons…</div></div>
 
-<script src="lib/three.js?v=41"></script>
-<script src="loader.js?v=41"></script>
-<script src="maps.js?v=41"></script>
-<script src="assets/sprites.js?v=41"></script>
-<script src="assets/bloon_sprites.js?v=41"></script>
-<script src="assets/btd_models.js?v=41"></script>
-<script src="assets/btd_rigs.js?v=41"></script>
-<script src="highscores_config.js?v=41" onerror=""></script><script src="assets/btd_fx.js?v=41"></script><script src="assets/btd_proj.js?v=41"></script><script src="assets/relic_tex.js?v=41"></script><script src="assets/bloon_variants.js?v=41"></script><script src="assets/btd_fort.js?v=41"></script>
-<script src="assets/btd_audio.js?v=41"></script>
-<script src="assets/music.js?v=41"></script>
-<script src="render3d.js?v=41"></script>
-<script src="game3d.js?v=41"></script><script src="meta.js?v=41"></script><script src="progress.js?v=41"></script><script src="discord_config.js?v=41"></script><script src="discord_link.js?v=41"></script><script src="net.js?v=41"></script>
+<script src="lib/three.js?v=42"></script>
+<script src="loader.js?v=42"></script>
+<script src="maps.js?v=42"></script>
+<script src="assets/sprites.js?v=42"></script>
+<script src="assets/bloon_sprites.js?v=42"></script>
+<script src="assets/btd_models.js?v=42"></script>
+<script src="assets/btd_rigs.js?v=42"></script>
+<script src="highscores_config.js?v=42" onerror=""></script><script src="assets/btd_fx.js?v=42"></script><script src="assets/btd_proj.js?v=42"></script><script src="assets/relic_tex.js?v=42"></script><script src="assets/bloon_variants.js?v=42"></script><script src="assets/btd_fort.js?v=42"></script>
+<script src="assets/btd_audio.js?v=42"></script>
+<script src="assets/music.js?v=42"></script>
+<script src="render3d.js?v=42"></script>
+<script src="game3d.js?v=42"></script><script src="meta.js?v=42"></script><script src="progress.js?v=42"></script><script src="discord_config.js?v=42"></script><script src="discord_link.js?v=42"></script><script src="net.js?v=42"></script>
 </body>
 </html>
