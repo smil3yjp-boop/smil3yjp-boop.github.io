@@ -3164,7 +3164,7 @@ function saveProfile() { try { localStorage.setItem('bss_profile', JSON.stringif
 const heroIconSrc = n => 'assets/ui/heroes/' + n + '.png';
 function selectedSkin(ch) { const k = PROFILE.skin[ch.id]; return k && PROFILE.owned.includes(k) ? SKINS.find(s => s.key === k) : null; }
 // ---------------------------------------------------------------- sound settings (master / music / sfx / voice) + menu music + BTD6 run music
-let AUDIOSET = { master: 70, music: 60, sfx: 80, voice: 80 };
+let AUDIOSET = { master: 70, music: 10, sfx: 80, voice: 80 };
 try { AUDIOSET = Object.assign(AUDIOSET, JSON.parse(localStorage.getItem('bss_audio') || '{}')); } catch (e) { }
 const AUDIO_ROWS = [['master', 'Master'], ['music', 'Music'], ['sfx', 'Effects'], ['voice', 'Voices']];
 let MUSIC = null;
@@ -3183,13 +3183,11 @@ const MAP_MUSIC = {
 };
 // where each Soulstone track loops back to after its intro (seconds)
 const MUSIC_LOOP = { SS_Forest1: 48, SS_Forest2: 12, SS_Cavern1: 52.364, SS_Snow2: 236.308, SS_Cathedral1: 13.714 };
-const BOSS_MUSIC = {
-  bloonarius: 'MusicBossBloonarius', lych: 'MusicHaunted', vortex: 'MusicBossOnslaught', dreadbloon: 'MusicBossOnslaught',
-  phayze: 'MusicBossOnslaughtGlitch', blastapopoulos: 'MusicBossOnslaughtGlitch',
-};
+// every boss uses the same theme
+const BOSS_THEME = 'BossTheme';
 function runMusicTick(dt) {
   const want = !G || G.state === 'loading' || G.state === 'end' ? null
-    : (G.boss && !G.boss.dead && BOSS_MUSIC[G.boss.def.id]) || MAP_MUSIC[G.mapId] || 'SS_Forest1';
+    : (G.boss && !G.boss.dead && BOSS_THEME) || MAP_MUSIC[G.mapId] || 'SS_Forest1';
   if (want !== runTrack) {
     runTrack = want;
     for (const a of RUNMUS) a.target = 0;

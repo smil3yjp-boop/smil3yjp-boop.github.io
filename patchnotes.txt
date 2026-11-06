@@ -23,7 +23,6 @@ v0.3.4 | Nov 5, 2026
 - Co-op: the world now updates 15 times a second for other players (was 10), for smoother bloons
 - Co-op: every player now shows as a coloured blip on the minimap (blinking red while down)
 - Co-op: party panel at the top left during a run with each player's Discord avatar, name and health
-- Sign in with Discord on the website too: a Sign in with Discord button next to Patch Notes saves your progress and highscores to your Discord account (the same save as the Discord Activity)
 - Co-op leaderboard: best party runs by Team Damage, Level, Loops, Bosses and Time Survived, with every player's avatar
 - Click a party on the Co-op leaderboard to see each player's own end-of-run card (MVP marked)
 - Co-op runs now count on the leaderboard even when players leave through the End Run portal or Quit at different times
@@ -31,6 +30,8 @@ v0.3.4 | Nov 5, 2026
 - The Skill Effects slider no longer fades enemy shots (the pink orbs always show at full strength)
 - Captain Churchill nerf: Tank Shells deal 11 damage (was 14), fire every 1.35s (was 1.2s) with a smaller blast (2.1, was 2.4); his area bonus is +10% (was +15%); Armor Piercing Shells cooldown 45s (was 35s)
 - Monkey Sub nerf: torpedoes deal 8 damage (was 9) and the torpedo itself now only does about a third of that on impact before it explodes (the blast is unchanged)
+- New boss theme: every boss now plays the same new track
+- Music volume now starts at 10% (only changes it if you haven't set your own music volume)
 
 v0.3.3 | Nov 5, 2026
 - Map music is now Soulstone Survivors' music, matched to each map (forest, desert, cavern, snow, cathedral and Void King themes)
