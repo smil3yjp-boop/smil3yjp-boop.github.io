@@ -1652,7 +1652,9 @@ function bossSkull(b, idx) {
 }
 function bossAI(b, dt) {
   const p = nearestPlayer(b.x, b.y);
-  while (b.skulls.length && b.hp / b.maxhp <= b.skulls[0]) bossSkull(b, 3 - b.skulls.length), b.skulls.shift();
+  // each skull breaks once: it leaves the list before it fires, and health can never climb back past it
+  while (b.skulls.length && b.hp / b.maxhp <= b.skulls[0]) { const idx = 3 - b.skulls.length; b.skulls.shift(); bossSkull(b, idx); }
+  b.hp = Math.min(b.hp, bossHealCap(b));
   if (b.shieldT > 0) b.shieldT -= dt;
   // living Mini-Lychs feed the Lych
   if (b.def.id === 'lych') { const minis = G.bloons.filter(o => !o.dead && o.type === 'lychmini').length; if (minis) b.hp = Math.min(bossHealCap(b), b.hp + b.maxhp * 0.004 * minis * dt); }
@@ -2726,9 +2728,10 @@ function drawBossBar(B, u) {
   const on = uiImg('btd_BossSkullPipOn'), off = uiImg('btd_BossSkullPipOff'), ps = 30 * u;
   const fire = uiImg('btd_BossSkullPipFire');
   [0.75, 0.5, 0.25].forEach((t, i) => {
-    const im = k > t ? on : off, x = bx + bw * t - ps / 2, y = by + bh - ps * 0.35;
+    const live = i >= 3 - B.skulls.length && k > t;   // a broken skull stays dark for good
+    const im = live ? on : off, x = bx + bw * t - ps / 2, y = by + bh - ps * 0.35;
     if (im) ctx.drawImage(im, x, y, ps, ps);
-    if (fire && i === B.blimpSkull && k > t) ctx.drawImage(fire, x + ps * 0.34, y - ps * 0.55, ps * 0.32, ps * 0.6);
+    if (fire && i === B.blimpSkull && live) ctx.drawImage(fire, x + ps * 0.34, y - ps * 0.55, ps * 0.32, ps * 0.6);
   });
   // portrait medallion
   const pm = uiImg(BOSS_PORTRAIT[B.def.id]), ms = 112 * u, mx = bx - ms * 0.78, my = by + bh / 2 - ms / 2;

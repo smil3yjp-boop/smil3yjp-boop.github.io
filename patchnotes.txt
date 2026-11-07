@@ -1,6 +1,8 @@
-v0.3.4 | Nov 6, 2026
+v0.3.4 | Nov 5, 2026
 - Lych heals half as much when it absorbs its bloons
 - Bosses can no longer heal back past a skull they've already dropped (75%, 50%, 25%)
+- A broken skull can never trigger again or spawn more bloons; all boss healing now stops at the last broken skull, and broken skulls stay dark on the boss bar
+- Co-op: a skull no longer breaks a second time when the world passes to another player
 - Hero levels need even more XP from level 100 onward (x4 instead of x2)
 - Runs now always take place on Overlord's Ring (the other maps are kept for later)
 - Bloons now come out of four portals at the north, south, east and west of the arena instead of around you

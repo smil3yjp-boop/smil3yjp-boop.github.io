@@ -588,7 +588,7 @@ var NET = (() => {
     // turn the mirrored world into a real one
     for (const b of G.bloons) { b.net = false; b.spd = bloonSpd(b.def) * (b.jit || 1); b.anc = b.anc || []; b.slowT = b.slowT || 0; if (b.tx !== undefined) { b.x = b.tx; b.y = b.ty; } }
     G.bloons = G.bloons.filter(b => !b.dead);
-    if (G.boss && !G.boss.dead) { const B = G.boss; B.net = false; B.mechT = B.mechT ?? 8; B.atkT = B.atkT ?? 3; B.enrT = B.enrT ?? 6; B.skulls = B.skulls || []; B.blimpSkull = B.blimpSkull ?? 0; }
+    if (G.boss && !G.boss.dead) { const B = G.boss; B.net = false; B.mechT = B.mechT ?? 8; B.atkT = B.atkT ?? 3; B.enrT = B.enrT ?? 6; B.skulls = (B.skulls || []).filter(t => t < B.hp / B.maxhp); /* taking over: skulls already below its health count as broken, so they never fire twice */ B.blimpSkull = B.blimpSkull ?? 0; }
     G.pickups = G.pickups.map(q => { q.net = false; if (q.owner && q.owner !== N.me.id) q.dead = true; if (q.kind === 'soul' && !q.v) q.v = 1; return q; }).filter(q => !q.dead);
     G.hazards = G.hazards.concat((G.netHaz || []).map(h => Object.assign(h, { net: false })));
     G.netHaz = [];
