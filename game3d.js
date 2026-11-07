@@ -767,7 +767,7 @@ function spawnPick(moab) {
   for (let k = 0; k < 8; k++) { const x = pt.x + rnd(-1.4, 1.4), y = pt.y + rnd(-1.4, 1.4); if (G.arena.free(x, y, 0.6)) return [x, y]; }
   return [pt.x, pt.y];
 }
-function xpFor(l) { return Math.floor((6 + l * 5 + Math.pow(l, 1.55) * 2.2) * (l >= 100 ? 4 : l >= 50 ? 2 : 1)); }   // x2 from 50, x4 from 100
+function xpFor(l) { return Math.floor(2 * (6 + l * 5 + Math.pow(l, 1.55) * 2.2) * (l >= 100 ? 4 : l >= 50 ? 2 : 1)); }   // doubled in v0.3.5; x2 from 50, x4 from 100
 
 // ---------------------------------------------------------------- skills
 function addSkill(id) {

@@ -23,7 +23,8 @@ var PROG = (() => {
   }
 
   // ------------------------------------------------------------------ Ascension
-  const pres = () => PROFILE.prestige || 0;
+  const ASC_MAX = 15;   // highest Ascension rank
+  const pres = () => Math.min(ASC_MAX, PROFILE.prestige || 0);
   const PRES = { dmg: 0.04, xp: 0.04, mm: 0.1 };
   const knowMaxed = () => KNOWLEDGE.every(k => kLv(k.id) >= k.costs.length);
 
@@ -83,12 +84,12 @@ var PROG = (() => {
   let ascArm = false;
   function renderAscend() {
     const box = $('kasc'); if (!box) return;
-    const n = pres(), ready = knowMaxed();
-    box.innerHTML = `<div class="kat"><b>ASCENSION ${'★'.repeat(Math.min(n, 10)) || '—'}</b><span>${n ? `Rank ${n}: +${Math.round(n * PRES.dmg * 100)}% damage · +${Math.round(n * PRES.xp * 100)}% XP gain · +${Math.round(n * PRES.mm * 100)}% Monkey Money (permanent)` : 'Max out every Knowledge upgrade to Ascend'}</span></div>` +
-      `<button class="btn small" id="ascbtn" ${ready ? '' : 'disabled'}>${ascArm ? 'CLICK AGAIN TO RESET KNOWLEDGE' : `ASCEND → +${Math.round(PRES.dmg * 100)}% dmg · +${Math.round(PRES.xp * 100)}% xp · +${Math.round(PRES.mm * 100)}% MM`}</button>`;
+    const n = pres(), maxed = n >= ASC_MAX, ready = knowMaxed() && !maxed;
+    box.innerHTML = `<div class="kat"><b>ASCENSION ${'★'.repeat(n) || '—'}</b><span>${n ? `Rank ${n}/${ASC_MAX}: +${Math.round(n * PRES.dmg * 100)}% damage · +${Math.round(n * PRES.xp * 100)}% XP gain · +${Math.round(n * PRES.mm * 100)}% Monkey Money (permanent)` : 'Max out every Knowledge upgrade to Ascend'}</span></div>` +
+      `<button class="btn small" id="ascbtn" ${ready ? '' : 'disabled'}>${maxed ? 'MAX ASCENSION REACHED' : ascArm ? 'CLICK AGAIN TO RESET KNOWLEDGE' : `ASCEND → +${Math.round(PRES.dmg * 100)}% dmg · +${Math.round(PRES.xp * 100)}% xp · +${Math.round(PRES.mm * 100)}% MM`}</button>`;
     const b = $('ascbtn');
     b.onclick = () => {
-      if (!knowMaxed()) return;
+      if (!knowMaxed() || pres() >= ASC_MAX) return;
       if (!ascArm) { ascArm = true; renderAscend(); setTimeout(() => { ascArm = false; renderAscend(); }, 4000); return; }
       ascArm = false; PROFILE.prestige = n + 1; PROFILE.know = {}; saveProfile();
       play('UpgradeParagonDartMonkey', { vol: 0.9 }); META.ach('ascend');
