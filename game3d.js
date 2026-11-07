@@ -417,7 +417,6 @@ const STAT_CARDS = [
   { id: 'crit', name: 'Critical Shot', icon: ['WeakPointIcon'], v: 0.035, fmt: v => `+${pct(v)} critical chance`, apply: (s, v) => s.crit += v },
   { id: 'critm', name: 'Lethal Strikes', icon: ['ViolentImpactIcon'], v: 0.15, fmt: v => `+${pct(v)} critical damage`, apply: (s, v) => s.critMult += v },
   { id: 'hp', name: 'Thick Skin', icon: ['LivesIcon'], v: 12, fmt: v => `+${Math.round(v)} max health`, apply: (s, v, g) => { s.maxhp += v; g.player.hp += v; } },
-  { id: 'regen', name: 'Banana Diet', icon: ['HealthyBananasIcon'], v: 0.35, fmt: v => `+${v.toFixed(1)} health / sec`, apply: (s, v) => s.regen += v },
   { id: 'spd', name: 'Monkey Agility', icon: ['HeroicVelocityIcon'], v: 0.05, fmt: v => `+${pct(v)} move speed`, apply: (s, v) => s.speed += v },
   { id: 'magnet', name: 'XP Magnet', icon: ['BigBunchIcon'], v: 0.9, fmt: v => `+${v.toFixed(1)}m pickup range`, apply: (s, v) => s.magnet += v },
   { id: 'xp', name: 'Monkey Knowledge', icon: ['MonkeyEducationIcon'], v: 0.07, fmt: v => `+${pct(v)} XP gain`, apply: (s, v) => s.xp += v },
@@ -1428,7 +1427,8 @@ function useAbility() {
 // ---------------------------------------------------------------- bloons
 // a boss can never heal back past a skull it has already broken (75% / 50% / 25%)
 function bossHealCap(b) { return b.maxhp * [1, 0.75, 0.5, 0.25][Math.min(3, 3 - ((b.skulls && b.skulls.length) ?? 3))]; }
-function hpScale(def) { return G.chaos.hp * (1 + G.t / 240) * (def.moab ? 1 + G.t / 400 : 1) * Math.pow(1.6, G.loop) * (1 + 0.5 * ((G.coopN || 1) - 1)); }
+const BLOON_HP_MULT = 2, BOSS_HP_MULT = 2;   // base health of every bloon / boss
+function hpScale(def) { return BLOON_HP_MULT * G.chaos.hp * (1 + G.t / 240) * (def.moab ? 1 + G.t / 400 : 1) * Math.pow(1.6, G.loop) * (1 + 0.5 * ((G.coopN || 1) - 1)); }
 // co-op: a random living player (bloons spawn around everyone)
 function anyPlayer() { const all = [G.player].concat(NET.on ? NET.alivePeers() : []).filter(q => !q.down); return all.length ? pick(all) : G.player; }
 function nearestPlayer(x, y) { let best = G.player.down ? null : G.player, bd = best ? Math.hypot(best.x - x, best.y - y) : 1e9; if (NET.on) for (const q of NET.alivePeers()) { const d = Math.hypot(q.x - x, q.y - y); if (d < bd) { bd = d; best = q; } } return best || G.player; }
@@ -1591,7 +1591,7 @@ function checkMilestones() {
 function spawnBoss() {
   const def = BOSSES[(G.mapIdx + G.chaosIdx + G.loop) % BOSSES.length];
   const pos = spawnPick(true) || G.arena.randomCellNear(G.player.x, G.player.y, 12, 18) || [G.player.x + 10, G.player.y];
-  const hp = def.hp * G.chaos.hp * (1 + G.t / 600) * Math.pow(1.7, G.loop) * (1 + 0.6 * ((G.coopN || 1) - 1));
+  const hp = BOSS_HP_MULT * def.hp * G.chaos.hp * (1 + G.t / 600) * Math.pow(1.7, G.loop) * (1 + 0.6 * ((G.coopN || 1) - 1));
   G.boss = { isBoss: true, def, x: pos[0], y: pos[1], r: def.r, hp, maxhp: hp, spd: def.spd, dead: false, hitT: 0, slowT: 0, frozenT: 0, stunT: 0, burnT: 0, burnD: 0, atkT: 3, phase: 1, wob: 0, kx: 0, ky: 0, shield: false,
     skulls: [0.75, 0.5, 0.25], blimpSkull: rint(0, 2), dashAtSpawn: G.dashesUsed || 0 };
   if (G.loop >= ENRAGE_LOOP) {

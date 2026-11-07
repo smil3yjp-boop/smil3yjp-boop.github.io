@@ -1,3 +1,7 @@
+v0.3.5 | Nov 6, 2026
+- All bloons and bosses now have double health
+- Removed the Banana Diet (health regen) card
+
 v0.3.4 | Nov 6, 2026
 - Lych heals half as much when it absorbs its bloons
 - Bosses can no longer heal back past a skull they've already dropped (75%, 50%, 25%)
@@ -50,6 +54,7 @@ v0.3.4 | Nov 6, 2026
 - Removed old unused music and images from the game files
 
 v0.3.3 | Nov 5, 2026
+- Map music is now Soulstone Survivors' music, matched to each map (forest, desert, cavern, snow, cathedral and Void King themes)
 - Boss themes are unchanged
 - Banana Farm paths now have their own effects: Top grows more bananas that heal more, Middle banks gold every harvest, Bottom sends bananas straight to you with extra XP
 - Monkey Village paths now have their own effects: Top gives all towers attack speed and pierce, Middle gives damage and extra damage to MOABs and bosses, Bottom gives more gold and cheaper chests
