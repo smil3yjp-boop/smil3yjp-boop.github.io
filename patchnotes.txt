@@ -1,4 +1,4 @@
-v0.3.4 | Nov 5, 2026
+v0.3.4 | Nov 6, 2026
 - Lych heals half as much when it absorbs its bloons
 - Bosses can no longer heal back past a skull they've already dropped (75%, 50%, 25%)
 - A broken skull can never trigger again or spawn more bloons; all boss healing now stops at the last broken skull, and broken skulls stay dark on the boss bar
