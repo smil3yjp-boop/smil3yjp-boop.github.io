@@ -5,7 +5,16 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <title>Bloonstone SurvivorS</title>
-<link rel="stylesheet" href="style.css?v=48">
+<link rel="stylesheet" href="style.css?v=50">
+<script>
+// if anything fails while the game is loading, say so on the loading screen instead of hanging
+window.addEventListener('error', function (e) {
+  var ld = document.getElementById('loading'), t = ld && ld.querySelector('.lvtitle');
+  if (!t || ld.classList.contains('hidden')) return;
+  var what = e.message || ('could not load ' + ((e.target && (e.target.src || e.target.href)) || 'a file').split('/').pop());
+  t.textContent = 'Load error: ' + what + ' (try reloading)';
+}, true);
+</script>
 </head>
 <body>
 <canvas id="gl"></canvas>
@@ -30,6 +39,7 @@
         <div id="hname" class="hname"></div>
         <div id="hskin" class="hskin"></div>
         <div id="hdesc" class="hdesc"></div>
+        <div id="habil" class="habil" data-tip=""><img id="habilimg" alt=""><div><b id="habiln"></b><span id="habilcd"></span><em id="habild"></em></div></div>
         <div id="hlevel" class="hlevel"></div>
         <div class="hstats">
           <div><span>Health</span><i><b id="hhp"></b></i></div>
@@ -147,17 +157,17 @@
 <div id="rotate" class="rotate"><div class="rotph">📱</div><div>Turn your phone sideways to play</div></div>
 <div id="loading" class="overlay"><div class="lvtitle">Inflating bloons…</div></div>
 
-<script src="lib/three.js?v=48"></script>
-<script src="loader.js?v=48"></script>
-<script src="maps.js?v=48"></script>
-<script src="assets/sprites.js?v=48"></script>
-<script src="assets/bloon_sprites.js?v=48"></script>
-<script src="assets/btd_models.js?v=48"></script>
-<script src="assets/btd_rigs.js?v=48"></script>
-<script src="highscores_config.js?v=48" onerror=""></script><script src="assets/btd_fx.js?v=48"></script><script src="assets/btd_proj.js?v=48"></script><script src="assets/relic_tex.js?v=48"></script><script src="assets/bloon_variants.js?v=48"></script><script src="assets/btd_fort.js?v=48"></script>
-<script src="assets/btd_audio.js?v=48"></script>
-<script src="assets/music.js?v=48"></script>
-<script src="render3d.js?v=48"></script>
-<script src="game3d.js?v=48"></script><script src="meta.js?v=48"></script><script src="progress.js?v=48"></script><script src="discord_config.js?v=48"></script><script src="discord_link.js?v=48"></script><script src="net.js?v=48"></script>
+<script src="lib/three.js?v=50"></script>
+<script src="loader.js?v=50"></script>
+<script src="maps.js?v=50"></script>
+<script src="assets/sprites.js?v=50"></script>
+<script src="assets/bloon_sprites.js?v=50"></script>
+<script src="assets/btd_models.js?v=50"></script>
+<script src="assets/btd_rigs.js?v=50"></script>
+<script src="highscores_config.js?v=50" onerror=""></script><script src="assets/btd_fx.js?v=50"></script><script src="assets/btd_proj.js?v=50"></script><script src="assets/relic_tex.js?v=50"></script><script src="assets/bloon_variants.js?v=50"></script><script src="assets/btd_fort.js?v=50"></script>
+<script src="assets/btd_audio.js?v=50"></script>
+<script src="assets/music.js?v=50"></script>
+<script src="render3d.js?v=50"></script>
+<script src="game3d.js?v=50"></script><script src="meta.js?v=50"></script><script src="progress.js?v=50"></script><script src="discord_config.js?v=50"></script><script src="discord_link.js?v=50"></script><script src="net.js?v=50"></script>
 </body>
 </html>

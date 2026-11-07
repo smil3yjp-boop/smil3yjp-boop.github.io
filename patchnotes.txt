@@ -3,6 +3,7 @@ v0.3.5 | Nov 6, 2026
 - Removed the Banana Diet (health regen) card
 - Levelling up during a run now takes twice as much XP
 - Ascension now stops at rank 15
+- The hero screen now shows each hero's ability: its icon, name, cooldown, button and what it does
 
 v0.3.4 | Nov 6, 2026
 - Lych heals half as much when it absorbs its bloons

@@ -3342,6 +3342,9 @@ function buildMenu() {
   { const lk = !heroUnlocked(ch.id); $('start').disabled = lk; $('start').textContent = lk ? (nextUnlock() === ch.id ? 'DEFEAT A BOSS TO UNLOCK' : `LOCKED · ${UNLOCK_ORDER.indexOf(ch.id) - UNLOCK_ORDER.indexOf(nextUnlock()) + 1} BOSS KILLS`) : 'BEGIN RUN'; }
   $('hskin').textContent = sk ? sk.name : 'Classic';
   $('hdesc').textContent = ch.desc;
+  { const A = HERO_ABIL[ch.id];   // hero ability: what it does and its cooldown
+    $('habil').classList.toggle('hidden', !A);
+    if (A) { $('habilimg').src = 'assets/ui/abil/' + A.icon + '.png'; $('habiln').textContent = A.name; $('habilcd').textContent = `Ability · ${A.cd}s cooldown · ${btnName('ability')}`; $('habild').textContent = A.desc; } }
   PROG.renderHeroLevel(ch);
   $('hhp').style.width = Math.min(100, ch.hp / 1.7) + '%';
   $('hspd').style.width = Math.min(100, (ch.spd - 5) / 2.2 * 100) + '%';
