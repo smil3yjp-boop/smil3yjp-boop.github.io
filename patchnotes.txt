@@ -1,6 +1,6 @@
 v0.3.5 | Nov 6, 2026
 - All bloons and bosses now have double health
-- Removed the Banana Diet (health regen) card
+- Removed the Banana Diet (health regen) card :)
 
 v0.3.4 | Nov 6, 2026
 - Lych heals half as much when it absorbs its bloons
