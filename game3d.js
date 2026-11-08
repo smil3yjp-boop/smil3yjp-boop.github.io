@@ -327,6 +327,8 @@ const PATH_SPR = {
 const PARAGONS = { dart: 'Apex Plasma Master', boomer: 'Glaive Dominus', bomb: 'Ballistic Obliteration Missile Bunker', lightning: 'Root of All Nature', sentry: 'Master Builder',
   frost: 'Herald of Everfrost', buccaneer: 'Navarch of the Seas', sub: 'Nautic Siege Core', shuriken: 'Ascended Shadow', sniper: 'Sniper Paragon', spike: 'Mega Massive Munitions Factory',
   tack: 'Cyclone of Fire and Metal', fire: 'Magus Perfectus', ace: 'Goliath Doomship' };
+// per-Paragon tuning: damage multiplier and whether it gets the extra 40% faster re-fire (Ballistic Obliteration Missile Bunker was far too strong)
+const PARAGON_TUNE = { bomb: { dmg: 2.5, refire: false } };
 const paragonReady = sk => !sk.hero && sk.lv === MAXLV && PARAGONS[sk.id] && G.skills.filter(k => !k.hero && k.lv >= MAXLV).length >= 3 && !G.banished.has('para_' + sk.id);
 // Beast Handler: which beasts are out at each skill level, and how hard they hit
 const BEASTS = {
@@ -2349,7 +2351,7 @@ function update(dt) {
       if (tp) { p.x = tp.x; p.y = tp.y; }
       CUR_SK = sk; SRC = sk.hero ? 'hero' : sk.id;
       let ok; try { ok = CAST[sk.id](sk); } finally { CUR_SK = null; if (tp) { p.x = px; p.y = py; } }
-      if (!ok) sk.cd = 0.15; else { sk.fired = (sk.fired || 0) + 1; if (sk.paragon && sk.cd < 1e8) sk.cd *= 0.6; }
+      if (!ok) sk.cd = 0.15; else { sk.fired = (sk.fired || 0) + 1; if (sk.paragon && sk.cd < 1e8 && (PARAGON_TUNE[sk.id] || {}).refire !== false) sk.cd *= 0.6; }
     }
   }
   // phoenix orbit (Dragon's Breath lv7)
@@ -3331,7 +3333,7 @@ function cardInfo(o) {
     const line = names.slice(t).map((n, i) => i ? `<span style="color:var(--dim)">→ ${n}</span>` : `<b>${n}</b>`).join('<br>');
     return { title: names[t], kind: `${o.sk.def.name} · ${PATH_NAME[o.L]}`, desc: `${line}<br><br><span style="color:var(--gold2)">${pathBonus(o.sk, o.L)}</span>` + (SUPPORT_PATHS[o.sk.id] && o.tier === 1 ? `<br><span style="color:#7fd8ff">Tier 5: ${SUPPORT_PATHS[o.sk.id].cap[o.L]}</span>` : ''), icon: o.sk.def.icon, upg: PATH_ICON[`${o.sk.id}_${o.L}${o.tier === 0 ? 3 : 4}`], tags: o.sk.def.tags };
   }
-  if (o.type === 'paragon') return { title: PARAGONS[o.sk.id], kind: `PARAGON · merge ${o.sk.def.name}`, desc: `Your three maxed towers lend their power: ${o.sk.def.name} becomes its Paragon.<br><br><span style="color:var(--gold2)">x3 damage · 40% faster attacks · Paragon model</span>`, icon: o.sk.def.icon, tags: o.sk.def.tags };
+  if (o.type === 'paragon') return { title: PARAGONS[o.sk.id], kind: `PARAGON · merge ${o.sk.def.name}`, desc: `Your three maxed towers lend their power: ${o.sk.def.name} becomes its Paragon.<br><br><span style="color:var(--gold2)">x${(PARAGON_TUNE[o.sk.id] || {}).dmg || 3} damage · 40% faster attacks · Paragon model</span>`, icon: o.sk.def.icon, tags: o.sk.def.tags };
   const v = o.c.v * R.m;
   return { title: o.c.name, kind: o.c.heroCard ? `${G.ch.name} · Signature${G.items[o.c.id] ? ` (${G.items[o.c.id].n}/${HERO_CARD_MAX})` : ''}` : o.c.tag ? `${TAGNAME[o.c.tag]} Upgrade` : 'Attribute', desc: o.c.fmt(v), icon: o.c.icon || ['UpgradeIcon'], upg: o.c.upg, tags: o.c.tag ? [o.c.tag] : [], v };
 }
@@ -3380,7 +3382,7 @@ function chooseCard(o, info) {
   const R = RARITY[o.rar];
   if (o.type === 'paragon') {
     const sk = o.sk; sk.lv = 8; sk.paragon = true;
-    sk.def = Object.assign({}, sk.def, { name: PARAGONS[sk.id], dmg: sk.def.dmg * 3, cd: sk.def.cd * 0.6 });
+    sk.def = Object.assign({}, sk.def, { name: PARAGONS[sk.id], dmg: sk.def.dmg * ((PARAGON_TUNE[sk.id] || {}).dmg || 3), cd: sk.def.cd * 0.6 });
     const tp = G.towerPos[sk.id] || G.player;
     G.effects.push({ kind: 'ring', x: tp.x, y: tp.y, r: 6, t: 0, life: 0.8, color: '#ffe680' }, { kind: 'expl', x: tp.x, y: tp.y, r: 2.5, t: 0, life: 0.8 });
     shake(0.5); META.ach('paragon'); toast(`PARAGON: ${PARAGONS[sk.id]}!`, '#ffe680'); play('UpgradeParagonDartMonkey', { vol: 0.9 });

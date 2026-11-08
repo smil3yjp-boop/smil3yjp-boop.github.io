@@ -28,6 +28,7 @@ v0.3.5 | Nov 6, 2026
 - Mermonkey and Desperado upgrade paths now show their real names (like Abyss Dweller, Popseidon, Big Iron, Golden Justice) instead of "0-3-0"-style labels, and Mermonkey path cards show their upgrade icons
 - Fixed Beast Handler animals walking and flying backwards (raptor, T-Rex, Giganotosaurus, eagle, condor and Pouakai)
 - Fixed projectiles flying backwards (arrows, darts, missiles, rockets, tridents and other pointed shots now fly tip-first)
+- Nerfed the Bomb Shooter Paragon (Ballistic Obliteration Missile Bunker): x2.5 damage instead of x3, and it no longer gets the extra re-fire speed boost (about half its old damage)
 - Credit: "LZ-129 Hindenburg" 3D model by Maritime History Buff (sketchfab.com/maritimehistorybuff), licensed CC BY 4.0, simplified and animated for the game, with the fin insignia removed
 
 v0.3.4 | Nov 5, 2026
