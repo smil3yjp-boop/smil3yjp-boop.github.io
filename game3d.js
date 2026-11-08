@@ -166,7 +166,11 @@ const BLOON_ORDER = ['red', 'blue', 'green', 'yellow', 'pink', 'black', 'white',
 const UNLOCK_T = { red: 0, blue: 15, green: 40, yellow: 70, pink: 100, black: 135, white: 150, purple: 185, zebra: 210, lead: 235, rainbow: 270, ceramic: 320 };
 const COST = { red: 1, blue: 2, green: 3, yellow: 4, pink: 5, black: 11, white: 11, purple: 11, zebra: 23, lead: 23, rainbow: 47, ceramic: 104 };
 
-const BOSS_SFX = { bloonarius: ['BossBloonariusSpawn', 'BossBloonariusDeath'], lych: ['BossLychSpawn', 'BossLychDeath'], vortex: ['VortexSpawn', 'VortexDeath'], dreadbloon: ['BossDreadBloonArmourBreak', 'BossDreadBloonDeath'], phayze: ['BossPhayzeSpawn', 'BossPhayzeDeath'], blastapopoulos: ['BossBlastapopoulosSpawn', 'BossBlastapopoulosDeath'] };
+const BOSS_SFX = { reaver: ['BossLychSpawn', 'BossPhayzeDeath'], bloonarius: ['BossBloonariusSpawn', 'BossBloonariusDeath'], lych: ['BossLychSpawn', 'BossLychDeath'], vortex: ['VortexSpawn', 'VortexDeath'], dreadbloon: ['BossDreadBloonArmourBreak', 'BossDreadBloonDeath'], phayze: ['BossPhayzeSpawn', 'BossPhayzeDeath'], blastapopoulos: ['BossBlastapopoulosSpawn', 'BossBlastapopoulosDeath'] };
+// the run's last fight: opens as a single portal after the 3rd boss; its attacks are Soulstone's Void King set
+const FINAL_BOSS = { id: 'reaver', name: 'VOID KING', title: 'Ruler of the Void', model: 'x_reaver', final: true, hp: 42000, r: 3.2, spd: 2.1, color: '#36f0ff', ability: 'void' };
+const FINAL_AFTER_LOOP = 2;   // the 3rd boss (loops 0, 1, 2) opens the final portal
+function bossDef(id) { return id === FINAL_BOSS.id ? FINAL_BOSS : BOSSES.find(d => d.id === id); }
 const BOSSES = [
   { id: 'bloonarius', name: 'BLOONARIUS', title: 'The Inflator', model: 'bloonarius', hp: 30000, r: 3.4, spd: 1.2, color: '#4bd34b', ability: 'spawn' },
   { id: 'lych', name: 'LYCH', title: 'Soul Drinker', model: 'lych', hp: 27000, r: 3.2, spd: 1.5, color: '#7a2fd0', ability: 'spawn' },
@@ -1771,6 +1775,160 @@ function enragedTick(b, dt) {
   }
   toast(`☠ ${b.def.name}: ${ENRAGED[id].move}!`, '#c070ff');
 }
+// ================================================================ FINAL BOSS: the Void King (Soulstone's Void King attack set)
+// Void Bolts, Meteor Area, Eye Laser (beam 1.03-2.02s) from the start; each broken skull adds a wave of bloons and a new attack:
+// 75% Rotating Rays, 50% Void Zones (Soulstone's 12 s quadrant sequence), 25% Arena Blast (charge 3.43 s, safe only next to the boss)
+const VOID_HZ = new Set(['vlaser', 'vrays', 'vzone', 'vblast']);
+const VZONE_SEQ = [[0, 1, 6], [0, 9, 12], [1, 2, 5], [1, 7, 8], [1, 10, 12], [2, 3, 4], [2, 6, 9], [2, 11, 12], [3, 5, 10]];   // [zone, start, end] from Void-King-VoidZones-Sequence
+const VZONE_WARN = 0.8, RAY_WARN = 1.2, LASER_ON = 1.03;
+function arenaCenter() { const m = (G.spawnPortals || []).find(q => q.kind === 'moab'); return m ? [m.x, m.y] : G.arena.def.spawn; }
+function arenaRadius() { const c = arenaCenter(); let r = 8; for (const sp of G.spawnPortals || []) if (sp.kind !== 'moab') r = Math.max(r, Math.hypot(sp.x - c[0], sp.y - c[1]) + 3); return r; }
+async function startFinalBoss() {
+  G.portals = null; G.finalFight = true; G.state = 'loading';
+  play('BossPhayzeWarp', { vol: 0.9 });
+  show('loading', true); document.querySelector('#loading .lvtitle').textContent = 'The Void King awakens…';
+  try { await R3.loadSkin('x_reaver'); } catch (e) { console.warn('reaver model', e); }
+  show('loading', false);
+  if (!G) return;
+  for (const o of G.bloons) o.dead = true;
+  G.bloons = []; G.eproj = []; G.hazards = G.hazards.filter(h => !['slime', 'magma', 'bossSlam', 'chargeLine', 'cyclone'].includes(h.kind) && !VOID_HZ.has(h.kind)); G.netHaz = [];
+  const P = G.player; if (P.down) { P.down = false; P.rev = 0; P.hp = G.stats.maxhp * 0.4; }
+  G.state = 'play'; G.grace = 0;
+  if (!NET.guest) spawnFinalBoss();
+}
+function spawnFinalBoss() {
+  const def = FINAL_BOSS, c = arenaCenter();
+  const hp = BOSS_HP_MULT * def.hp * G.chaos.hp * (1 + G.t / 600) * Math.pow(1.7, G.loop + 1) * (1 + 0.6 * ((G.coopN || 1) - 1));
+  G.boss = { isBoss: true, def, x: c[0], y: c[1], r: def.r, hp, maxhp: hp, spd: def.spd, dead: false, hitT: 0, slowT: 0, frozenT: 0, stunT: 0, burnT: 0, burnD: 0, atkT: 4, phase: 1, wob: 0, kx: 0, ky: 0, shield: false,
+    skulls: [0.75, 0.5, 0.25], blimpSkull: -1, dashAtSpawn: G.dashesUsed || 0, stage: 0, rooted: 3, anim: 'roar', seq: 0 };
+  G.bossIntro = 3; PROG.seen('x', def.id);
+  play(BOSS_SFX.reaver[0], { vol: 1 }); shake(0.9);
+  setTimeout(() => G && toast('☠ The VOID KING attacks with Void Bolts, Meteors and its Eye Laser', '#36f0ff'), 3100);
+}
+// a wave of bloons out of the four edge portals when a skull breaks
+function reaverWave(n) {
+  const types = ['ceramic', 'rainbow', 'lead', 'zebra'];
+  for (const sp of G.spawnPortals || []) if (sp.kind !== 'moab') for (let i = 0; i < n; i++) spawnBloon(pick(types), [sp.x + rnd(-1, 1), sp.y + rnd(-1, 1)]);
+  if (G.boss) spawnBloon(pick(['moab', 'bfb']), (spawnPick(true) || [G.boss.x, G.boss.y]));
+}
+function reaverAI(b, dt) {
+  const dm = G.chaos.dmg;
+  if (b.shieldT > 0) b.shieldT -= dt;
+  if (b.rooted > 0) b.rooted -= dt;
+  // skulls: 75% Rotating Rays, 50% Void Zones, 25% Arena Blast (each also sends a wave of bloons)
+  while (b.skulls.length && b.hp / b.maxhp <= b.skulls[0]) {
+    b.skulls.shift(); b.stage = 3 - b.skulls.length; b.shieldT = 1.2; b.anim = 'roar'; b.rooted = Math.max(b.rooted, 1.6); shake(0.8);
+    play(SKULL_SFX.phayze, { vol: 1, gap: 0 }); play('MoabDestroyed01', { vol: 0.4 });
+    G.effects.push({ kind: 'ring', x: b.x, y: b.y, r: b.r + 7, t: 0, life: 0.8, color: '#36f0ff', enemy: true });
+    reaverWave(3 + b.stage);
+    toast(['', '☠ The Void King begins ROTATING RAYS', '☠ VOID ZONES: get out of the glowing quadrants', '☠ ARENA BLAST: stay close to the Void King when it charges!'][b.stage], '#36f0ff');
+    b.atkT = Math.min(b.atkT, 1.8); b.next = ['', 'rays', 'zones', 'blast'][b.stage];
+  }
+  b.hp = Math.min(b.hp, bossHealCap(b));
+  if (b.hp < b.maxhp * 0.5 && b.phase === 1) { b.phase = 2; b.spd *= 1.15; }
+  b.atkT -= dt;
+  if (b.atkT > 0 || b.rooted > 0.2) return;
+  const p = nearestPlayer(b.x, b.y), d = Math.hypot(p.x - b.x, p.y - b.y), fast = b.phase === 2 ? 0.8 : 1;
+  // what next: a newly unlocked move first, then a weighted pick from what this stage allows
+  let mv = b.next; b.next = null;
+  if (!mv) {
+    const opts = [['bolts', 3], ['meteors', 3], ['laser', 2]];
+    if (d < b.r + 5) opts.push(['swipe', 4]);
+    if (b.stage >= 1) opts.push(['rays', 1.4]);
+    if (b.stage >= 2 && !(b.zonesUntil > G.t)) opts.push(['zones', 1.2]);
+    if (b.stage >= 3) opts.push(['blast', 1.1]);
+    const tot = opts.reduce((a, o) => a + o[1], 0); let r = Math.random() * tot;
+    for (const [k, w] of opts) { r -= w; if (r <= 0) { mv = k; break; } }
+    if (mv === b.last && opts.length > 2 && Math.random() < 0.6) mv = opts[(opts.findIndex(o => o[0] === mv) + 1) % opts.length][0];
+  }
+  b.last = mv;
+  if (mv === 'swipe') {   // claw rake in front of it
+    b.anim = 'attack'; b.rooted = 0.7;
+    const a = Math.atan2(p.y - b.y, p.x - b.x);
+    G.hazards.push({ kind: 'bossSlam', x: b.x + Math.cos(a) * (b.r + 1.6), y: b.y + Math.sin(a) * (b.r + 1.6), r: 3.2, t: 0, life: 0.45, dmg: 30 * dm });
+    b.atkT = 1.6 * fast;
+  } else if (mv === 'bolts') {   // Void Bolts: three volleys of shadow orbs at every player
+    b.anim = 'cast'; b.rooted = 1.0;
+    const tg = [G.player].concat(NET.on ? NET.alivePeers() : []).filter(q => !q.down);
+    for (let v = 0; v < 3; v++) setTimeout(() => {
+      if (!G || b.dead) return;
+      for (const q of tg) { const a0 = Math.atan2(q.y - b.y, q.x - b.x); for (let i = -2; i <= 2; i++) { const a = a0 + i * 0.17; G.eproj.push({ x: b.x + Math.cos(a) * b.r, y: b.y + Math.sin(a) * b.r, vx: Math.cos(a) * 9, vy: Math.sin(a) * 9, r: 0.55, life: 3.5, dmg: 15 * dm }); } }
+      play('ThrowObject01', { vol: 0.3, gap: 0 });
+    }, 550 + v * 300);
+    b.atkT = 2.6 * fast;
+  } else if (mv === 'meteors') {   // Meteor Area: big telegraphed impacts on and around players (1.52 s, like the Void King's)
+    b.anim = 'cast'; b.rooted = 0.9;
+    const tg = [G.player].concat(NET.on ? NET.alivePeers() : []).filter(q => !q.down), n = 3 + b.stage;
+    for (const q of tg) for (let i = 0; i < n; i++) {
+      const x = q.x + (i ? rnd(-6, 6) : (q.vx || 0) * 0.6), y = q.y + (i ? rnd(-6, 6) : (q.vy || 0) * 0.6);
+      if (G.arena.isWalk(x, y)) G.hazards.push({ kind: 'bossSlam', x, y, r: 3, t: 0, life: 1.52 + i * 0.18, dmg: 26 * dm, leave: b.stage >= 2 ? { kind: 'magma', r: 2, life: 4, tick: 0 } : null });
+    }
+    b.atkT = 2.9 * fast;
+  } else if (mv === 'laser') {   // Eye Laser: charges, then a beam from 1.03 s to 2.02 s that slowly tracks you
+    b.anim = 'laser'; b.rooted = 2.1;
+    G.hazards.push({ kind: 'vlaser', x: b.x, y: b.y, a: Math.atan2(p.y - b.y, p.x - b.x), len: 26, w: 1.8, r: 0, t: 0, life: 2.02, dmg: 18 * dm, track: 0.55 });
+    play('BossPhayzeSummonPortal', { vol: 0.7, gap: 0 });
+    b.atkT = 3.0 * fast;
+  } else if (mv === 'rays') {   // Rotating Rays: four beams sweep around it while it channels
+    b.anim = 'channel'; b.base = 'channel'; b.rooted = 9;
+    const dir = (b.rayDir = -(b.rayDir || -1));
+    G.hazards.push({ kind: 'vrays', x: b.x, y: b.y, a: rnd(TAU), spin: dir * (b.phase === 2 ? 0.62 : 0.5), len: 24, w: 1.4, r: 1.5, t: 0, life: 9, dmg: 16 * dm });
+    setTimeout(() => { if (G && G.boss === b) b.base = null; }, 9000);
+    play('VortexTornado0*', { vol: 0.6, gap: 0 });
+    b.atkT = 10 * fast;
+  } else if (mv === 'zones') {   // Void Zones: the four quadrants light up in the Void King's sequence; it keeps attacking meanwhile
+    b.anim = 'channel'; b.rooted = 1.4;
+    const c = arenaCenter(), R = arenaRadius(), t0 = G.t;
+    b.zonesUntil = G.t + 12.5;
+    for (const [z, s0, s1] of VZONE_SEQ) G.hazards.push({ kind: 'vzone', x: c[0], y: c[1], a: -Math.PI / 4 + z * Math.PI / 2, len: R, w: 0, r: 0, t: -(s0 - 1), life: (s1 - s0) + VZONE_WARN, dmg: 14 * dm, z });   // warns from beat s0-1, burns s0..s1 (+warn) of the sequence
+    b.atkT = 2.4 * fast;
+  } else if (mv === 'blast') {   // Arena Blast: 3.43 s charge, then everything outside a circle around the boss is hit
+    b.anim = 'blast'; b.rooted = 4.0;
+    G.hazards.push({ kind: 'vblast', x: b.x, y: b.y, r: b.r + 4.5, len: arenaRadius() * 1.4, w: 0, a: 0, t: 0, life: 3.43, dmg: 60 * dm });
+    play('BossBlastapopoulosFormRocks0*', { vol: 0.8, gap: 0 });
+    b.atkT = 5.5 * fast;
+  }
+}
+// moving parts of the Void hazards (host only: the laser follows its target, the rays spin, both stay on the boss)
+function voidHazStep(h, dt) {
+  const B = G.boss;
+  if (h.kind === 'vlaser' || h.kind === 'vrays' || h.kind === 'vblast') { if (B && !B.dead) { h.x = B.x; h.y = B.y; } else h.life = 0; }
+  if (h.kind === 'vlaser' && h.t < 1.9) { const q = nearestPlayer(h.x, h.y), want = Math.atan2(q.y - h.y, q.x - h.x); let da = Math.atan2(Math.sin(want - h.a), Math.cos(want - h.a)); h.a += Math.max(-h.track * dt, Math.min(h.track * dt, da)) * (h.t < LASER_ON ? 3 : 1); }
+  if (h.kind === 'vrays' && h.t > RAY_WARN) h.a += h.spin * dt;
+}
+function segDist(px, py, x0, y0, a, len) { const dx = Math.cos(a), dy = Math.sin(a), t = Math.max(0, Math.min(len, (px - x0) * dx + (py - y0) * dy)); return Math.hypot(px - (x0 + dx * t), py - (y0 + dy * t)); }
+// is this player standing in the live part of a Void hazard? (hits go through the usual hit-invulnerability)
+function voidHazHit(p, h) {
+  if (!p || p.down) return;
+  if (h.kind === 'vlaser') { if (h.t >= LASER_ON && segDist(p.x, p.y, h.x, h.y, h.a, h.len) < h.w / 2 + p.r) hurtPlayer(h.dmg); }
+  else if (h.kind === 'vrays') { if (h.t >= RAY_WARN) for (let k = 0; k < 4; k++) if (segDist(p.x, p.y, h.x, h.y, h.a + k * Math.PI / 2, h.len) < h.w / 2 + p.r && Math.hypot(p.x - h.x, p.y - h.y) > h.r) { hurtPlayer(h.dmg); break; } }
+  else if (h.kind === 'vzone') { if (h.t >= VZONE_WARN) { const dx = p.x - h.x, dy = p.y - h.y, d = Math.hypot(dx, dy); let rel = Math.atan2(dy, dx) - h.a; rel = ((rel % TAU) + TAU) % TAU; if (d < h.len && d > 2.2 && rel < Math.PI / 2) hurtPlayer(h.dmg); } }
+  else if (h.kind === 'vblast') {
+    if (h.t >= h.life && !h.done) {
+      h.done = true; shake(1.2);
+      G.effects.push({ kind: 'ring', x: h.x, y: h.y, r: h.len, t: 0, life: 0.7, color: '#b04cff', enemy: true });
+      G.effects.push({ kind: 'boom', x: h.x, y: h.y, r: h.r, t: 0, life: 0.5, color: '#36f0ff', enemy: true });
+      play('Explosion0*', { vol: 0.8, gap: 0 });
+      if (Math.hypot(p.x - h.x, p.y - h.y) > h.r) { p.inv = 0; hurtPlayer(h.dmg); }
+    }
+  }
+}
+// the Void King is down: the run is won
+function finalVictory(b) {
+  G.victory = true; G.finalFight = false;
+  for (const o of G.bloons) if (!o.dead) { o.dead = true; G.effects.push({ kind: 'pop', x: o.x, y: o.y, r: o.r, t: 0, life: 0.16, color: o.def.color }); }
+  G.eproj.length = 0; G.hazards = G.hazards.filter(h => !VOID_HZ.has(h.kind) && h.kind !== 'bossSlam');
+  for (let i = 0; i < 10; i++) setTimeout(() => G && G.effects.push({ kind: 'boom', x: b.x + rnd(-3, 3), y: b.y + rnd(-3, 3), r: rnd(2, 5), t: 0, life: 0.6, color: i % 2 ? '#36f0ff' : '#b04cff' }), i * 140);
+  play(BOSS_SFX.reaver[1], { vol: 1 }); shake(1.4);
+  G.effects.push({ kind: 'expl', x: b.x, y: b.y, r: b.r * 2, t: 0, life: 1.1 });
+  setTimeout(() => G && toast('THE VOID KING IS DEFEATED — VICTORY!', '#36f0ff'), 500);
+  setTimeout(() => { if (G && G.boss === b) G.boss = null; }, 2500);
+  setTimeout(() => {
+    if (!G || G.state === 'end') return;
+    if (NET.host) NET.sendEnd(true, true);
+    endRun(true);
+  }, 3800);
+}
 function killBoss(b) {
   const fx0 = G.effects.length; try { killBoss0(b); } finally { for (let i = fx0; i < G.effects.length; i++) G.effects[i].enemy = true; }
 }
@@ -1784,10 +1942,11 @@ function killBoss0(b) {
   if (G.bossKills === 1) { const key = `${G.arena.def.id}_${G.chaosIdx}`, best = BEST[key]; if (!best || G.t < best) { BEST[key] = G.t; G.bestThisRun = G.t; try { localStorage.setItem('bss_best', JSON.stringify(BEST)); } catch (e) { } } }
   // clear the arena and open Soulstone-style portals: continue (new random arena) or end the run
   G.portals = [];   // stops spawning until a portal is chosen
+  if (b.def.final) { finalVictory(b); return; }
   for (const o of G.bloons) if (!o.dead) { o.dead = true; G.effects.push({ kind: 'pop', x: o.x, y: o.y, r: o.r, t: 0, life: 0.16, color: o.def.color }); }
   G.eproj.length = 0; G.hazards = G.hazards.filter(h => h.kind === 'spikes' || h.kind === 'glue');
   for (const q of G.pickups) if (q.kind === 'soul') q.vac = true;
-  setTimeout(() => G && toast(`${b.def.name} DEFEATED!  Stand in a portal and ${pressWord().toLowerCase()} ${btnName('interact')}`, '#ffe39a'), 600);
+  setTimeout(() => G && toast(G.loop >= FINAL_AFTER_LOOP ? `${b.def.name} DEFEATED!  The final portal is opening…` : `${b.def.name} DEFEATED!  Stand in a portal and ${pressWord().toLowerCase()} ${btnName('interact')}`, '#ffe39a'), 600);
   setTimeout(() => {
     if (!G) return;
     const P = G.player, mid = (G.spawnPortals || []).find(q => q.kind === 'moab');
@@ -1795,7 +1954,11 @@ function killBoss0(b) {
     const side = (sx) => { if (!mid) return null; for (let d = 4.5; d < 9; d += 0.5) { const x = mid.x + sx * d, y = mid.y; if (G.arena.free(x, y, 1)) return [x, y]; } return null; };
     const spots = [[-3.5, -2], [3.5, -2], [-4, 2], [4, 2], [0, -4], [0, 4]].map(([dx, dy]) => [P.x + dx, P.y + dy]).filter(([x, y]) => G.arena.free(x, y, 1));
     const a = side(-1) || spots[0] || [P.x - 3, P.y], c = side(1) || spots.find(q => Math.hypot(q[0] - a[0], q[1] - a[1]) > 4) || [P.x + 3, P.y];
-    G.portals = [{ kind: 'continue', x: a[0], y: a[1], t: 0 }, { kind: 'end', x: c[0], y: c[1], t: 0 }];
+    if (G.loop >= FINAL_AFTER_LOOP) {   // the 3rd boss: only one way forward, the final boss portal in the middle
+      G.portals = [{ kind: 'final', x: mid ? mid.x : P.x, y: mid ? mid.y : P.y - 4, t: 0 }];
+      R3.loadSkin('x_reaver');   // start loading the final boss model now
+      toast('A FINAL PORTAL OPENS… the Void King awaits', '#36f0ff');
+    } else G.portals = [{ kind: 'continue', x: a[0], y: a[1], t: 0 }, { kind: 'end', x: c[0], y: c[1], t: 0 }];
     play('BossPhayzeWarp', { vol: 0.8 });
   }, 2600);
   for (let i = 0; i < 6; i++) setTimeout(() => G && G.effects.push({ kind: 'boom', x: b.x + rnd(-2, 2), y: b.y + rnd(-2, 2), r: rnd(2, 4), t: 0, life: 0.5, color: '#fff' }), i * 120);
@@ -1895,8 +2058,9 @@ function update(dt) {
         G.useKey = false;
         if (G.spec) break;
         // co-op: CONTINUE marks you ready (everyone must be), END RUN takes only you out of the run
-        if (NET.on) { if (pt.kind === 'continue') { NET.toggleReady(); break; } NET.leave(true); return; }
+        if (NET.on) { if (pt.kind === 'continue' || pt.kind === 'final') { NET.toggleReady(); break; } NET.leave(true); return; }
         if (pt.kind === 'continue') { continueRun(); return; }
+        if (pt.kind === 'final') { startFinalBoss(); return; }
         G.portals = null; endRun(true, true); return;
       }
     }
@@ -2017,9 +2181,9 @@ function update(dt) {
       if (c.t > c.tele) { const v = 22 * dt; B.x += Math.cos(c.a) * v; B.y += Math.sin(c.a) * v; if (!A.isWalk(B.x, B.y)) { B.x -= Math.cos(c.a) * v; B.y -= Math.sin(c.a) * v; c.t = 99; } }
       if (c.t > c.tele + c.dur) B.charge = null;
     } else {
-      bossAI(B, dt);
+      if (B.def.final) reaverAI(B, dt); else bossAI(B, dt);
       const tq = nearestPlayer(B.x, B.y), dx = tq.x - B.x, dy = tq.y - B.y, d = Math.hypot(dx, dy);
-      if (d > 4) {
+      if (d > 4 && !(B.rooted > 0)) {
         let [ux, uy] = A.flowDir(B.x, B.y); if (!ux && !uy) { ux = dx / d; uy = dy / d; }
         B.x += ux * B.spd * dt; B.y += uy * B.spd * dt;
       }
@@ -2107,6 +2271,7 @@ function update(dt) {
       if (Math.hypot(p.x - h.x, p.y - h.y) < h.r + p.r * 0.5) hurtPlayer(h.dmg);
       if (h.leave) G.hazards.push(Object.assign({ x: h.x, y: h.y, t: 0 }, h.leave));   // enraged slime / magma left behind
     } else if (h.kind === 'cyclone') cyclonePull(p, h, dt);
+    else if (VOID_HZ.has(h.kind)) { voidHazStep(h, dt); voidHazHit(p, h); }
   }
   G.hazards = G.hazards.filter(h => h.t < h.life);
 
@@ -2316,12 +2481,18 @@ function render(dt = 0.016) {
   // portal labels
   if (G.portals) for (const pt of G.portals) {
     const q = R3.project(pt.x, pt.y, 3.6, W, H); if (!q) continue;
-    const co = NET.on && !G.spec, cont = pt.kind === 'continue';
-    if (co && cont) {   // ready counter above the portal
+    const co = NET.on && !G.spec, cont = pt.kind === 'continue', fin = pt.kind === 'final';
+    if (co && (cont || fin)) {   // ready counter above the portal
       const rc = NET.readyCount(), n = NET.runSize(), wait = NET.readyNames();
       ctx.fillStyle = 'rgba(0,0,0,.6)'; roundRect(q[0] - 110 * u, q[1] - 82 * u, 220 * u, 56 * u, 10 * u); ctx.fill();
       text(`READY ${rc}/${n}`, q[0], q[1] - 58 * u, 22 * u, rc === n ? '#7dff8a' : '#ffe39a', 'center');
       if (wait.length) text('Waiting for ' + wait.join(', '), q[0], q[1] - 36 * u, 13 * u, '#e8e0d0', 'center');
+    }
+    if (fin) {
+      text('FINAL BOSS', q[0], q[1], 26 * u, '#36f0ff', 'center');
+      text(co ? 'Everyone must be ready · face the Void King' : 'Face the Void King · win the run', q[0], q[1] + 22 * u, 14 * u, '#e8e0d0', 'center');
+      if (pt.near) text(`${pressWord()} ${btnName('interact')} to ${co ? (NET.cont.has(NET.me.id) ? 'cancel ready' : 'ready up') : 'enter'}`, q[0], q[1] + 46 * u, 17 * u + Math.sin(G.t * 6) * u, '#fff', 'center');
+      continue;
     }
     text(cont ? 'CONTINUE' : co ? 'LEAVE RUN' : 'END RUN', q[0], q[1], 22 * u, cont ? '#7fd8ff' : '#ff8a7a', 'center');
     text(cont ? (co ? `Everyone must be ready · Loop ${G.loop + 2}` : `${MAP_POOL.length > 1 ? 'New arena' : 'Next loop'} · Loop ${G.loop + 2} · stronger bloons`) : co ? 'Finish with your score · others keep playing' : 'Finish with your score', q[0], q[1] + 20 * u, 13 * u, '#e8e0d0', 'center');
@@ -2694,7 +2865,7 @@ function drawHUD() {
 }
 // BTD6-style boss health bar: portrait medallion, boss-themed tiled fill, skull tier pips
 const BOSS_TILE = { lych: 'btd_LychHealthBarTile', phayze: 'btd_PhayzeHealthBarTile', dreadbloon: 'btd_DreadbloonHealthbarLarge' };
-const BOSS_PORTRAIT = { bloonarius: 'btd_BloonariusPortrait', lych: 'btd_LychPortrait', vortex: 'btd_VortexPortrait', dreadbloon: 'btd_DreadbloonPortrait', phayze: 'btd_PhayzePortrait', blastapopoulos: 'btd_BlastapopoulosPortrait' };
+const BOSS_PORTRAIT = { reaver: 'ReaverPortrait', bloonarius: 'btd_BloonariusPortrait', lych: 'btd_LychPortrait', vortex: 'btd_VortexPortrait', dreadbloon: 'btd_DreadbloonPortrait', phayze: 'btd_PhayzePortrait', blastapopoulos: 'btd_BlastapopoulosPortrait' };
 function drawBossBar(B, u) {
   const bw = Math.min(W * 0.5, 820 * u), bh = 34 * u, bx = (W - bw) / 2 + 40 * u, by = 92 * u;
   const k = clamp(B.hp / B.maxhp, 0, 1);
@@ -3184,9 +3355,9 @@ function endRun(win, quit = false) {
   const eb = $('endbanner');
   eb.style.backgroundImage = `url("assets/ui/GameOver_Frame_01.png")`;
   $('endskull').style.display = win ? 'none' : 'block';
-  eb.textContent = win ? (quit ? 'RUN COMPLETE' : 'FALLEN IN GLORY') : quit ? 'RUN ABANDONED' : 'DEFEATED';
+  eb.textContent = G.victory ? 'VICTORY!' : win ? (quit ? 'RUN COMPLETE' : 'FALLEN IN GLORY') : quit ? 'RUN ABANDONED' : 'DEFEATED';
   eb.style.color = win ? '#ffe39a' : '#ff7a7a';
-  const mm = Math.round((G.goldEarned / 20 + G.level * 4 + G.bossKills * 150 + G.t / 6) * META.mmMult());
+  const mm = Math.round((G.goldEarned / 20 + G.level * 4 + G.bossKills * 150 + G.t / 6 + (G.victory ? 1000 * (1 + G.chaosIdx) : 0)) * META.mmMult());
   PROFILE.mm += mm; const hxRows = PROG.finish(win, quit); if (PROG.levelOf(G.ch.id) >= 10) META.ach('hero10'); saveProfile();
   renderStats($('endstats'), [['Monkey Money earned', '+' + mm + '  (total ' + Math.floor(PROFILE.mm) + ')'], ...hxRows, ['Bosses defeated', G.bossKills], ['Gold earned', '$' + Math.round(G.goldEarned).toLocaleString()], ...(rec ? [['Record', rec]] : [])]);
   renderBreakdown($('endbreak'));

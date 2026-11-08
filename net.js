@@ -5,7 +5,7 @@
 var NET = (() => {
   const BT = Object.keys(BLOONS);                       // bloon type <-> index
   const PK = ['soul', 'heart', 'chest', 'relic', 'banana'];
-  const HZ = ['slime', 'magma', 'bossSlam', 'chargeLine', 'cyclone'];
+  const HZ = ['slime', 'magma', 'bossSlam', 'chargeLine', 'cyclone', 'vlaser', 'vrays', 'vzone', 'vblast'];
   const ENEMY_HZ = new Set(HZ);
   const PERSONAL_PK = new Set(['relic', 'banana']);
   const r2 = v => Math.round(v * 100) / 100, r1 = v => Math.round(v * 10) / 10;
@@ -93,8 +93,8 @@ var NET = (() => {
       case 'e': if (N.guest && from === N.runHost) onEvents(m); break;
       case 'mech': if (N.guest && from === N.runHost) onMech(m); break;
       case 'bk': if (N.guest && from === N.runHost) onBossKill(m); break;
-      case 'cont': if (N.guest && from === N.runHost) { N.cont.clear(); continueRun(m.map); } break;
-      case 'end': if (N.inRun && from === N.runHost && G) { if (N.spec) stopSpectating('The run is over — you can join the next one!'); else endRun(m.win, m.quit); } break;
+      case 'cont': if (N.guest && from === N.runHost) { N.cont.clear(); if (m.final) startFinalBoss(); else continueRun(m.map); } break;
+      case 'end': if (N.inRun && from === N.runHost && G) { if (N.spec) stopSpectating('The run is over — you can join the next one!'); else { if (m.victory) G.victory = true; endRun(m.win, m.quit); } } break;
       case 'spec': if (N.specWant && !G && !N.inRun) { N.specWant = false; whenLoaded(() => { if (!G && !N.inRun) startSpectating(m, from); }); } break;
       case 'specreq': if (N.host && G && G.state !== 'end') send(from, { t: 'spec', map: G.mapIdx, chaos: G.chaosIdx, ids: [N.me.id, ...N.runIds] }); break;
       case 'leave': if (N.inRun && (N.runIds.has(from))) onLeave(from); break;
@@ -178,7 +178,9 @@ var NET = (() => {
     if (!N.host || !G || !G.portals || !G.portals.length || G.state === 'end') return;
     if ([N.me.id, ...N.runIds].every(id => N.cont.has(id))) N.hostContinue();
   }
+  N.sendEnd = (win, victory) => send('*', { t: 'end', win: !!win, quit: false, victory: victory ? 1 : 0 });
   N.hostContinue = () => {
+    if (G.portals && G.portals.some(q => q.kind === 'final')) { N.cont.clear(); send('*', { t: 'cont', final: 1 }); startFinalBoss(); return; }
     const idx = pickMap(G.mapIdx);
     N.cont.clear(); send('*', { t: 'cont', map: idx }); continueRun(idx);
   };
@@ -437,7 +439,7 @@ var NET = (() => {
       const [id, x, y, hp, mhp, r, sh, phase, sk, intro, ch, drain, anim, spd, atkT, mechT, blimpSkull, das, enr] = w.bo;
       let b = G.boss;
       if (!b || b.def.id !== id || (b.dead && !b.localDead)) {
-        const def = BOSSES.find(d => d.id === id);
+        const def = bossDef(id);
         b = G.boss = { isBoss: true, net: true, nid: -1, def, x, y, r, hp, maxhp: mhp, spd, dead: false, hitT: 0, slowT: 0, frozenT: 0, stunT: 0, burnT: 0, burnD: 0, atkT, phase, wob: 0, kx: 0, ky: 0, shield: false,
           skulls: [0.75, 0.5, 0.25].slice(3 - sk), blimpSkull, dashAtSpawn: G.dashesUsed || 0, pend: [] };
         G.bossIntro = intro; play(BOSS_SFX[id][0], { vol: 1 }); shake(0.6); PROG.seen('x', id);
@@ -490,6 +492,7 @@ var NET = (() => {
       if (h.kind === 'slime') { if (Math.hypot(p.x - h.x, p.y - h.y) < h.r) p.slowT = 0.3; }
       else if (h.kind === 'magma') { h.tick = (h.tick || 0) - dt; if (h.tick <= 0 && Math.hypot(p.x - h.x, p.y - h.y) < h.r + p.r * 0.5) { h.tick = 0.5; hurtPlayer(8 * G.chaos.dmg); } }
       else if (h.kind === 'cyclone') cyclonePull(p, h, dt);
+      else if (VOID_HZ.has(h.kind)) voidHazHit(p, h);
       else if (h.kind === 'bossSlam' && h.t >= h.life && !h.done) { h.done = true; G.effects.push({ kind: 'boom', x: h.x, y: h.y, r: h.r, t: 0, life: 0.4, color: '#ff3030', net: true, enemy: true }); if (Math.hypot(p.x - h.x, p.y - h.y) < h.r + p.r * 0.5) hurtPlayer(h.dmg); }
     }
     for (const q of G.pickups) if (q.net && q.tx !== undefined) { q.x += (q.tx - q.x) * k; q.y += (q.ty - q.y) * k; q.t += dt; if (q.kind === 'chest') q.afford = q.free || G.gold >= chestCost(); }
@@ -572,7 +575,7 @@ var NET = (() => {
   }
   function onBossKill(m) {
     if (!G) return;
-    const def = BOSSES.find(d => d.id === m.id); if (!def) return;
+    const def = bossDef(m.id); if (!def) return;
     G.bossKills++;
     META.bossKill({ def, x: m.x, y: m.y, dashAtSpawn: G.boss && G.boss.dashAtSpawn !== undefined ? G.boss.dashAtSpawn : G.dashesUsed });
     if (G.boss) G.boss.dead = true;

@@ -11,6 +11,7 @@ const R3 = (() => {
   const texReady = new Map();
 
   // ------------------------------------------------------------ utils
+  const TAU_R = Math.PI * 2;
   function w(x, y, h = 0) { return tmpV.set(nav.x0 + x, Y0 + h, y - nav.z1); }
   function toWorld(x, y, h = 0, out = new THREE.Vector3()) { return out.set(nav.x0 + x, Y0 + h, y - nav.z1); }
   function loadImage(uri) {
@@ -273,7 +274,7 @@ const R3 = (() => {
   // ------------------------------------------------------------ animated rigs (heroes, towers, blimps, bosses)
   const RIGS = {}, rigInfo = {}, rigClips = {};
   const EYEPUSH = {};
-  const RIGYAW = { w_heli_4: Math.PI / 2 };   // IFR heli is authored facing sideways
+  const RIGYAW = { w_heli_4: Math.PI / 2, x_reaver: Math.PI };   // IFR heli is authored facing sideways; the Neon Reaver (glTF) faces +Z, BTD rigs face -Z   // IFR heli is authored facing sideways
   // parts to leave off: Brickell skins come sitting in their ship, Red Sauda's shelf blades don't line up with her hands
   const RIGHIDE = {
     s_DreadPirateBrickell: /^(BodyLVL10|FlagPoleLV1|MineDispenser.*|FlagLVL1|PoleLVL1|.*Ship.*)$/i,
@@ -291,6 +292,7 @@ const R3 = (() => {
       const map = m.tex ? await makeTex(P.tex[m.tex]) : null;
       const c = m.color || [1, 1, 1, 1];
       P.mats[mk] = new THREE.MeshLambertMaterial({ map, color: new THREE.Color(c[0], c[1], c[2]), alphaTest: map && P.tex[m.tex].startsWith('data:image/png') ? 0.4 : 0 });
+      if (m.glow) { P.mats[mk].emissiveMap = await makeTex(P.tex[m.glow]); P.mats[mk].emissive = new THREE.Color(1, 1, 1); P.mats[mk].emissiveIntensity = 1.6; }   // neon parts that light up (Neon Reaver)
     }
     const buf = P.buf;
     P.meta.meshes.forEach((m, i) => {
@@ -443,6 +445,12 @@ const R3 = (() => {
         return true;
       },
       busy() { return busyT > 0; },
+      // swap the looping clip (idle <-> walk <-> channel); a one-shot attack that is playing finishes first
+      setBase(tag) {
+        const a = actions[tag]; if (!a || a === idle) return;
+        const prev = idle; idle = a; a.setLoop(THREE.LoopRepeat, Infinity);
+        if (cur === prev) { a.reset(); a.setEffectiveWeight(1); a.play(); a.crossFadeFrom(prev, 0.25, false); cur = a; }
+      },
       update(dt) {
         mixer.update(dt);
         if (busyT > 0) { busyT -= dt; if (busyT <= 0.12 && cur !== idle) { idle.reset(); idle.setEffectiveWeight(1); idle.play(); idle.crossFadeFrom(cur, 0.15, false); cur = idle; } }
@@ -540,7 +548,7 @@ const R3 = (() => {
     if (color && p.mesh.instanceColor !== undefined) p.mesh.setColorAt(p.n, color);
     p.n++;
   }
-  const ENEMY_HZ = /^(slime|magma|bossSlam|chargeLine|cyclone)$/;
+  const ENEMY_HZ = /^(slime|magma|bossSlam|chargeLine|cyclone|vlaser|vrays|vzone|vblast)$/;
   const IDQ = new THREE.Quaternion();
   const FLATQ = new THREE.Quaternion().setFromEuler(new THREE.Euler(-Math.PI / 2, 0, 0));
   let bloonMats = {};
@@ -566,6 +574,9 @@ const R3 = (() => {
     const glow = new THREE.PlaneGeometry(1, 1);
     const glowTex = radialTexture();
     const gp = instPool('glow', glow, new THREE.MeshBasicMaterial({ map: glowTex, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, toneMapped: false }), 3000);
+    // dark (normally blended) soft sprites: the Neon Reaver's shadow flames
+    const sf = instPool('shadowFlame', glow, new THREE.MeshBasicMaterial({ map: glowTex, transparent: true, opacity: 0.92, depthWrite: false, toneMapped: false }), 700);
+    sf.mesh.setColorAt(0, new THREE.Color(0, 0, 0)); sf.mesh.renderOrder = 2;
     gp.mesh.setColorAt(0, new THREE.Color());
     const gfl = instPool('glowFlat', glow, new THREE.MeshBasicMaterial({ map: glowTex, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, toneMapped: false }), 600);
     gfl.mesh.setColorAt(0, new THREE.Color());
@@ -579,7 +590,7 @@ const R3 = (() => {
     const disc = new THREE.CircleGeometry(1, 40);
     const dp = instPool('disc', disc, new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.35, depthWrite: false, toneMapped: false }), 300);
     dp.mesh.setColorAt(0, new THREE.Color());
-    const da = instPool('discAdd', disc, new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, toneMapped: false }), 300);
+    const da = instPool('discAdd', disc, new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, toneMapped: false }), 1200);
     da.mesh.setColorAt(0, new THREE.Color());
     // projectiles
     const dart = new THREE.ConeGeometry(0.07, 0.75, 6); dart.rotateX(Math.PI / 2);
@@ -790,7 +801,9 @@ const R3 = (() => {
     for (const [b, m] of big) if (!seen.has(b)) { scene.remove(m); big.delete(b); }
 
     // bloon spawn portals: same look as the Continue portal, purple with small cyan sparks (the middle MOAB/boss one is bigger)
+    const finalOpen = G.finalFight || (G.portals && G.portals.some(q => q.kind === 'final'));
     for (const sp of G.spawnPortals || []) {
+      if (finalOpen && sp.kind === 'moab') continue;   // the final boss portal takes the middle spot
       const k = sp.kind === 'moab' ? 1.45 : 1, t = sp.t || 0, c = tmpC2.setRGB(0.68, 0.28, 1);
       push('discAdd', w(sp.x, sp.y, 0.06), FLATQ, tmpS.set(1.6 * k, 1.6 * k, 1), tmpC.copy(c).multiplyScalar(0.45 + 0.08 * Math.sin(t * 3)));
       push('ring', w(sp.x, sp.y, 0.08), FLATQ, tmpS.set(1.7 * k, 1.7 * k, 1), c);
@@ -802,7 +815,7 @@ const R3 = (() => {
     }
     // Soulstone-style portals after a boss kill
     if (G.portals) for (const pt of G.portals) {
-      const c = pt.kind === 'continue' ? tmpC2.setRGB(0.3, 0.75, 1) : tmpC2.setRGB(1, 0.35, 0.25), gk = Math.min(1, pt.t * 2);
+      const c = pt.kind === 'final' ? tmpC2.setRGB(0.42, 0.12, 0.85) : pt.kind === 'continue' ? tmpC2.setRGB(0.3, 0.75, 1) : tmpC2.setRGB(1, 0.35, 0.25), gk = Math.min(1, pt.t * 2) * (pt.kind === 'final' ? 1.25 : 1);
       push('discAdd', w(pt.x, pt.y, 0.06), FLATQ, tmpS.set(1.6 * gk, 1.6 * gk, 1), tmpC.copy(c).multiplyScalar(0.45));
       push('ring', w(pt.x, pt.y, 0.08), FLATQ, tmpS.set(1.7 * gk, 1.7 * gk, 1), c);
       push('glow', w(pt.x, pt.y, 1.6), camQ, tmpS.set(2.6 * gk, 3.8 * gk, 1), tmpC.copy(c).multiplyScalar(0.9));
@@ -933,6 +946,31 @@ const R3 = (() => {
       } else if (h.kind === 'cyclone') {   // Vortex's enraged pull: spinning rings closing in
         for (let i = 0; i < 3; i++) { const f = 1 - ((h.t * 0.9 + i / 3) % 1); push('ring', w(h.x, h.y, 0.09 + i * 0.01), FLATQ, tmpS.set(h.r * f, h.r * f, 1), tmpC.setRGB(0.35, 0.8, 1).multiplyScalar(0.4 + 0.6 * (1 - f))); }
         for (let i = 0; i < 8; i++) { const a = -h.t * 4 + i * 0.785, rr = h.r * (0.25 + 0.7 * ((i * 0.37 + h.t) % 1)); push('glow', w(h.x + Math.cos(a) * rr, h.y + Math.sin(a) * rr, 0.5 + (i % 3) * 0.5), camQ, tmpS.setScalar(0.6), tmpC.setRGB(0.5, 0.9, 1)); }
+      } else if (h.kind === 'vlaser') {   // Eye Laser: thin aiming line while it charges, then a thick cyan beam (1.03 s on)
+        const on = h.t >= 1.03, n = Math.ceil(h.len / (on ? 0.7 : 1.4)), fl = 0.85 + 0.15 * Math.sin(h.t * 60);
+        for (let i = 1; i <= n; i++) { const d = h.len * i / n, x = h.x + Math.cos(h.a) * d, y = h.y + Math.sin(h.a) * d;
+          if (on) { push('glow', w(x, y, 1.6), camQ, tmpS.setScalar(h.w * 1.7 * fl), tmpC.setRGB(0.25, 0.95, 1)); push('glow', w(x, y, 1.6), camQ, tmpS.setScalar(h.w * 0.6), tmpC.setRGB(0.9, 1, 1)); push('discAdd', w(x, y, 0.07), FLATQ, tmpS.set(h.w * 0.6, h.w * 0.6, 1), tmpC.setRGB(0.15, 0.5, 0.6)); }
+          else push('discAdd', w(x, y, 0.07), FLATQ, tmpS.set(h.w * 0.22, h.w * 0.22, 1), tmpC.setRGB(0.35 + 0.4 * k, 0.08, 0.5 + 0.4 * k)); }
+        push('glow', w(h.x, h.y, 2.4), camQ, tmpS.setScalar(on ? 3.2 : 1 + 2 * h.t), on ? tmpC.setRGB(0.4, 1, 1) : tmpC.setRGB(0.7, 0.3, 1));
+      } else if (h.kind === 'vrays') {   // Rotating Rays: four beams sweeping around the boss (faint while they warn)
+        const on = h.t >= 1.2;
+        for (let r = 0; r < 4; r++) { const a = h.a + r * Math.PI / 2, n = Math.ceil(h.len / 0.8);
+          for (let i = 0; i <= n; i++) { const d = h.r + (h.len - h.r) * i / n, x = h.x + Math.cos(a) * d, y = h.y + Math.sin(a) * d;
+            if (on) { push('glow', w(x, y, 1.2), camQ, tmpS.setScalar(h.w * 1.6), tmpC.setRGB(0.55, 0.25, 1)); push('discAdd', w(x, y, 0.07), FLATQ, tmpS.set(h.w * 0.55, h.w * 0.55, 1), tmpC.setRGB(0.3, 0.12, 0.5)); }
+            else if (i % 2 === 0) push('discAdd', w(x, y, 0.07), FLATQ, tmpS.set(h.w * 0.3, h.w * 0.3, 1), tmpC.setRGB(0.3, 0.1, 0.45).multiplyScalar(0.5 + 0.5 * Math.sin(h.t * 12))); } }
+      } else if (h.kind === 'vzone') {   // Void Zone: a quadrant of the arena (dim while it warns, bright while it burns)
+        if (h.t < 0) continue;
+        const on = h.t >= 0.8, R = h.len, st = 2.4;
+        if (!h._pts) { h._pts = []; for (let r = 2.6; r < R; r += st) { const n = Math.max(2, Math.round((Math.PI / 2) * r / st)); for (let i = 0; i <= n; i++) { const a = h.a + (Math.PI / 2) * i / n; h._pts.push([h.x + Math.cos(a) * r, h.y + Math.sin(a) * r]); } } }
+        const fade = Math.min(1, (h.life - h.t) * 3), pul = on ? 0.75 + 0.25 * Math.sin(h.t * 7) : 0.35 + 0.25 * Math.sin(h.t * 16);
+        for (const [x, y] of h._pts) push('discAdd', w(x, y, 0.07), FLATQ, tmpS.set(st * 0.75, st * 0.75, 1), tmpC.setRGB(0.26, 0.05, 0.45).multiplyScalar(pul * fade * (on ? 0.8 : 0.45)));
+        if (on && Math.random() < 0.5) { const q = h._pts[(Math.random() * h._pts.length) | 0]; push('glow', w(q[0], q[1], 0.6 + Math.random()), camQ, tmpS.setScalar(0.8), tmpC.setRGB(0.6, 0.3, 1)); }
+      } else if (h.kind === 'vblast') {   // Arena Blast: the whole arena glows and a ring closes in on the safe circle around the boss
+        const kk = Math.min(1, h.t / h.life), rr = h.len - (h.len - h.r) * kk, pul = 0.5 + 0.5 * Math.sin(h.t * (6 + kk * 18));
+        push('ring', w(h.x, h.y, 0.1), FLATQ, tmpS.set(rr, rr, 1), tmpC.setRGB(0.75, 0.3, 1));
+        push('ring', w(h.x, h.y, 0.11), FLATQ, tmpS.set(h.r, h.r, 1), tmpC.setRGB(0.3, 1, 1).multiplyScalar(0.6 + 0.4 * pul));
+        push('discAdd', w(h.x, h.y, 0.06), FLATQ, tmpS.set(h.r, h.r, 1), tmpC.setRGB(0.05, 0.35, 0.4).multiplyScalar(0.6 + 0.4 * pul));
+        for (let i = 0; i < 24; i++) { const a = i * TAU_R / 24 + h.t * 0.6, x = h.x + Math.cos(a) * rr, y = h.y + Math.sin(a) * rr; push('glow', w(x, y, 0.8), camQ, tmpS.setScalar(1.4), tmpC.setRGB(0.6, 0.25, 1).multiplyScalar(0.5 + 0.5 * kk)); }
       } else if (h.kind === 'chargeLine') {
         const steps = 12;
         for (let i = 0; i <= steps; i++) { const d = h.len * i / steps; push('discAdd', w(h.x + Math.cos(h.a) * d, h.y + Math.sin(h.a) * d, 0.07), FLATQ, tmpS.set(h.w / 2, h.w / 2, 1), tmpC.setRGB(0.25 + 0.3 * k, 0.03, 0.03)); }
@@ -985,22 +1023,62 @@ const R3 = (() => {
     renderer.render(scene, camera);
     tick();
   }
+  // the Neon Reaver burns with shadowy black flames: dark wisps rise off its spine, head, shoulders and arms (they follow its animation)
+  const FLAME_BONES = ['Bone_007', 'Bone_005', 'Bone_004', 'Bone_003', 'Bone_002', 'Bone_019', 'Bone_018', 'Bone_023', 'Bone_022', 'Bone_021', 'Bone_027', 'Bone_026', 'Bone_025', 'Bone_012', 'Bone_017', 'Bone_011', 'Bone_016'];
+  const _fv = new THREE.Vector3(), _fd = new THREE.Color();
+  function shadowFlames(m, b) {
+    let em = m.userData.flameBones;
+    if (!em) {
+      const r = RIGS['x_reaver'] && RIGS['x_reaver'].r, ids = r ? FLAME_BONES.map(n => r.nodes.findIndex(q => q.n === n)).filter(i => i >= 0) : [];
+      em = m.userData.flameBones = []; m.traverse(o => { const k = /^n(\d+)$/.exec(o.name); if (k && ids.includes(+k[1])) em.push(o); });
+    }
+    m.updateMatrixWorld(true);
+    const cx = m.position.x, cz = m.position.z;   // flames lean outward from the body so they show against the floor
+    const dim0 = DIM; DIM = false;   // part of the boss: always shown, whatever the Skill Effects slider says
+    const t = performance.now() / 1000, sc = (m.userData.baseScale || 1) * 0.42, hurt = b.hitT > 0 ? 0.04 : 0;   // sc: about a quarter of the model's own units, in world size
+    em.forEach((o, e) => {
+      o.getWorldPosition(_fv);
+      const bx = _fv.x, by = _fv.y, bz = _fv.z, big = e >= 13 ? 0.6 : 1;   // legs burn less
+      // faint violet underglow so the black fire reads against dark floors
+      tmpS.setScalar(sc * big * 1.6); push('glow', tmpV.set(bx, by + sc * 0.4, bz), camera.quaternion, tmpS, tmpC.setRGB(0.05, 0.01, 0.1));
+      const NP = 6;
+      for (let i = 0; i < NP; i++) {
+        const seed = e * 7.13 + i * 3.71, ph = (t * (0.8 + (seed % 0.5)) + i / NP + e * 0.37) % 1;
+        const jx = Math.sin(seed * 12.9) * 0.18 * sc, jz = Math.cos(seed * 7.7) * 0.18 * sc, sway = Math.sin(t * 3 + seed) * 0.12 * sc * ph;
+        const s = sc * big * (0.75 + 0.35 * Math.sin(seed)) * (1 - ph * 0.7) * (ph < 0.12 ? ph / 0.12 : 1);
+        let ox = bx - cx, oz = bz - cz; const ol = Math.hypot(ox, oz) || 1; ox /= ol; oz /= ol;
+        tmpV.set(bx + jx + sway + ox * ph * 2.2 * sc, by + ph * 2.6 * sc, bz + jz + oz * ph * 2.2 * sc);
+        _fd.setRGB(0.03 + hurt + 0.05 * ph, 0.0 + hurt, 0.06 + hurt + 0.08 * ph);
+        tmpS.set(s * 0.7, s * 1.5, 1); push('shadowFlame', tmpV, camera.quaternion, tmpS, _fd);
+        if (ph > 0.5 && i % 2 === 0) { tmpS.setScalar(s * 0.5); push('glow', tmpV, camera.quaternion, tmpS, tmpC.setRGB(0.3, 0.07, 0.55).multiplyScalar(1.2 - ph)); }   // faint purple tips
+      }
+    });
+    DIM = dim0;
+  }
   function drawBig(b, G, dt) {
+    if (b.def.final && !hasRig('x_reaver')) { loadSkin('x_reaver'); return; }   // joined mid-fight: wait for the Neon Reaver model
     const { key, len } = bigModelFor(b);
     let m = big.get(b);
     if (!m || m.userData.key !== key) {
       if (m) scene.remove(m);
-      const rk = b.isBoss ? 'b_' + key : key;
-      m = rig(rk, len, 'len') || model(key, len, 'len') || model('moab', len, 'len');
+      const rk = b.def.final ? key : b.isBoss ? 'b_' + key : key;
+      m = (b.def.final ? rig(rk, b.r * 2.4, 'height') : rig(rk, len, 'len')) || model(key, len, 'len') || model('moab', len, 'len');
       if (!m) return;
       m.userData.key = key; big.set(b, m); scene.add(m);
       m.traverse(o => { if (o.material) { o.material = o.material.clone(); } });
       if (m.userData.rig && b.isBoss && !b.placed) { b.placed = true; m.userData.rig.play('place'); }
     }
     const rg = m.userData.rig;
+    if (rg && b.def.final && rg.setBase) {   // Neon Reaver: walks while it moves, idles (or channels) while it stands
+      const mv = m.userData.lx !== undefined && dt > 0 ? Math.hypot(b.x - m.userData.lx, b.y - m.userData.ly) / dt : 0;
+      m.userData.mv = (m.userData.mv || 0) * 0.85 + mv * 0.15;
+      rg.setBase(b.base || (m.userData.mv > 0.4 ? 'walk' : 'idle'));
+      m.userData.lx = b.x; m.userData.ly = b.y;
+    }
     if (rg) { if (b.anim) { rg.play(b.anim); b.anim = null; } rg.update(dt); }
-    const hover = b.isBoss ? 0.4 : 0.8;
-    m.position.copy(w(b.x, b.y, hover + Math.sin(b.wob) * 0.12));
+    if (b.def.final) shadowFlames(m, b);
+    const hover = b.def.final ? 0 : b.isBoss ? 0.4 : 0.8;
+    m.position.copy(w(b.x, b.y, hover + (b.def.final ? 0 : Math.sin(b.wob) * 0.12)));
     const a = Math.atan2(G.player.y - b.y, G.player.x - b.x);
     const want = faceAngle(a);
     let d = want - m.rotation.y; d = Math.atan2(Math.sin(d), Math.cos(d));

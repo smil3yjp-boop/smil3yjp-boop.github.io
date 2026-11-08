@@ -4,6 +4,11 @@ v0.3.5 | Nov 6, 2026
 - Levelling up during a run now takes twice as much XP
 - Ascension now stops at rank 15
 - Enraged bosses now only glow purple on the boss itself (removed the purple circle on the ground)
+- NEW FINAL BOSS: after you beat the 3rd boss, only one portal opens in the middle of the arena: the Final Boss portal (in co-op everyone has to be ready)
+- The Void King: a new animated final boss that walks the arena burning with black shadow flames, with idle, walk, claw swipe, casting, laser, channel, arena blast and roar animations
+- The Void King fights with its attacks from Soulstone Survivors: Void Bolts, Meteor Area, Eye Laser (it charges, then fires a tracking beam), and a claw swipe up close
+- Each skull it loses sends a wave of bloons and unlocks a new Void King attack: 75% Rotating Rays, 50% Void Zones (the arena's quadrants light up in sequence), 25% Arena Blast (stay close to the boss or get hit)
+- Beating the Void King ends the run with VICTORY and a big Monkey Money bonus that grows with Chaos rank
 - The hero screen now shows each hero's ability: its icon, name, cooldown, button and what it does
 
 v0.3.4 | Nov 5, 2026
