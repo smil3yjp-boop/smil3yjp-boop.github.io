@@ -443,6 +443,7 @@ var NET = (() => {
         b = G.boss = { isBoss: true, net: true, nid: -1, def, x, y, r, hp, maxhp: mhp, spd, dead: false, hitT: 0, slowT: 0, frozenT: 0, stunT: 0, burnT: 0, burnD: 0, atkT, phase, wob: 0, kx: 0, ky: 0, shield: false,
           skulls: [0.75, 0.5, 0.25].slice(3 - sk), blimpSkull, dashAtSpawn: G.dashesUsed || 0, pend: [] };
         G.bossIntro = intro; play(BOSS_SFX[id][0], { vol: 1 }); shake(0.6); PROG.seen('x', id);
+        if (def.final && !G.finalFight) { G.finalFight = true; G.finalHit = false; G.finalId = id; R3.loadSkin(def.model); if (id === 'john') R3.loadSkin('x_banimals'); }   // a final boss started mid-loop (after a victory)
       }
       b.tx = x; b.ty = y; b.r = r; b.maxhp = mhp; b.hp = Math.max(1, hp - pendSum(b, now)); b.dead = false; b.localDead = false;   // only the host ends a boss b.shieldT = sh ? 0.2 : 0; b.phase = phase; b.spd = spd; b.atkT = atkT; b.mechT = mechT;
       while (b.skulls.length > sk) b.skulls.shift();

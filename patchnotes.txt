@@ -1,5 +1,5 @@
 v0.3.5 | Nov 6, 2026
-- All bloons and bosses now have double health
+- All bloons now have double health, and bosses have 1.5x health
 - Removed the Banana Diet (health regen) card
 - Levelling up during a run now takes twice as much XP
 - Ascension now stops at rank 15
@@ -20,7 +20,7 @@ v0.3.5 | Nov 6, 2026
 - Each skull the Hindenburg loses drops crates of bloons and unlocks a new attack: 75% Flak Spiral, 50% the hull catches fire (burning debris rains down and it leaves fire behind it), 25% Hydrogen Blast (it dives onto you with a huge explosion and a shockwave)
 - After you beat a final boss, two portals open: FIGHT MORE BOSSES (keep the run going) or LEAVE RUN (end it with your victory)
 - Co-op: everyone in the run shares the final boss victory; taking the Leave Run portal only takes you out, the others keep playing
-- If you keep going, the final portal opens again every 3rd boss
+- If you keep going after beating a final boss, every boss from then on is a final boss (never the same one twice in a row)
 - Codex: the Void King, John and the Hindenburg are now in the Bosses tab, and the balloon dog and balloon giraffe are in the Bloons tab
 - 10 new achievements: Void Breaker, Tough Crowd, Grounded (beat each final boss), Final Answer (beat all three), Encore! (2 final bosses in one run), Chaos Conqueror (beat a final boss on Chaos IV+), Flawless Finale (beat a final boss without getting hit), Boss Marathon (6 bosses in one run), Point of No Return (reach loop 7), Party Popper (pop 50 balloon animals)
 - Ascending now costs 20,000 Monkey Money (you still need every Knowledge upgrade maxed)

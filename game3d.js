@@ -1442,7 +1442,7 @@ function useAbility() {
 // ---------------------------------------------------------------- bloons
 // a boss can never heal back past a skull it has already broken (75% / 50% / 25%)
 function bossHealCap(b) { return b.maxhp * [1, 0.75, 0.5, 0.25][Math.min(3, 3 - ((b.skulls && b.skulls.length) ?? 3))]; }
-const BLOON_HP_MULT = 2, BOSS_HP_MULT = 2;   // base health of every bloon / boss
+const BLOON_HP_MULT = 2, BOSS_HP_MULT = 1.5;   // base health of every bloon / boss
 function hpScale(def) { return BLOON_HP_MULT * G.chaos.hp * (1 + G.t / 240) * (def.moab ? 1 + G.t / 400 : 1) * Math.pow(1.6, G.loop) * (1 + 0.5 * ((G.coopN || 1) - 1)); }
 // co-op: a random living player (bloons spawn around everyone)
 function anyPlayer() { const all = [G.player].concat(NET.on ? NET.alivePeers() : []).filter(q => !q.down); return all.length ? pick(all) : G.player; }
@@ -1603,7 +1603,10 @@ function checkMilestones() {
     const e = setProps(spawnBloon(eliteTypes[G.elitesSpawned]), { fort: G.t + G.loop * 400 > 500 && Math.random() < 0.5 });
     if (e) { G.elitesSpawned++; toast(`ELITE: ${e.type.toUpperCase()} incoming!`, '#ff6a6a'); voice(e.type === 'moab' ? 'MoabWarning' : e.type === 'bfb' ? 'BfbWarning' : 'DdtWarning'); e.pickupChest = true; }
   }
-  if (!(G.boss && !G.boss.dead) && prog >= 1) spawnBoss();
+  if (!(G.boss && !G.boss.dead) && prog >= 1) {
+    if (G.victory) { if (!G.finalStarting) { G.finalStarting = true; startFinalBoss().finally(() => { if (G) G.finalStarting = false; }); } }   // after a final boss: only final bosses from now on
+    else spawnBoss();
+  }
 }
 
 
@@ -1800,7 +1803,7 @@ const VZONE_WARN = 0.8, RAY_WARN = 1.2, LASER_ON = 1.03;
 function arenaCenter() { const m = (G.spawnPortals || []).find(q => q.kind === 'moab'); return m ? [m.x, m.y] : G.arena.def.spawn; }
 function arenaRadius() { const c = arenaCenter(); let r = 8; for (const sp of G.spawnPortals || []) if (sp.kind !== 'moab') r = Math.max(r, Math.hypot(sp.x - c[0], sp.y - c[1]) + 3); return r; }
 async function startFinalBoss(id) {
-  const def = bossDef(id) || (NET.guest ? FINAL_BOSS : pick(FINAL_BOSSES));   // the host picks; guests are told which
+  const def = bossDef(id) || (NET.guest ? FINAL_BOSS : pick(FINAL_BOSSES.filter(d => d.id !== G.finalId)));   // the host picks (not the one just fought); guests are told which
   G.portals = null; G.finalFight = true; G.finalHit = false; G.finalId = def.id; G.state = 'loading';
   play('BossPhayzeWarp', { vol: 0.9 });
   show('loading', true); document.querySelector('#loading .lvtitle').textContent = FINAL_INTRO[def.id][0];
