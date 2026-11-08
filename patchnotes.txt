@@ -8,13 +8,25 @@ v0.3.5 | Nov 6, 2026
 - The Void King: a new animated final boss that walks the arena burning with black shadow flames, with idle, walk, claw swipe, casting, laser, channel, arena blast and roar animations
 - The Void King fights with its attacks from Soulstone Survivors: Void Bolts, Meteor Area, Eye Laser (it charges, then fires a tracking beam), and a claw swipe up close
 - Each skull it loses sends a wave of bloons and unlocks a new Void King attack: 75% Rotating Rays, 50% Void Zones (the arena's quadrants light up in sequence), 25% Arena Blast (stay close to the boss or get hit)
-- Beating the final boss ends the run with VICTORY and a big Monkey Money bonus that grows with Chaos rank
-- NEW FINAL BOSS: JOHN, the Balloon Twister. The final portal now brings either the Void King or John
+- Beating a final boss wins the run: VICTORY and a big Monkey Money bonus that grows with Chaos rank (and with every final boss you beat in the run)
+- NEW FINAL BOSS: JOHN, the Balloon Twister
 - John is a fully animated clown (waddle, honk punch, throw, balloon twisting, jump-stomp, juggling and a belly laugh)
 - John twists balloon animals that chase you: balloon dogs and balloon giraffes in green, red, blue, yellow, pink and purple, and they pop in a burst of their colour
 - John fights with Soulstone's Sasquach moves: Frostbolts (icy balloons that slow you), Glacier Areas (icy circles that slow you and bite every 2 seconds) and ShockWaves (rings that roll out across the arena, dash through them)
 - Each skull John loses sends a big wave of balloon animals and unlocks a new move: 75% Rotating Orbs (six balloons whirl around him), 50% Glacier Areas, 25% candy-striped Rotating Rays and triple ShockWaves
 - The hero screen now shows each hero's ability: its icon, name, cooldown, button and what it does
+- NEW FINAL BOSS: THE HINDENBURG, a giant airship with spinning propellers that flies over the arena. The final portal now brings the Void King, John or the Hindenburg
+- The Hindenburg attacks with Bomb Runs (it lines up on you, then flies through dropping bombs on both sides), Gondola Gunners (rapid volleys from its gondolas), Cargo Drops (crates that burst into bloons) and Propeller Gale (a cone of wind that pushes you back)
+- Each skull the Hindenburg loses drops crates of bloons and unlocks a new attack: 75% Flak Spiral, 50% the hull catches fire (burning debris rains down and it leaves fire behind it), 25% Hydrogen Blast (it dives onto you with a huge explosion and a shockwave)
+- After you beat a final boss, two portals open: FIGHT MORE BOSSES (keep the run going) or LEAVE RUN (end it with your victory)
+- Co-op: everyone in the run shares the final boss victory; taking the Leave Run portal only takes you out, the others keep playing
+- If you keep going, the final portal opens again every 3rd boss
+- Codex: the Void King, John and the Hindenburg are now in the Bosses tab, and the balloon dog and balloon giraffe are in the Bloons tab
+- 10 new achievements: Void Breaker, Tough Crowd, Grounded (beat each final boss), Final Answer (beat all three), Encore! (2 final bosses in one run), Chaos Conqueror (beat a final boss on Chaos IV+), Flawless Finale (beat a final boss without getting hit), Boss Marathon (6 bosses in one run), Point of No Return (reach loop 7), Party Popper (pop 50 balloon animals)
+- Ascending now costs 20,000 Monkey Money (you still need every Knowledge upgrade maxed)
+- Banana Farm and Monkey Village now face the camera so you see their fronts (doors, signs, the bank's $) instead of their backs
+- Mermonkey and Desperado upgrade paths now show their real names (like Abyss Dweller, Popseidon, Big Iron, Golden Justice) instead of "0-3-0"-style labels, and Mermonkey path cards show their upgrade icons
+- Credit: "LZ-129 Hindenburg" 3D model by Maritime History Buff (sketchfab.com/maritimehistorybuff), licensed CC BY 4.0, simplified and animated for the game, with the fin insignia removed
 
 v0.3.4 | Nov 5, 2026
 - Lych heals half as much when it absorbs its bloons

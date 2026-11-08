@@ -509,6 +509,16 @@ const ACH = [
   { id: 'mvp', name: 'Most Valuable Monkey', desc: 'Be the MVP of a co-op run', mm: 300 },
   { id: 'ascend', name: 'Ascended', desc: 'Ascend your Monkey Knowledge', mm: 1000 },
   { id: 'hero10', name: 'Master of One', desc: 'Get a hero to level 10', mm: 600 },
+  { id: 'finalvk', name: 'Void Breaker', desc: 'Defeat the Void King', mm: 500 },
+  { id: 'finaljohn', name: 'Tough Crowd', desc: 'Defeat John the balloon twister', mm: 500 },
+  { id: 'finalzep', name: 'Grounded', desc: 'Bring down the Hindenburg', mm: 500 },
+  { id: 'finalall', name: 'Final Answer', desc: 'Defeat all three final bosses (any runs)', mm: 1500 },
+  { id: 'final2', name: 'Encore!', desc: 'Defeat 2 final bosses in one run', mm: 1000 },
+  { id: 'finalchaos', name: 'Chaos Conqueror', desc: 'Defeat a final boss on Chaos IV or higher', mm: 1000 },
+  { id: 'flawless', name: 'Flawless Finale', desc: 'Defeat a final boss without taking a hit in the fight', mm: 1200 },
+  { id: 'boss6', name: 'Boss Marathon', desc: 'Defeat 6 bosses in one run', mm: 800 },
+  { id: 'loop7', name: 'Point of No Return', desc: 'Reach loop 7 in a run', mm: 800 },
+  { id: 'animals50', name: 'Party Popper', desc: 'Pop 50 of John\'s balloon animals (all runs)', mm: 300 },
 ];
 
 // ================================================================ META facade used by game3d.js
@@ -531,6 +541,8 @@ const META = {
     if (G.goldEarned >= 5000) META.ach('cash5k');
     if (G.loop >= 1) META.ach('loop2');
     if (G.loop >= 3) META.ach('loop4');
+    if (G.loop >= 6) META.ach('loop7');
+    if (G.bossKills >= 6) META.ach('boss6');
     if (G.bossKills >= 3) META.ach('boss3');
     if (G.level >= 50) META.ach('lvl50');
     if (G.dmgDealt >= 1e7) META.ach('dmg10m');
@@ -546,6 +558,7 @@ const META = {
   pop(b) {
     comboPop();
     if (b.def.golden) META.ach('golden');
+    if (b.def.animal) { PROFILE.animals = (PROFILE.animals || 0) + 1; if (PROFILE.animals >= 50) META.ach('animals50'); }
     if (G.stats.lifePop) { G.lifeAcc = (G.lifeAcc || 0) + G.stats.lifePop; if (G.lifeAcc >= 1) { const h = Math.floor(G.lifeAcc); G.lifeAcc -= h; G.player.hp = Math.min(G.stats.maxhp, G.player.hp + h); rs('hero').heal += h; } }
     if (b.def.moab) {
       PROFILE.blimps = (PROFILE.blimps || 0) + 1; if (PROFILE.blimps >= 100) META.ach('blimps100');
@@ -569,6 +582,16 @@ const META = {
       setTimeout(() => { if (!G) return; toast(`HERO UNLOCKED: ${ch.name}!`, '#7fd8ff'); play('UIHeroUnlock', { vol: 0.8 }); if (UNLOCK_VO[nu]) setTimeout(() => play(UNLOCK_VO[nu], { vol: 1, bus: 'vo' }), 700); }, 2500);
       if (!nextUnlock()) META.ach('allheroes');
     }
+  },
+  // a final boss fell (host and guests): per-boss, all three, two in a run, high Chaos, no hits taken in the fight
+  finalWin(id) {
+    if (!G) return;
+    META.ach({ reaver: 'finalvk', john: 'finaljohn', zeppelin: 'finalzep' }[id]);
+    PROFILE.finals = Object.assign({}, PROFILE.finals, { [id]: 1 }); saveProfile();
+    if (['reaver', 'john', 'zeppelin'].every(k => PROFILE.finals[k])) META.ach('finalall');
+    if ((G.finalWins || 0) >= 2) META.ach('final2');
+    if (G.chaosIdx >= 3) META.ach('finalchaos');
+    if (!G.finalHit) META.ach('flawless');
   },
   dash() { if (G) G.dashesUsed = (G.dashesUsed || 0) + 1; },
   ability() { if (G) { G.abilUses = (G.abilUses || 0) + 1; if (G.abilUses >= 20) META.ach('abil20'); } },

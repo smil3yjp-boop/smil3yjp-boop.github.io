@@ -5,7 +5,7 @@
 var NET = (() => {
   const BT = Object.keys(BLOONS);                       // bloon type <-> index
   const PK = ['soul', 'heart', 'chest', 'relic', 'banana'];
-  const HZ = ['slime', 'magma', 'bossSlam', 'chargeLine', 'cyclone', 'vlaser', 'vrays', 'vzone', 'vblast', 'glacier', 'shock', 'orbit', 'crays'];
+  const HZ = ['slime', 'magma', 'bossSlam', 'chargeLine', 'cyclone', 'vlaser', 'vrays', 'vzone', 'vblast', 'glacier', 'shock', 'orbit', 'crays', 'gale'];
   const ENEMY_HZ = new Set(HZ);
   const PERSONAL_PK = new Set(['relic', 'banana']);
   const r2 = v => Math.round(v * 100) / 100, r1 = v => Math.round(v * 10) / 10;
@@ -581,6 +581,12 @@ var NET = (() => {
     if (G.boss) G.boss.dead = true;
     shake(1); play(BOSS_SFX[def.id][1], { vol: 1 });
     G.effects.push({ kind: 'expl', x: m.x, y: m.y, r: 4, t: 0, life: 0.9, net: true, enemy: true });
+    if (def.final) {   // a final boss fell: everyone in the run shares the victory (leave now with it, or fight on)
+      G.victory = true; G.finalFight = false; G.finalJustWon = true; G.finalWins = (G.finalWins || 0) + 1; META.finalWin(def.id);
+      G.netHaz = []; G.eproj.length = 0;
+      setTimeout(() => G && toast(`${def.name} IS DEFEATED — VICTORY!  Fight more bosses, or leave the run as the victor`, def.color), 500);
+      return;
+    }
     setTimeout(() => G && toast(`${def.name} DEFEATED!  Stand in a portal and ${pressWord().toLowerCase()} ${btnName('interact')}`, '#ffe39a'), 600);
   }
 

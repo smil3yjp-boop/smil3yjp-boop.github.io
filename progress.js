@@ -24,6 +24,7 @@ var PROG = (() => {
 
   // ------------------------------------------------------------------ Ascension
   const ASC_MAX = 15;   // highest Ascension rank
+  const ASC_COST = 20000;   // Monkey Money to Ascend (on top of maxing every Knowledge upgrade)
   const pres = () => Math.min(ASC_MAX, PROFILE.prestige || 0);
   const PRES = { dmg: 0.04, xp: 0.04, mm: 0.1 };
   const knowMaxed = () => KNOWLEDGE.every(k => kLv(k.id) >= k.costs.length);
@@ -84,14 +85,14 @@ var PROG = (() => {
   let ascArm = false;
   function renderAscend() {
     const box = $('kasc'); if (!box) return;
-    const n = pres(), maxed = n >= ASC_MAX, ready = knowMaxed() && !maxed;
-    box.innerHTML = `<div class="kat"><b>ASCENSION ${'★'.repeat(n) || '—'}</b><span>${n ? `Rank ${n}/${ASC_MAX}: +${Math.round(n * PRES.dmg * 100)}% damage · +${Math.round(n * PRES.xp * 100)}% XP gain · +${Math.round(n * PRES.mm * 100)}% Monkey Money (permanent)` : 'Max out every Knowledge upgrade to Ascend'}</span></div>` +
-      `<button class="btn small" id="ascbtn" ${ready ? '' : 'disabled'}>${maxed ? 'MAX ASCENSION REACHED' : ascArm ? 'CLICK AGAIN TO RESET KNOWLEDGE' : `ASCEND → +${Math.round(PRES.dmg * 100)}% dmg · +${Math.round(PRES.xp * 100)}% xp · +${Math.round(PRES.mm * 100)}% MM`}</button>`;
+    const n = pres(), maxed = n >= ASC_MAX, rich = PROFILE.mm >= ASC_COST, ready = knowMaxed() && !maxed && rich;
+    box.innerHTML = `<div class="kat"><b>ASCENSION ${'★'.repeat(n) || '—'}</b><span>${n ? `Rank ${n}/${ASC_MAX}: +${Math.round(n * PRES.dmg * 100)}% damage · +${Math.round(n * PRES.xp * 100)}% XP gain · +${Math.round(n * PRES.mm * 100)}% Monkey Money (permanent)` : 'Max out every Knowledge upgrade to Ascend'}${maxed ? '' : ` · costs ${ASC_COST.toLocaleString()} Monkey Money`}</span></div>` +
+      `<button class="btn small" id="ascbtn" ${ready ? '' : 'disabled'}>${maxed ? 'MAX ASCENSION REACHED' : !rich && knowMaxed() ? `NEED ${ASC_COST.toLocaleString()} MONKEY MONEY` : ascArm ? `CLICK AGAIN: PAY ${ASC_COST.toLocaleString()} MM + RESET KNOWLEDGE` : `ASCEND (${ASC_COST.toLocaleString()} MM) → +${Math.round(PRES.dmg * 100)}% dmg · +${Math.round(PRES.xp * 100)}% xp · +${Math.round(PRES.mm * 100)}% MM`}</button>`;
     const b = $('ascbtn');
     b.onclick = () => {
-      if (!knowMaxed() || pres() >= ASC_MAX) return;
+      if (!knowMaxed() || pres() >= ASC_MAX || PROFILE.mm < ASC_COST) return;
       if (!ascArm) { ascArm = true; renderAscend(); setTimeout(() => { ascArm = false; renderAscend(); }, 4000); return; }
-      ascArm = false; PROFILE.prestige = n + 1; PROFILE.know = {}; saveProfile();
+      ascArm = false; PROFILE.mm -= ASC_COST; PROFILE.prestige = n + 1; PROFILE.know = {}; saveProfile();
       play('UpgradeParagonDartMonkey', { vol: 0.9 }); META.ach('ascend');
       renderKnowledge(); buildMenu();
     };
@@ -99,16 +100,19 @@ var PROG = (() => {
 
   // ------------------------------------------------------------------ Codex page
   const BOSS_MECH = { bloonarius: 'Spews slime bloons and sticky slime puddles that slow you.', lych: 'Drains your buffs and heals; Mini-Lychs feed it while alive.', vortex: 'Gales of wind-boosted bloons and storms that stun your towers.',
-    dreadbloon: 'Armoured Rock Bloons protect it.', phayze: 'Blinds you and sends phasing bloons through reality.', blastapopoulos: 'Molten rock bloons leave pools of magma behind.' };
+    dreadbloon: 'Armoured Rock Bloons protect it.', phayze: 'Blinds you and sends phasing bloons through reality.', blastapopoulos: 'Molten rock bloons leave pools of magma behind.',
+    reaver: 'Final boss. Void Bolts, Meteors and an Eye Laser; its skulls add Rotating Rays, Void Zones and an Arena Blast (stand right next to it).',
+    john: 'Final boss. Twists balloon animals, throws Frostbolt balloons and stomps ShockWaves; his skulls add Rotating Orbs, Glacier Areas and candy-striped Rotating Rays.',
+    zeppelin: 'Final boss. Bomb Runs, Gondola Gunners, Cargo Drops full of bloons and a Propeller Gale; its skulls add a Flak Spiral, a hull fire and the Hydrogen Blast dive.' };
   let ctab = 'b';
   function codexEntries(cat) {
     const c = (PROFILE.codex || {})[cat] || {};
-    if (cat === 'b') return Object.entries(BLOONS).map(([k, d]) => ({ id: k, got: !!c[k], name: k === 'lychmini' ? 'Mini-Lych' : k.toUpperCase(), spr: d.spr,
+    if (cat === 'b') return Object.entries(BLOONS).map(([k, d]) => ({ id: k, got: !!c[k], name: k === 'lychmini' ? 'Mini-Lych' : d.label || k.toUpperCase(), spr: d.spr, png: d.png,
       rows: [['Health', d.hp.toLocaleString()], ['Speed', d.sm ? `${Math.round(d.sm * 100)}% of yours` : (d.spd || '—')], ['Contact damage', d.dmg], ['XP', d.xp], ['Layers', d.kids.length ? d.kids.map(q => q[0]).join(', ') : d.moab ? 'blimp' : 'last layer']] }));
     if (cat === 't') return Object.entries(SKILLS).map(([k, d]) => ({ id: k, got: !!c[k], name: d.name, sprs: d.icon, desc: d.desc,
       rows: [['Damage', d.dmg], ['Cooldown', d.cd + 's'], ['Tags', (d.tags || []).map(t => TAGNAME[t] || t).join(', ')], ...(PATHS[k] ? [['Paths', PATHS[k].map(p => p[2]).join(' · ')]] : [])] }));
     if (cat === 'r') return RELICS.concat(Object.values(ESSENCE)).map(r => ({ id: r.id, got: !!c[r.id], name: r.name, png: `assets/ui/relic/${r.icon}.png`, desc: r.desc, rows: r.set ? [['Set', RELIC_SETS[r.set].name]] : [['Type', 'Boss essence']] }));
-    return BOSSES.map(b => ({ id: b.id, got: !!c[b.id], name: b.name, png: `assets/ui/${BOSS_PORTRAIT[b.id]}.png`, desc: `${b.title}. ${BOSS_MECH[b.id] || ''}`, rows: [['Base health', b.hp.toLocaleString()], ['Speed', b.spd]] }));
+    return BOSSES.concat(FINAL_BOSSES).map(b => ({ id: b.id, got: !!c[b.id], name: b.name, png: `assets/ui/${BOSS_PORTRAIT[b.id]}.png`, desc: `${b.title}. ${BOSS_MECH[b.id] || ''}`, rows: [['Base health', b.hp.toLocaleString()], ['Speed', b.spd], ...(b.final ? [['Appears', 'Final portal (every 3rd boss)']] : [])] }));
   }
   function renderCodex() {
     const tabs = { b: 'Bloons', t: 'Towers', r: 'Relics', x: 'Bosses' };

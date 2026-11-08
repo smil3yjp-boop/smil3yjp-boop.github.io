@@ -156,8 +156,8 @@ const BLOONS = {
   rock:    { spr: 'DreadRockBloonStandard', ds: 'DreadRockBloonStandardDS', hp: 360, spd: 2.6, r: 0.8, dmg: 18, xp: 8, color: '#c08030', kids: [], resist: { proj: 0.7 }, frostImmune: true },
   magma:   { spr: 'DreadRockBloonElite', ds: 'DreadRockBloonEliteDS', hp: 300, spd: 3.0, r: 0.8, dmg: 20, xp: 8, color: '#ff6a30', kids: [], resist: { fire: 0.2 }, magma: true },
   lychmini:{ spr: 'MoabIcon', rig: 'b_lychmini', hp: 700, spd: 2.3, r: 1.3, dmg: 22, xp: 40, color: '#7a2fd0', kids: [], moab: true },
-  bdog:    { spr: 'MoabIcon', rig: 'x_bdog', hp: 900, spd: 3.0, r: 1.1, dmg: 20, xp: 20, color: '#2fbf6a', kids: [], moab: true, animal: true },      // John's balloon animals
-  bgiraffe:{ spr: 'MoabIcon', rig: 'x_bgiraffe', hp: 1300, spd: 2.4, r: 1.3, dmg: 24, xp: 26, color: '#f6d030', kids: [], moab: true, animal: true },
+  bdog:    { spr: 'MoabIcon', png: 'assets/ui/BalloonDog.png', label: 'BALLOON DOG', rig: 'x_bdog', hp: 900, spd: 3.0, r: 1.1, dmg: 20, xp: 20, color: '#2fbf6a', kids: [], moab: true, animal: true },      // John's balloon animals
+  bgiraffe:{ spr: 'MoabIcon', png: 'assets/ui/BalloonGiraffe.png', label: 'BALLOON GIRAFFE', rig: 'x_bgiraffe', hp: 1300, spd: 2.4, r: 1.3, dmg: 24, xp: 26, color: '#f6d030', kids: [], moab: true, animal: true },
   zomg:    { spr: 'ZomgIcon',    hp: 9000, spd: 1.1, r: 2.6,  dmg: 60, xp: 200, color: '#2c2',   kids: [['bfb', 2]], moab: true, elite: true },
 };
 // bloon speed as a fraction of the hero's base run speed (red is half as fast as you, pink slightly faster)
@@ -169,13 +169,18 @@ const BLOON_ORDER = ['red', 'blue', 'green', 'yellow', 'pink', 'black', 'white',
 const UNLOCK_T = { red: 0, blue: 15, green: 40, yellow: 70, pink: 100, black: 135, white: 150, purple: 185, zebra: 210, lead: 235, rainbow: 270, ceramic: 320 };
 const COST = { red: 1, blue: 2, green: 3, yellow: 4, pink: 5, black: 11, white: 11, purple: 11, zebra: 23, lead: 23, rainbow: 47, ceramic: 104 };
 
-const BOSS_SFX = { reaver: ['BossLychSpawn', 'BossPhayzeDeath'], john: ['BossBloonariusSpawn', 'BossBloonariusDeath'], bloonarius: ['BossBloonariusSpawn', 'BossBloonariusDeath'], lych: ['BossLychSpawn', 'BossLychDeath'], vortex: ['VortexSpawn', 'VortexDeath'], dreadbloon: ['BossDreadBloonArmourBreak', 'BossDreadBloonDeath'], phayze: ['BossPhayzeSpawn', 'BossPhayzeDeath'], blastapopoulos: ['BossBlastapopoulosSpawn', 'BossBlastapopoulosDeath'] };
+const BOSS_SFX = { reaver: ['BossLychSpawn', 'BossPhayzeDeath'], john: ['BossBloonariusSpawn', 'BossBloonariusDeath'], zeppelin: ['BossBlastapopoulosSpawn', 'BossDreadBloonDeath'], bloonarius: ['BossBloonariusSpawn', 'BossBloonariusDeath'], lych: ['BossLychSpawn', 'BossLychDeath'], vortex: ['VortexSpawn', 'VortexDeath'], dreadbloon: ['BossDreadBloonArmourBreak', 'BossDreadBloonDeath'], phayze: ['BossPhayzeSpawn', 'BossPhayzeDeath'], blastapopoulos: ['BossBlastapopoulosSpawn', 'BossBlastapopoulosDeath'] };
 // the run's last fight: opens as a single portal after the 3rd boss; its attacks are Soulstone's Void King set
 const FINAL_BOSS = { id: 'reaver', name: 'VOID KING', title: 'Ruler of the Void', model: 'x_reaver', final: true, hp: 42000, r: 3.2, spd: 2.1, color: '#36f0ff', ability: 'void' };
 // John the clown: twists balloon animals and fights with Soulstone's Sasquach moves (Frostbolts, Glacier Areas, ShockWaves, Rotating Rays) plus its Rotating Orbs
 const JOHN_BOSS = { id: 'john', name: 'JOHN', title: 'The Balloon Twister', model: 'x_john', final: true, hp: 40000, r: 3.0, spd: 2.3, color: '#ff4a6a', ability: 'circus' };
-const FINAL_BOSSES = [FINAL_BOSS, JOHN_BOSS];
-const FINAL_AFTER_LOOP = 2;   // the 3rd boss (loops 0, 1, 2) opens the final portal
+// the Hindenburg: a burning airship - Bomb Runs, Gondola Gunners, Cargo Drops, Propeller Gale; Flak Spiral, a hull fire and a Hydrogen Blast dive as its skulls break
+const ZEP_BOSS = { id: 'zeppelin', name: 'THE HINDENBURG', title: 'Titan of the Skies', model: 'x_zeppelin', final: true, air: true, hp: 44000, r: 3.6, spd: 2.0, color: '#ff9a3c', ability: 'airship' };
+const FINAL_BOSSES = [FINAL_BOSS, JOHN_BOSS, ZEP_BOSS];
+const FINAL_INTRO = { reaver: ['The Void King awakens…', '☠ The VOID KING attacks with Void Bolts, Meteors and its Eye Laser'], john: ['Something is honking in the dark…', '🎈 JOHN twists balloon animals and throws Frostbolt balloons — watch for his Glacier Areas and ShockWaves!'], zeppelin: ['Engines drone overhead…', '🔥 THE HINDENBURG: dodge its Bomb Runs, Gondola Gunners, Cargo Drops and Propeller Gale!'] };
+const FINAL_AI = () => ({ reaver: reaverAI, john: johnAI, zeppelin: zepAI });
+const FINAL_AFTER_LOOP = 2;   // the 3rd boss (loops 0, 1, 2) opens the final portal, then every 3rd boss after that
+const isFinalLoop = () => G.loop >= FINAL_AFTER_LOOP && (G.loop - FINAL_AFTER_LOOP) % 3 === 0;
 function bossDef(id) { return FINAL_BOSSES.find(d => d.id === id) || BOSSES.find(d => d.id === id); }
 const BOSSES = [
   { id: 'bloonarius', name: 'BLOONARIUS', title: 'The Inflator', model: 'bloonarius', hp: 30000, r: 3.4, spd: 1.2, color: '#4bd34b', ability: 'spawn' },
@@ -277,8 +282,8 @@ function heroCards() {
 // Each skill: tags, icon sprite, base cooldown, cast(sk) + level descriptions (lv2..lv7)
 const MAXLV = 7;
 // tower paths (choose at levels 3 and 5): display names per path [Top, Middle, Bottom] x tiers [3,4,5], plus their BTD6 upgrade icons
-const PATHS = {"dart": [["Spike-o-pult", "Juggernaut", "Ultra-Juggernaut"], ["Triple Shot", "Super Monkey Fan Club", "Plasma Monkey Fan Club"], ["Crossbow", "Sharp Shooter", "Crossbow Master"]], "boomer": [["Glaive Ricochet", "M.O.A.R. Glaives", "Glaive Lord"], ["Bionic Boomerang", "Turbo Charge", "Perma Charge"], ["Kylie Boomerang", "MOAB Press", "MOAB Domination"]], "bomb": [["Really Big Bombs", "Bloon Impact", "Bloon Crush"], ["Cluster Bombs", "Recursive Cluster", "Bomb Blitz"], ["MOAB Mauler", "MOAB Assassin", "MOAB Eliminator"]], "tack": [["Hot Shots", "Ring of Fire", "Inferno Ring"], ["Blade Shooter", "Blade Maelstrom", "Super Maelstrom"], ["Tack Sprayer", "Overdrive", "The Tack Zone"]], "frost": [["Ice Shards", "Embrittlement", "Super Brittle"], ["Arctic Wind", "Snowstorm", "Absolute Zero"], ["Cryo Cannon", "Icicles", "Icicle Impale"]], "glue": [["Bloon Dissolver", "Bloon Liquefier", "The Bloon Solver"], ["Glue Splatter", "Glue Hose", "Glue Storm"], ["MOAB Glue", "Relentless Glue", "Super Glue"]], "sniper": [["Deadly Precision", "Maim MOAB", "Cripple MOAB"], ["Bouncing Bullet", "Supply Drop", "Elite Sniper"], ["Semi-Automatic", "Full Auto Rifle", "Elite Defender"]], "shuriken": [["Double Shot", "Bloonjitsu", "Grandmaster Ninja"], ["Shinobi Tactics", "Bloon Sabotage", "Grand Saboteur"], ["Flash Bomb", "Sticky Bomb", "Master Bomber"]], "fire": [["Arcane Mastery", "Arcane Spike", "Archmage"], ["Dragon's Breath", "Summon Phoenix", "Wizard Lord Phoenix"], ["Shimmer", "Necromancer", "Prince of Darkness"]], "lightning": [["Druid of the Storm", "Ball Lightning", "Superstorm"], ["Druid of the Jungle", "Jungle's Bounty", "Spirit of the Forest"], ["Druid of Wrath", "Poplust", "Avatar of Wrath"]], "spike": [["Spiked Balls", "Spiked Mines", "Super Mines"], ["MOAB SHREDR", "Spike Storm", "Carpet of Spikes"], ["Long Life Spikes", "Deadly Spikes", "Perma-Spike"]], "mortar": [["Shell Shock", "The Big One", "The Biggest One"], ["Heavy Shells", "Artillery Battery", "Pop and Awe"], ["Signal Flare", "Shattering Shells", "Blooncineration"]], "heli": [["Razor Rotors", "Apache Dartship", "Apache Prime"], ["Downdraft", "Support Chinook", "Special Poperations"], ["MOAB Shove", "Comanche Defense", "Comanche Commander"]], "sentry": [["Sprockets", "Sentry Expert", "Sentry Champion"], ["Cleansing Foam", "Overclock", "Ultraboost"], ["Double Gun", "Bloon Trap", "XXXL Trap"]], "plasma": [["Sun Avatar", "Sun Temple", "True Sun God"], ["Robo Monkey", "Tech Terror", "The Anti-Bloon"], ["Dark Knight", "Dark Champion", "Legend of the Night"]], "brew": [["Berserker Brew", "Stronger Stimulant", "Permanent Brew"], ["Unstable Concoction", "Transforming Tonic", "Total Transformation"], ["Lead to Gold", "Rubber to Gold", "Bloon Master Alchemist"]], "farm": [["Banana Plantation", "Banana Research Facility", "Banana Central"], ["Monkey Bank", "IMF Loan", "Monkey-Nomics"], ["Marketplace", "Central Market", "Monkey Wall Street"]], "sub": [["Submerge and Support", "Bloontonium Reactor", "Energizer"], ["Ballistic Missile", "First Strike Capability", "Pre-emptive Strike"], ["Triple Guns", "Armor Piercing Darts", "Sub Commander"]], "buccaneer": [["Destroyer", "Aircraft Carrier", "Carrier Flagship"], ["Cannon Ship", "Monkey Pirates", "Pirate Lord"], ["Merchantman", "Favored Trades", "Trade Empire"]], "ace": [["Fighter Plane", "Operation: Dart Storm", "Sky Shredder"], ["Bomber Ace", "Ground Zero", "Tsar Bomba"], ["Neva-Miss Targeting", "Spectre", "Flying Fortress"]], "dartling": [["Laser Cannon", "Plasma Accelerator", "Ray of Doom"], ["Hydra Rocket Pods", "Rocket Storm", "M.A.D"], ["Buckshot", "Bloon Area Denial System", "Bloon Exclusion Zone"]], "desperado": [["Desperado 3-0-0", "Desperado 4-0-0", "Desperado 5-0-0"], ["Desperado 0-3-0", "Desperado 0-4-0", "Desperado 0-5-0"], ["Desperado 0-0-3", "Desperado 0-0-4", "Desperado 0-0-5"]], "mermonkey": [["Mermonkey 3-0-0", "Mermonkey 4-0-0", "Mermonkey 5-0-0"], ["Mermonkey 0-3-0", "Mermonkey 0-4-0", "Mermonkey 0-5-0"], ["Mermonkey 0-0-3", "Mermonkey 0-0-4", "Mermonkey 0-0-5"]], "village": [["Primary Training", "Primary Mentoring", "Primary Expertise"], ["Monkey Intelligence Bureau", "Call to Arms", "Homeland Defense"], ["Monkey Town", "Monkey City", "Monkeyopolis"]]};
-const PATH_ICON = {"dart_T3": "Spike-o-pultUpgradeIcon", "dart_T4": "JuggernautUpgradeIcon", "dart_T5": "UltraJuggernautUpgradeIcon", "dart_M3": "TripleShotUpgradeIcon", "dart_M4": "SuperMonkeyFanClubUpgradeIcon", "dart_M5": "PlasmaMonkeyFanClubUpgradeIcon", "dart_B3": "CrossBowUpgradeIcon", "dart_B4": "SharpShooterUpgradeIcon", "dart_B5": "CrossBowMasterUpgradeIcon", "boomer_T3": "GlaiveRicochetUpgradeIcon", "boomer_T4": "MoarGlaivesUpgradeIcon", "boomer_T5": "GlaiveLordUpgradeIcon", "boomer_M3": "BionicBoomerangUpgradeIcon", "boomer_M4": "TurbochargeUpgradeIcon", "boomer_M5": "PermaChargeUpgradeIcon", "boomer_B3": "KylieBoomerangUpgradeIcon", "boomer_B4": "MoabPressUpgradeIcon", "boomer_B5": "MoabDominationUpgradeIcon", "bomb_T3": "ReallyBigBombsUpgradeIcon", "bomb_T4": "BloonImpactUpgradeIcon", "bomb_T5": "BloonCrushUpgradeIcon", "bomb_M3": "ClusterBombsUpgradeIcon", "bomb_M4": "RecursiveClusterUpgradeIcon", "bomb_M5": "BombBlitzUpgradeIcon", "bomb_B3": "MoabMaulerUpgradeIcon", "bomb_B4": "MoabAssassinUpgradeIcon", "bomb_B5": "MoabEliminatorUpgradeIcon", "tack_T3": "HotShotsUpgradeIcon", "tack_T4": "RingOfFireUpgradeIcon", "tack_T5": "InfernoRingUpgradeIcon", "tack_M3": "BladeShooterUpgradeIcon", "tack_M4": "BladeMaelstromUpgradeIcon", "tack_M5": "SuperMaelstromUpgradeIcon", "tack_B3": "TackSprayerUpgradeIcon", "tack_B4": "OverdriveUpgradeIcon", "tack_B5": "TheTackZoneUpgradeIcon", "frost_T3": "IceShardsUpgradeIcon", "frost_T4": "EmbrittlementUpgradeIcon", "frost_T5": "SuperBrittleUpgradeIcon", "frost_M3": "ArcticWindUpgradeIcon", "frost_M4": "SnowstormUpgradeIcon", "frost_M5": "AbsoluteZeroUpgradeIcon", "frost_B3": "CryoCannonUpgradeIcon", "frost_B4": "IciclesUpgradeIcon", "frost_B5": "IcicleImpaleUpgradeIcon", "glue_T3": "BloonDissolverUpgradeIcon", "glue_T4": "BloonLiquefierUpgradeIcon", "glue_T5": "TheBloonSolverUpgradeIcon", "glue_M3": "GlueSplatterUpgradeIcon", "glue_M4": "GlueHoseUpgradeIcon", "glue_M5": "GlueStormUpgradeIcon", "glue_B3": "MoabGlueUpgradeIcon", "glue_B4": "RelentlessGlueUpgradeIcon", "glue_B5": "SuperGlueUpgradeIcon", "sniper_T3": "DeadlyPrecisionUpgradeIcon", "sniper_T4": "MaimMoabUpgradeIcon", "sniper_T5": "CrippleMoabUpgradeIcon", "sniper_M3": "BouncingBulletUpgradeIcon", "sniper_M4": "CashDropUpgradeIcon", "sniper_M5": "EliteSniperUpgradeIcon", "sniper_B3": "SemiAutomaticUpgradeIcon", "sniper_B4": "FullAutoRifleUpgradeIcon", "sniper_B5": "EliteDefenderUpgradeIcon", "shuriken_T3": "DoubleShotUpgradeIcon", "shuriken_T4": "BloonjitsuUpgradeIcon", "shuriken_T5": "GrandmasterNinjaUpgradeIcon", "shuriken_M3": "ShinobiTacticsUpgradeIcon", "shuriken_M4": "BloonSabotageUpgradeIcon", "shuriken_M5": "GrandSaboteurUpgradeIcon", "shuriken_B3": "FlashBombUpgradeIcon", "shuriken_B4": "StickyBombUpgradeIcon", "shuriken_B5": "MasterBomberUpgradeIcon", "fire_T3": "ArcaneMasteryUpgradeIcon", "fire_T4": "ArcaneSpikeUpgradeIcon", "fire_T5": "ArchmageUpgradeIcon", "fire_M3": "DragonsBreathUpgradeIcon", "fire_M4": "SummonPhoenixUpgradeIcon", "fire_M5": "WizardLordPhoenixUpgradeIcon", "fire_B3": "ShimmerUpgradeIcon", "fire_B4": "SoulbindUpgradeIcon", "fire_B5": "SoulbindUpgradeIcon", "lightning_T3": "DruidoftheStormUpgradeIcon", "lightning_T4": "BallLightningUpgradeIcon", "lightning_T5": "SuperStormUpgradeIcon", "lightning_M3": "DruidoftheJungleUpgradeIcon", "lightning_M4": "JunglesBountyUpgradeIcon", "lightning_M5": "SpiritoftheForestUpgradeIcon", "lightning_B3": "DruidofWrathUpgradeIcon", "lightning_B4": "PoplustUpgradeIcon", "lightning_B5": "AvatarofWrathUpgradeIcon", "spike_T3": "SpikedBallsUpgradeIcon", "spike_T4": "SpikedMinesUpgradeIcon", "spike_T5": "SuperMinesUpgradeIcon", "spike_M3": "MOABSHREDRUpgradeIcon", "spike_M4": "SpikeStormUpgradeIcon", "spike_M5": "CarpetOfSpikesUpgradeIcon", "spike_B3": "LongLifeSpikesUpgradeIcon", "spike_B4": "DeadlySpikesUpgradeIcon", "spike_B5": "PermaSpikeUpgradeIcon", "mortar_T3": "ShellShockUpgradeIcon", "mortar_T4": "TheBIgOneUpgradeIcon", "mortar_T5": "TheBIggestOneUpgradeIcon", "mortar_M3": "HeavyShellsUpgradeIcon", "mortar_M4": "ArtilleryBatteryUpgradeIcon", "mortar_M5": "PopandAweUpgradeIcon", "mortar_B3": "SignalFlareUpgradeIcon", "mortar_B4": "ShatteringShellsUpgradeIcon", "mortar_B5": "BlooncinerationUpgradeIcon", "heli_T3": "RazorRotorsUpgradeIcon", "heli_T4": "ApacheDartshipUpgradeIcon", "heli_T5": "ApachePrimeUpgradeIcon", "heli_M3": "DowndraftUpgradeIcon", "heli_M4": "SupportChinookUpgradeIcon", "heli_M5": "SpecialPoperationsUpgradeIcon", "heli_B3": "MOABShoveUpgradeIcon", "heli_B4": "ComancheDefenseUpgradeIcon", "heli_B5": "ComancheCommanderUpgradeIcon", "sentry_T3": "SprocketsUpgradeIcon", "sentry_T4": "SentryExpertUpgradeIcon", "sentry_T5": "SentryParagonUpgradeIcon", "sentry_M3": "CleansingFoamUpgradeIcon", "sentry_M4": "OverclockUpgradeIcon", "sentry_M5": "UltraboostUpgradeIcon", "sentry_B3": "DoubleGunUpgradeIcon", "sentry_B4": "BloonTrapUpgradeIcon", "sentry_B5": "XXXLUpgradeIcon", "plasma_T3": "SunAvatarUpgradeIcon", "plasma_T4": "SunTempleUpgradeIcon", "plasma_T5": "TrueSonGodUpgradeIcon", "plasma_M3": "RoboMonkeyUpgradeIcon", "plasma_M4": "TechTerrorUpgradeIcon", "plasma_M5": "TheAntiBloonUpgradeIcon", "plasma_B3": "DarkKnightUpgradeIcon", "plasma_B4": "DarkChampionUpgradeIcon", "plasma_B5": "LegendOfTheNightUpgradeIcon", "brew_T3": "BerserkerBrewUpgradeIcon", "brew_T4": "StrongerStimulantUpgradeIcon", "brew_T5": "PermanentBrewUpgradeIcon", "brew_M3": "UnstableConcoctionUpgradeIcon", "brew_M4": "TransformingTonicUpgradeIcon", "brew_M5": "TotalTransformationUpgradeIcon", "brew_B3": "LeadtoGoldUpgradeIcon", "brew_B4": "RubbertoGoldUpgradeIcon", "brew_B5": "BloonMasterAlchemistUpgradeIcon", "farm_T3": "BananaPlantationUpgradeIcon", "farm_T4": "BananaResearchFacilityUpgradeIcon", "farm_T5": "BananaCentralUpgradeIcon", "farm_M3": "MonkeyBankUpgradeIcon", "farm_M4": "IMFLoanUpgradeIcon", "farm_M5": "MonkeyNomicsUpgradeIcon", "farm_B3": "MarketplaceUpgradeIcon", "farm_B4": "CentralMarketUpgradeIcon", "farm_B5": "MonkeyWallStreetUpgradeIcon", "sub_T3": "SubmergeandSupportUpgradeIcon", "sub_T4": "BloontoniumReactorUpgradeIcon", "sub_T5": "EnergizerUpgradeIcon", "sub_M3": "BallisticMissileUpgradeIcon", "sub_M4": "FirstStrikeCapabilityUpgradeIcon", "sub_M5": "PreEmptiveStrikeUpgradeIcon", "sub_B3": "TripleGunsUpgradeIcon", "sub_B4": "ArmorPiercingDartsUpgradeIcon", "sub_B5": "SubCommanderUpgradeIcon", "buccaneer_T3": "DestroyerUpgradeIcon", "buccaneer_T4": "AircraftCarrierUpgradeIcon", "buccaneer_T5": "CarrierFlagshipUpgradeIcon", "buccaneer_M3": "CannonShipUpgradeIcon", "buccaneer_M4": "MonkeyPiratesUpgradeIcon", "buccaneer_M5": "PirateLordUpgradeIcon", "buccaneer_B3": "MerchantmanUpgradeIcon", "buccaneer_B4": "FavoredTradesUpgradeIcon", "buccaneer_B5": "TradeEmpireUpgradeIcon", "ace_T3": "FighterPlaneUpgradeIcon", "ace_T4": "OperationDartStormUpgradeIcon", "ace_T5": "SkyShredderUpgradeIcon", "ace_M3": "BomberAceUpgradeIcon", "ace_M4": "GroundZeroUpgradeIcon", "ace_M5": "TsarBombaUpgradeIcon", "ace_B3": "NevaMissTargetingUpgradeIcon", "ace_B4": "SpecterUpgradeIcon", "ace_B5": "FlyingFortressUpgradeIcon", "dartling_T3": "LaserCannonUpgradeIcon", "dartling_T4": "PlasmaAcceleratorUpgradeIcon", "dartling_T5": "RayOfDoomUpgradeIcon", "dartling_M3": "HydraRocketsUpgradeIcon", "dartling_M4": "RocketStormUpgradeIcon", "dartling_M5": "MadUpgradeIcon", "dartling_B3": "BuckshotUpgradeIcon", "dartling_B4": "BloonAreaDenialSystemUpgradeIcon", "dartling_B5": "BloonExclusionZoneUpgradeIcon", "desperado_T3": "300UpgradeIcon", "desperado_T4": "400UpgradeIcon", "desperado_T5": "500UpgradeIcon", "desperado_M3": "030UpgradeIcon", "desperado_M4": "040UpgradeIcon", "desperado_M5": "050UpgradeIcon", "desperado_B3": "003UpgradeIcon", "desperado_B4": "004UpgradeIcon", "desperado_B5": "005UpgradeIcon", "village_T3": "PrimaryTrainingUpgradeIcon", "village_T4": "PrimaryMentoringUpgradeIcon", "village_T5": "PrimaryExpertiseUpgradeIcon", "village_M3": "MonkeyIntelligenceBureauUpgradeIcon", "village_M4": "CallToArmsUpgradeIcon", "village_M5": "HomelandDefenseUpgradeIcon", "village_B3": "MonkeyTownUpgradeIcon", "village_B4": "MonkeyCityUpgradeIcon", "village_B5": "MonkeyNomicsUpgradeIcon"};
+const PATHS = {"dart": [["Spike-o-pult", "Juggernaut", "Ultra-Juggernaut"], ["Triple Shot", "Super Monkey Fan Club", "Plasma Monkey Fan Club"], ["Crossbow", "Sharp Shooter", "Crossbow Master"]], "boomer": [["Glaive Ricochet", "M.O.A.R. Glaives", "Glaive Lord"], ["Bionic Boomerang", "Turbo Charge", "Perma Charge"], ["Kylie Boomerang", "MOAB Press", "MOAB Domination"]], "bomb": [["Really Big Bombs", "Bloon Impact", "Bloon Crush"], ["Cluster Bombs", "Recursive Cluster", "Bomb Blitz"], ["MOAB Mauler", "MOAB Assassin", "MOAB Eliminator"]], "tack": [["Hot Shots", "Ring of Fire", "Inferno Ring"], ["Blade Shooter", "Blade Maelstrom", "Super Maelstrom"], ["Tack Sprayer", "Overdrive", "The Tack Zone"]], "frost": [["Ice Shards", "Embrittlement", "Super Brittle"], ["Arctic Wind", "Snowstorm", "Absolute Zero"], ["Cryo Cannon", "Icicles", "Icicle Impale"]], "glue": [["Bloon Dissolver", "Bloon Liquefier", "The Bloon Solver"], ["Glue Splatter", "Glue Hose", "Glue Storm"], ["MOAB Glue", "Relentless Glue", "Super Glue"]], "sniper": [["Deadly Precision", "Maim MOAB", "Cripple MOAB"], ["Bouncing Bullet", "Supply Drop", "Elite Sniper"], ["Semi-Automatic", "Full Auto Rifle", "Elite Defender"]], "shuriken": [["Double Shot", "Bloonjitsu", "Grandmaster Ninja"], ["Shinobi Tactics", "Bloon Sabotage", "Grand Saboteur"], ["Flash Bomb", "Sticky Bomb", "Master Bomber"]], "fire": [["Arcane Mastery", "Arcane Spike", "Archmage"], ["Dragon's Breath", "Summon Phoenix", "Wizard Lord Phoenix"], ["Shimmer", "Necromancer", "Prince of Darkness"]], "lightning": [["Druid of the Storm", "Ball Lightning", "Superstorm"], ["Druid of the Jungle", "Jungle's Bounty", "Spirit of the Forest"], ["Druid of Wrath", "Poplust", "Avatar of Wrath"]], "spike": [["Spiked Balls", "Spiked Mines", "Super Mines"], ["MOAB SHREDR", "Spike Storm", "Carpet of Spikes"], ["Long Life Spikes", "Deadly Spikes", "Perma-Spike"]], "mortar": [["Shell Shock", "The Big One", "The Biggest One"], ["Heavy Shells", "Artillery Battery", "Pop and Awe"], ["Signal Flare", "Shattering Shells", "Blooncineration"]], "heli": [["Razor Rotors", "Apache Dartship", "Apache Prime"], ["Downdraft", "Support Chinook", "Special Poperations"], ["MOAB Shove", "Comanche Defense", "Comanche Commander"]], "sentry": [["Sprockets", "Sentry Expert", "Sentry Champion"], ["Cleansing Foam", "Overclock", "Ultraboost"], ["Double Gun", "Bloon Trap", "XXXL Trap"]], "plasma": [["Sun Avatar", "Sun Temple", "True Sun God"], ["Robo Monkey", "Tech Terror", "The Anti-Bloon"], ["Dark Knight", "Dark Champion", "Legend of the Night"]], "brew": [["Berserker Brew", "Stronger Stimulant", "Permanent Brew"], ["Unstable Concoction", "Transforming Tonic", "Total Transformation"], ["Lead to Gold", "Rubber to Gold", "Bloon Master Alchemist"]], "farm": [["Banana Plantation", "Banana Research Facility", "Banana Central"], ["Monkey Bank", "IMF Loan", "Monkey-Nomics"], ["Marketplace", "Central Market", "Monkey Wall Street"]], "sub": [["Submerge and Support", "Bloontonium Reactor", "Energizer"], ["Ballistic Missile", "First Strike Capability", "Pre-emptive Strike"], ["Triple Guns", "Armor Piercing Darts", "Sub Commander"]], "buccaneer": [["Destroyer", "Aircraft Carrier", "Carrier Flagship"], ["Cannon Ship", "Monkey Pirates", "Pirate Lord"], ["Merchantman", "Favored Trades", "Trade Empire"]], "ace": [["Fighter Plane", "Operation: Dart Storm", "Sky Shredder"], ["Bomber Ace", "Ground Zero", "Tsar Bomba"], ["Neva-Miss Targeting", "Spectre", "Flying Fortress"]], "dartling": [["Laser Cannon", "Plasma Accelerator", "Ray of Doom"], ["Hydra Rocket Pods", "Rocket Storm", "M.A.D"], ["Buckshot", "Bloon Area Denial System", "Bloon Exclusion Zone"]], "desperado": [["Big Iron", "Twin Sixes", "The Blazing Sun"], ["Deadeye", "Bounty Hunter", "Golden Justice"], ["Enforcer", "Avenger", "The Desert Phantom"]], "mermonkey": [["Abyss Dweller", "Abyssal Warrior", "Lord of the Abyss"], ["Riptide Champion", "Arctic Knight", "Popseidon"], ["Alluring Melody", "Symphonic Resonance", "The Final Harmonic"]], "village": [["Primary Training", "Primary Mentoring", "Primary Expertise"], ["Monkey Intelligence Bureau", "Call to Arms", "Homeland Defense"], ["Monkey Town", "Monkey City", "Monkeyopolis"]]};
+const PATH_ICON = {"dart_T3": "Spike-o-pultUpgradeIcon", "dart_T4": "JuggernautUpgradeIcon", "dart_T5": "UltraJuggernautUpgradeIcon", "dart_M3": "TripleShotUpgradeIcon", "dart_M4": "SuperMonkeyFanClubUpgradeIcon", "dart_M5": "PlasmaMonkeyFanClubUpgradeIcon", "dart_B3": "CrossBowUpgradeIcon", "dart_B4": "SharpShooterUpgradeIcon", "dart_B5": "CrossBowMasterUpgradeIcon", "boomer_T3": "GlaiveRicochetUpgradeIcon", "boomer_T4": "MoarGlaivesUpgradeIcon", "boomer_T5": "GlaiveLordUpgradeIcon", "boomer_M3": "BionicBoomerangUpgradeIcon", "boomer_M4": "TurbochargeUpgradeIcon", "boomer_M5": "PermaChargeUpgradeIcon", "boomer_B3": "KylieBoomerangUpgradeIcon", "boomer_B4": "MoabPressUpgradeIcon", "boomer_B5": "MoabDominationUpgradeIcon", "bomb_T3": "ReallyBigBombsUpgradeIcon", "bomb_T4": "BloonImpactUpgradeIcon", "bomb_T5": "BloonCrushUpgradeIcon", "bomb_M3": "ClusterBombsUpgradeIcon", "bomb_M4": "RecursiveClusterUpgradeIcon", "bomb_M5": "BombBlitzUpgradeIcon", "bomb_B3": "MoabMaulerUpgradeIcon", "bomb_B4": "MoabAssassinUpgradeIcon", "bomb_B5": "MoabEliminatorUpgradeIcon", "tack_T3": "HotShotsUpgradeIcon", "tack_T4": "RingOfFireUpgradeIcon", "tack_T5": "InfernoRingUpgradeIcon", "tack_M3": "BladeShooterUpgradeIcon", "tack_M4": "BladeMaelstromUpgradeIcon", "tack_M5": "SuperMaelstromUpgradeIcon", "tack_B3": "TackSprayerUpgradeIcon", "tack_B4": "OverdriveUpgradeIcon", "tack_B5": "TheTackZoneUpgradeIcon", "frost_T3": "IceShardsUpgradeIcon", "frost_T4": "EmbrittlementUpgradeIcon", "frost_T5": "SuperBrittleUpgradeIcon", "frost_M3": "ArcticWindUpgradeIcon", "frost_M4": "SnowstormUpgradeIcon", "frost_M5": "AbsoluteZeroUpgradeIcon", "frost_B3": "CryoCannonUpgradeIcon", "frost_B4": "IciclesUpgradeIcon", "frost_B5": "IcicleImpaleUpgradeIcon", "glue_T3": "BloonDissolverUpgradeIcon", "glue_T4": "BloonLiquefierUpgradeIcon", "glue_T5": "TheBloonSolverUpgradeIcon", "glue_M3": "GlueSplatterUpgradeIcon", "glue_M4": "GlueHoseUpgradeIcon", "glue_M5": "GlueStormUpgradeIcon", "glue_B3": "MoabGlueUpgradeIcon", "glue_B4": "RelentlessGlueUpgradeIcon", "glue_B5": "SuperGlueUpgradeIcon", "sniper_T3": "DeadlyPrecisionUpgradeIcon", "sniper_T4": "MaimMoabUpgradeIcon", "sniper_T5": "CrippleMoabUpgradeIcon", "sniper_M3": "BouncingBulletUpgradeIcon", "sniper_M4": "CashDropUpgradeIcon", "sniper_M5": "EliteSniperUpgradeIcon", "sniper_B3": "SemiAutomaticUpgradeIcon", "sniper_B4": "FullAutoRifleUpgradeIcon", "sniper_B5": "EliteDefenderUpgradeIcon", "shuriken_T3": "DoubleShotUpgradeIcon", "shuriken_T4": "BloonjitsuUpgradeIcon", "shuriken_T5": "GrandmasterNinjaUpgradeIcon", "shuriken_M3": "ShinobiTacticsUpgradeIcon", "shuriken_M4": "BloonSabotageUpgradeIcon", "shuriken_M5": "GrandSaboteurUpgradeIcon", "shuriken_B3": "FlashBombUpgradeIcon", "shuriken_B4": "StickyBombUpgradeIcon", "shuriken_B5": "MasterBomberUpgradeIcon", "fire_T3": "ArcaneMasteryUpgradeIcon", "fire_T4": "ArcaneSpikeUpgradeIcon", "fire_T5": "ArchmageUpgradeIcon", "fire_M3": "DragonsBreathUpgradeIcon", "fire_M4": "SummonPhoenixUpgradeIcon", "fire_M5": "WizardLordPhoenixUpgradeIcon", "fire_B3": "ShimmerUpgradeIcon", "fire_B4": "SoulbindUpgradeIcon", "fire_B5": "SoulbindUpgradeIcon", "lightning_T3": "DruidoftheStormUpgradeIcon", "lightning_T4": "BallLightningUpgradeIcon", "lightning_T5": "SuperStormUpgradeIcon", "lightning_M3": "DruidoftheJungleUpgradeIcon", "lightning_M4": "JunglesBountyUpgradeIcon", "lightning_M5": "SpiritoftheForestUpgradeIcon", "lightning_B3": "DruidofWrathUpgradeIcon", "lightning_B4": "PoplustUpgradeIcon", "lightning_B5": "AvatarofWrathUpgradeIcon", "spike_T3": "SpikedBallsUpgradeIcon", "spike_T4": "SpikedMinesUpgradeIcon", "spike_T5": "SuperMinesUpgradeIcon", "spike_M3": "MOABSHREDRUpgradeIcon", "spike_M4": "SpikeStormUpgradeIcon", "spike_M5": "CarpetOfSpikesUpgradeIcon", "spike_B3": "LongLifeSpikesUpgradeIcon", "spike_B4": "DeadlySpikesUpgradeIcon", "spike_B5": "PermaSpikeUpgradeIcon", "mortar_T3": "ShellShockUpgradeIcon", "mortar_T4": "TheBIgOneUpgradeIcon", "mortar_T5": "TheBIggestOneUpgradeIcon", "mortar_M3": "HeavyShellsUpgradeIcon", "mortar_M4": "ArtilleryBatteryUpgradeIcon", "mortar_M5": "PopandAweUpgradeIcon", "mortar_B3": "SignalFlareUpgradeIcon", "mortar_B4": "ShatteringShellsUpgradeIcon", "mortar_B5": "BlooncinerationUpgradeIcon", "heli_T3": "RazorRotorsUpgradeIcon", "heli_T4": "ApacheDartshipUpgradeIcon", "heli_T5": "ApachePrimeUpgradeIcon", "heli_M3": "DowndraftUpgradeIcon", "heli_M4": "SupportChinookUpgradeIcon", "heli_M5": "SpecialPoperationsUpgradeIcon", "heli_B3": "MOABShoveUpgradeIcon", "heli_B4": "ComancheDefenseUpgradeIcon", "heli_B5": "ComancheCommanderUpgradeIcon", "sentry_T3": "SprocketsUpgradeIcon", "sentry_T4": "SentryExpertUpgradeIcon", "sentry_T5": "SentryParagonUpgradeIcon", "sentry_M3": "CleansingFoamUpgradeIcon", "sentry_M4": "OverclockUpgradeIcon", "sentry_M5": "UltraboostUpgradeIcon", "sentry_B3": "DoubleGunUpgradeIcon", "sentry_B4": "BloonTrapUpgradeIcon", "sentry_B5": "XXXLUpgradeIcon", "plasma_T3": "SunAvatarUpgradeIcon", "plasma_T4": "SunTempleUpgradeIcon", "plasma_T5": "TrueSonGodUpgradeIcon", "plasma_M3": "RoboMonkeyUpgradeIcon", "plasma_M4": "TechTerrorUpgradeIcon", "plasma_M5": "TheAntiBloonUpgradeIcon", "plasma_B3": "DarkKnightUpgradeIcon", "plasma_B4": "DarkChampionUpgradeIcon", "plasma_B5": "LegendOfTheNightUpgradeIcon", "brew_T3": "BerserkerBrewUpgradeIcon", "brew_T4": "StrongerStimulantUpgradeIcon", "brew_T5": "PermanentBrewUpgradeIcon", "brew_M3": "UnstableConcoctionUpgradeIcon", "brew_M4": "TransformingTonicUpgradeIcon", "brew_M5": "TotalTransformationUpgradeIcon", "brew_B3": "LeadtoGoldUpgradeIcon", "brew_B4": "RubbertoGoldUpgradeIcon", "brew_B5": "BloonMasterAlchemistUpgradeIcon", "farm_T3": "BananaPlantationUpgradeIcon", "farm_T4": "BananaResearchFacilityUpgradeIcon", "farm_T5": "BananaCentralUpgradeIcon", "farm_M3": "MonkeyBankUpgradeIcon", "farm_M4": "IMFLoanUpgradeIcon", "farm_M5": "MonkeyNomicsUpgradeIcon", "farm_B3": "MarketplaceUpgradeIcon", "farm_B4": "CentralMarketUpgradeIcon", "farm_B5": "MonkeyWallStreetUpgradeIcon", "sub_T3": "SubmergeandSupportUpgradeIcon", "sub_T4": "BloontoniumReactorUpgradeIcon", "sub_T5": "EnergizerUpgradeIcon", "sub_M3": "BallisticMissileUpgradeIcon", "sub_M4": "FirstStrikeCapabilityUpgradeIcon", "sub_M5": "PreEmptiveStrikeUpgradeIcon", "sub_B3": "TripleGunsUpgradeIcon", "sub_B4": "ArmorPiercingDartsUpgradeIcon", "sub_B5": "SubCommanderUpgradeIcon", "buccaneer_T3": "DestroyerUpgradeIcon", "buccaneer_T4": "AircraftCarrierUpgradeIcon", "buccaneer_T5": "CarrierFlagshipUpgradeIcon", "buccaneer_M3": "CannonShipUpgradeIcon", "buccaneer_M4": "MonkeyPiratesUpgradeIcon", "buccaneer_M5": "PirateLordUpgradeIcon", "buccaneer_B3": "MerchantmanUpgradeIcon", "buccaneer_B4": "FavoredTradesUpgradeIcon", "buccaneer_B5": "TradeEmpireUpgradeIcon", "ace_T3": "FighterPlaneUpgradeIcon", "ace_T4": "OperationDartStormUpgradeIcon", "ace_T5": "SkyShredderUpgradeIcon", "ace_M3": "BomberAceUpgradeIcon", "ace_M4": "GroundZeroUpgradeIcon", "ace_M5": "TsarBombaUpgradeIcon", "ace_B3": "NevaMissTargetingUpgradeIcon", "ace_B4": "SpecterUpgradeIcon", "ace_B5": "FlyingFortressUpgradeIcon", "dartling_T3": "LaserCannonUpgradeIcon", "dartling_T4": "PlasmaAcceleratorUpgradeIcon", "dartling_T5": "RayOfDoomUpgradeIcon", "dartling_M3": "HydraRocketsUpgradeIcon", "dartling_M4": "RocketStormUpgradeIcon", "dartling_M5": "MadUpgradeIcon", "dartling_B3": "BuckshotUpgradeIcon", "dartling_B4": "BloonAreaDenialSystemUpgradeIcon", "dartling_B5": "BloonExclusionZoneUpgradeIcon", "village_T3": "PrimaryTrainingUpgradeIcon", "village_T4": "PrimaryMentoringUpgradeIcon", "village_T5": "PrimaryExpertiseUpgradeIcon", "village_M3": "MonkeyIntelligenceBureauUpgradeIcon", "village_M4": "CallToArmsUpgradeIcon", "village_M5": "HomelandDefenseUpgradeIcon", "village_B3": "MonkeyTownUpgradeIcon", "village_B4": "MonkeyCityUpgradeIcon", "village_B5": "MonkeyNomicsUpgradeIcon", "mermonkey_T3": "300UpgradeIcon", "mermonkey_T4": "400UpgradeIcon", "mermonkey_T5": "500UpgradeIcon", "mermonkey_M3": "030UpgradeIcon", "mermonkey_M4": "030UpgradeIcon", "mermonkey_M5": "050UpgradeIcon", "mermonkey_B3": "003UpgradeIcon", "mermonkey_B4": "004UpgradeIcon", "mermonkey_B5": "005UpgradeIcon", "desperado_M4": "040UpgradeIcon"};
 const PATH_NAME = { T: 'Top path', M: 'Middle path', B: 'Bottom path' };
 const PATH_BONUS = { T: '+25% damage', M: '+20% attack speed', B: '+1 pierce, +25% vs MOABs & bosses' };
 // support towers don't deal damage, so their paths give their own buffs; the level-7 upgrade is a capstone for the path picked at level 5
@@ -397,7 +402,7 @@ const SKILLS = {
     lv: ['Focused Firing: tighter spread', 'Faster Barrel Spin: +25% fire rate', 'Hydra Rocket Pods: rockets every 12 shots', 'Laser Shock: +40% damage', 'Buckshot: +2 bullets', 'Ray of Doom: a piercing death ray'],
     desc: 'Sprays a hail of darts toward your aim.' },
   mermonkey: { name: 'Mermonkey', icon: ['MermonkeyIcon'], tags: ['proj', 'frost'], cd: 1.2, dmg: 6,
-    lv: ['Sharper Prongs: +3 pierce', 'Echosense: +1 wave', 'Riptide Champion: +40% damage', 'Arctic Knight: waves slow bloons', 'Abyss Dweller: +30% wave size', 'Lord of the Abyss: waves freeze, x2 damage'],
+    lv: ['Sharper Prongs: +3 pierce', 'Echosense Network: +1 wave', 'Riptide Champion: +40% damage', 'Arctic Knight: waves slow bloons', 'Abyss Dweller: +30% wave size', 'Lord of the Abyss: waves freeze, x2 damage'],
     desc: 'Throws trident waves that slice through lines of bloons.' },
   village: { name: 'Monkey Village', icon: ['MonkeyVillageIcon'], tags: ['buff'], cd: 1, dmg: 0,
     lv: ['Bigger Radius: +5% damage', 'Jungle Drums: +10% attack speed', 'Radar Scanner: +1 pierce', 'Monkey Commerce: +25% gold', 'Grow Blocker: +10% damage', 'Tier 5: your path\'s capstone'],
@@ -739,7 +744,7 @@ async function continueRun(forceIdx) {
   G.summons = G.summons.filter(sm => sm.kind !== 'sentry');
   for (const sm of G.summons) { sm.x = P.x + rnd(-1, 1); sm.y = P.y + rnd(-1, 1); }
   R3.resetRun();
-  G.boss = null; G.loop++;
+  G.boss = null; G.loop++; G.finalJustWon = false;
   G.goalStart = G.pops; G.goal = G.pops + Math.round(G.chaos.goal * (1 + 0.4 * G.loop)); G.elitesSpawned = 0;
   G.spawnBudget = 0; G.chestT = 30; G.grace = 10;
   G.arena.computeFlow(P.x, P.y);
@@ -1789,16 +1794,17 @@ function enragedTick(b, dt) {
 // ================================================================ FINAL BOSS: the Void King (Soulstone's Void King attack set)
 // Void Bolts, Meteor Area, Eye Laser (beam 1.03-2.02s) from the start; each broken skull adds a wave of bloons and a new attack:
 // 75% Rotating Rays, 50% Void Zones (Soulstone's 12 s quadrant sequence), 25% Arena Blast (charge 3.43 s, safe only next to the boss)
-const VOID_HZ = new Set(['vlaser', 'vrays', 'vzone', 'vblast', 'glacier', 'shock', 'orbit', 'crays']);   // final-boss hazards (Void King + John)
+const VOID_HZ = new Set(['vlaser', 'vrays', 'vzone', 'vblast', 'glacier', 'shock', 'orbit', 'crays', 'gale']);   // final-boss hazards (Void King, John, Hindenburg)
 const VZONE_SEQ = [[0, 1, 6], [0, 9, 12], [1, 2, 5], [1, 7, 8], [1, 10, 12], [2, 3, 4], [2, 6, 9], [2, 11, 12], [3, 5, 10]];   // [zone, start, end] from Void-King-VoidZones-Sequence
 const VZONE_WARN = 0.8, RAY_WARN = 1.2, LASER_ON = 1.03;
 function arenaCenter() { const m = (G.spawnPortals || []).find(q => q.kind === 'moab'); return m ? [m.x, m.y] : G.arena.def.spawn; }
 function arenaRadius() { const c = arenaCenter(); let r = 8; for (const sp of G.spawnPortals || []) if (sp.kind !== 'moab') r = Math.max(r, Math.hypot(sp.x - c[0], sp.y - c[1]) + 3); return r; }
 async function startFinalBoss(id) {
   const def = bossDef(id) || (NET.guest ? FINAL_BOSS : pick(FINAL_BOSSES));   // the host picks; guests are told which
-  G.portals = null; G.finalFight = true; G.finalId = def.id; G.state = 'loading';
+  G.portals = null; G.finalFight = true; G.finalHit = false; G.finalId = def.id; G.state = 'loading';
   play('BossPhayzeWarp', { vol: 0.9 });
-  show('loading', true); document.querySelector('#loading .lvtitle').textContent = def.id === 'john' ? 'Something is honking in the dark…' : 'The Void King awakens…';
+  show('loading', true); document.querySelector('#loading .lvtitle').textContent = FINAL_INTRO[def.id][0];
+  PROG.seen('x', def.id);
   try { await R3.loadSkin(def.model); if (def.id === 'john') await R3.loadSkin('x_banimals'); } catch (e) { console.warn('final boss model', e); }
   show('loading', false);
   if (!G) return;
@@ -1816,7 +1822,7 @@ function spawnFinalBoss(def = FINAL_BOSS) {
     skulls: [0.75, 0.5, 0.25], blimpSkull: -1, dashAtSpawn: G.dashesUsed || 0, stage: 0, rooted: 3, anim: 'roar', seq: 0 };
   G.bossIntro = 3; PROG.seen('x', def.id);
   play(BOSS_SFX[def.id][0], { vol: 1 }); shake(0.9);
-  setTimeout(() => G && toast(def.id === 'john' ? '🎈 JOHN twists balloon animals and throws Frostbolt balloons — watch for his Glacier Areas and ShockWaves!' : '☠ The VOID KING attacks with Void Bolts, Meteors and its Eye Laser', def.color), 3100);
+  setTimeout(() => G && toast(FINAL_INTRO[def.id][1], def.color), 3100);
 }
 // a wave of bloons out of the four edge portals when a skull breaks
 function reaverWave(n) {
@@ -1905,7 +1911,8 @@ function reaverAI(b, dt) {
 // moving parts of the Void hazards (host only: the laser follows its target, the rays spin, both stay on the boss)
 function voidHazStep(h, dt) {
   const B = G.boss;
-  if (h.kind === 'vlaser' || h.kind === 'vrays' || h.kind === 'vblast' || h.kind === 'orbit' || h.kind === 'crays') { if (B && !B.dead) { h.x = B.x; h.y = B.y; } else h.life = 0; }
+  if (h.kind === 'vlaser' || h.kind === 'vrays' || h.kind === 'vblast' || h.kind === 'orbit' || h.kind === 'crays' || h.kind === 'gale') { if (B && !B.dead) { h.x = B.x; h.y = B.y; } else h.life = 0; }
+  if (h.kind === 'gale') { const q = nearestPlayer(h.x, h.y), want = Math.atan2(q.y - h.y, q.x - h.x); let da = Math.atan2(Math.sin(want - h.a), Math.cos(want - h.a)); h.a += Math.max(-h.track * dt, Math.min(h.track * dt, da)); }
   if (h.kind === 'orbit') h.a += (h.spin || 1.6) * dt;
   if (h.kind === 'vlaser' && h.t < 1.9) { const q = nearestPlayer(h.x, h.y), want = Math.atan2(q.y - h.y, q.x - h.x); let da = Math.atan2(Math.sin(want - h.a), Math.cos(want - h.a)); h.a += Math.max(-h.track * dt, Math.min(h.track * dt, da)) * (h.t < LASER_ON ? 3 : 1); }
   if ((h.kind === 'vrays' || h.kind === 'crays') && h.t > RAY_WARN) h.a += h.spin * dt;
@@ -1927,6 +1934,14 @@ function voidHazHit(p, h) {
   else if (h.kind === 'orbit') {   // Rotating Orbs: balloons circling John
     const rad = h.len * Math.min(1, h.t / 0.6);
     for (let k = 0; k < 6; k++) { const a = h.a + k * TAU / 6; if (Math.hypot(p.x - (h.x + Math.cos(a) * rad), p.y - (h.y + Math.sin(a) * rad)) < h.w + p.r) { hurtPlayer(h.dmg); break; } }
+  }
+  else if (h.kind === 'gale') {   // Propeller Gale: a widening cone of wind shoves you away from the airship and stings every 0.6 s
+    if (h.t < 0.5) return;
+    const dx = p.x - h.x, dy = p.y - h.y, ca = Math.cos(h.a), sa = Math.sin(h.a), along = dx * ca + dy * sa, side = Math.abs(-dx * sa + dy * ca);
+    if (along > 0 && along < h.len && side < (h.w / 2) * (0.25 + 0.75 * along / h.len) + p.r) {
+      const dtp = h.dtp || 0.016, f = 7 * dtp; moveCircle(p, ca * f, sa * f);
+      p.galeT = (p.galeT || 0) - dtp; if (p.galeT <= 0) { p.galeT = 0.6; hurtPlayer(h.dmg); }
+    }
   }
   else if (h.kind === 'vblast') {
     if (h.t >= h.life && !h.done) {
@@ -2023,22 +2038,164 @@ function johnAI(b, dt) {
     b.atkT = 12.8 * fast;
   }
 }
-// the Void King is down: the run is won
+// ================================================================ FINAL BOSS: the Hindenburg (airship)
+// Bomb Runs, Gondola Gunners, Cargo Drops (crates of bloons), Propeller Gale; skulls: 75% Flak Spiral,
+// 50% the hull catches fire (it rains Burning Debris and leaves a fire trail from then on), 25% Hydrogen Blast (crash dive)
+function zepCrates(b, n, dm) {
+  const tg = [G.player].concat(NET.on ? NET.alivePeers() : []).filter(q => !q.down);
+  for (let i = 0; i < n; i++) {
+    const q = tg[i % tg.length], a = rnd(TAU), d = rnd(2.5, 6), x = q.x + Math.cos(a) * d, y = q.y + Math.sin(a) * d;
+    if (!G.arena.isWalk(x, y)) continue;
+    G.hazards.push({ kind: 'bossSlam', x, y, r: 2.2, t: 0, life: 1.4 + i * 0.12, dmg: 20 * dm });
+    setTimeout(() => {   // the crate bursts open: bloons inside
+      if (!G || G.boss !== b || b.dead) return;
+      const types = b.stage >= 2 ? ['ceramic', 'rainbow', 'lead'] : ['rainbow', 'zebra', 'lead'];
+      for (let k = 0; k < 3; k++) spawnBloon(pick(types), [x + rnd(-0.8, 0.8), y + rnd(-0.8, 0.8)]);
+      if (b.stage >= 3 && i === 0) spawnBloon('moab', [x, y]);
+    }, (1.4 + i * 0.12) * 1000 + 30);
+  }
+}
+function zepAI(b, dt) {
+  const dm = G.chaos.dmg;
+  if (b.shieldT > 0) b.shieldT -= dt;
+  if (b.rooted > 0) b.rooted -= dt;
+  // which way the ship points (gondola guns fire off both sides of it)
+  if (b.lx !== undefined) { const mx = b.x - b.lx, my = b.y - b.ly; if (mx * mx + my * my > 1e-5) b.hd = Math.atan2(my, mx); }
+  b.lx = b.x; b.ly = b.y;
+  if (b.hd === undefined) { const q = nearestPlayer(b.x, b.y); b.hd = Math.atan2(q.y - b.y, q.x - b.x); }
+  // flying moves steer the ship themselves: Bomb Run (bombs either side of its path) and the Hydrogen Blast dive
+  if (b.run) {
+    const r = b.run; r.t += dt;
+    if (r.t > r.tele) {
+      const v = r.spd * dt, nx = b.x + Math.cos(r.a) * v, ny = b.y + Math.sin(r.a) * v;
+      if (G.arena.isWalk(nx, ny)) { b.x = nx; b.y = ny; } else r.t = r.tele + r.dur;
+      if (r.kind === 'bombs' && (r.drop -= dt) <= 0) {
+        r.drop = 0.2;
+        for (const s of [-1, 1]) {
+          const x = b.x + Math.cos(r.a + Math.PI / 2) * s * rnd(1.2, 2.6), y = b.y + Math.sin(r.a + Math.PI / 2) * s * rnd(1.2, 2.6);
+          if (G.arena.isWalk(x, y)) G.hazards.push({ kind: 'bossSlam', x, y, r: 1.9, t: 0, life: 0.95, dmg: 22 * dm, leave: b.burning ? { kind: 'magma', r: 1.4, life: 3, tick: 0 } : null });
+        }
+        play('ThrowObject01', { vol: 0.25, gap: 0.05, rate: 0.6 });
+      }
+    }
+    if (r.t > r.tele + r.dur) b.run = null;
+    b.rooted = Math.max(b.rooted, 0.25);
+  }
+  // burning hull: drips fire behind it while it flies
+  if (b.burning && (b.fireT = (b.fireT || 0) - dt) <= 0) {
+    b.fireT = 0.7;
+    const x = b.x - Math.cos(b.hd) * rnd(0, b.r), y = b.y - Math.sin(b.hd) * rnd(0, b.r);
+    if (G.arena.isWalk(x, y) && G.hazards.filter(h => h.kind === 'magma').length < 40) G.hazards.push({ kind: 'magma', x, y, r: 1.5, t: 0, life: 4.5, tick: 0 });
+  }
+  // skulls: 75% Flak Spiral, 50% the hull catches fire, 25% Hydrogen Blast
+  while (b.skulls.length && b.hp / b.maxhp <= b.skulls[0]) {
+    b.skulls.shift(); b.stage = 3 - b.skulls.length; b.shieldT = 1.2; b.anim = 'roar'; b.rooted = Math.max(b.rooted, 1.6); b.run = null; shake(0.8);
+    play('BossDreadBloonArmourBreak', { vol: 1, gap: 0 }); play('MoabDestroyed01', { vol: 0.4 });
+    G.effects.push({ kind: 'ring', x: b.x, y: b.y, r: b.r + 7, t: 0, life: 0.8, color: '#ff9a3c', enemy: true });
+    if (b.stage === 2) { b.burning = true; for (let i = 0; i < 8; i++) setTimeout(() => G && G.boss === b && G.effects.push({ kind: 'boom', x: b.x + rnd(-3, 3), y: b.y + rnd(-3, 3), r: rnd(1.5, 3), t: 0, life: 0.5, color: '#ff8a2a', enemy: true }), i * 120); }
+    setTimeout(() => { if (G && G.boss === b && !b.dead) zepCrates(b, 2 + b.stage, dm); }, 900);
+    toast(['', '🔥 FLAK SPIRAL: shells burst outward from the airship', '🔥 THE HULL IS ON FIRE: it rains burning debris and leaves fire behind it', '🔥 HYDROGEN BLAST: get out from under it when it dives!'][b.stage], '#ff9a3c');
+    b.atkT = Math.min(b.atkT, 1.8); b.next = ['', 'flak', 'debris', 'dive'][b.stage];
+  }
+  b.hp = Math.min(b.hp, bossHealCap(b));
+  if (b.hp < b.maxhp * 0.5 && b.phase === 1) { b.phase = 2; b.spd *= 1.15; }
+  b.atkT -= dt;
+  if (b.atkT > 0 || b.rooted > 0.2) return;
+  const p = nearestPlayer(b.x, b.y), fast = b.phase === 2 ? 0.8 : 1;
+  const tg = [G.player].concat(NET.on ? NET.alivePeers() : []).filter(q => !q.down);
+  let mv = b.next; b.next = null;
+  if (!mv) {
+    const opts = [['bombs', 3], ['guns', 3], ['cargo', 1.6], ['gale', 1.6]];
+    if (b.stage >= 1) opts.push(['flak', 1.4]);
+    if (b.stage >= 2) opts.push(['debris', 1.4]);
+    if (b.stage >= 3) opts.push(['dive', 1.1]);
+    const tot = opts.reduce((a, o) => a + o[1], 0); let r = Math.random() * tot;
+    for (const [k, w] of opts) { r -= w; if (r <= 0) { mv = k; break; } }
+    if (mv === b.last && Math.random() < 0.6) mv = opts[(opts.findIndex(o => o[0] === mv) + 1) % opts.length][0];
+  }
+  b.last = mv;
+  if (mv === 'bombs') {   // Bomb Run: lines up on you (red lane), then flies straight through dropping bombs either side
+    b.anim = 'attack';
+    const a = Math.atan2(p.y - b.y, p.x - b.x), len = Math.min(26, Math.hypot(p.x - b.x, p.y - b.y) + 12);
+    G.hazards.push({ kind: 'chargeLine', x: b.x, y: b.y, a, len, w: 5.4, t: 0, life: 0.9 });
+    b.run = { kind: 'bombs', a, t: 0, tele: 0.9, dur: len / 9, spd: 9, drop: 0 };
+    play('BossBlastapopoulosSpawn', { vol: 0.35, gap: 0, rate: 1.3 });
+    b.atkT = (1.6 + len / 9) * fast;
+  } else if (mv === 'guns') {   // Gondola Gunners: rattling volleys from the fore and aft gondolas at every player
+    b.anim = 'attack'; b.rooted = 1.7;
+    for (let v = 0; v < 5; v++) setTimeout(() => {
+      if (!G || b.dead || G.boss !== b) return;
+      for (const q of tg) for (const f of [-0.3, 0.3]) {
+        const gx = b.x + Math.cos(b.hd) * b.r * f * 2, gy = b.y + Math.sin(b.hd) * b.r * f * 2, a = Math.atan2(q.y - gy, q.x - gx) + rnd(-0.12, 0.12);
+        G.eproj.push({ x: gx, y: gy, vx: Math.cos(a) * 12, vy: Math.sin(a) * 12, r: 0.38, life: 3, dmg: 11 * dm });
+      }
+      play('ThrowObject01', { vol: 0.25, gap: 0, rate: 1.6 });
+    }, 300 + v * 260);
+    b.atkT = 2.6 * fast;
+  } else if (mv === 'cargo') {   // Cargo Drop: crates fall around you and burst into bloons
+    b.anim = 'cast'; b.rooted = 1.2;
+    zepCrates(b, 3, dm);
+    b.atkT = 3.2 * fast;
+  } else if (mv === 'gale') {   // Propeller Gale: the engines blast a cone of wind that shoves you back and stings
+    b.anim = 'channel'; b.base = 'channel'; b.rooted = 3.3;
+    G.hazards.push({ kind: 'gale', x: b.x, y: b.y, a: Math.atan2(p.y - b.y, p.x - b.x), len: 17, w: 9, r: b.r, t: 0, life: 3.2, dmg: 9 * dm, track: 0.45 });
+    setTimeout(() => { if (G && G.boss === b) b.base = null; }, 3300);
+    play('VortexTornado0*', { vol: 0.5, gap: 0 });
+    b.atkT = 4.0 * fast;
+  } else if (mv === 'flak') {   // Flak Spiral: three arms of flak shells burst outward one after another
+    b.anim = 'cast'; b.rooted = 1.6;
+    const a0 = rnd(TAU), dir = Math.random() < 0.5 ? -1 : 1;
+    for (let arm = 0; arm < 3; arm++) for (let i = 0; i < 16; i++) {
+      const rr = b.r + 1 + i * 1.05, a = a0 + arm * TAU / 3 + dir * i * 0.38, x = b.x + Math.cos(a) * rr, y = b.y + Math.sin(a) * rr;
+      if (G.arena.isWalk(x, y)) G.hazards.push({ kind: 'bossSlam', x, y, r: 1.7, t: 0, life: 0.9 + i * 0.1, dmg: 20 * dm });
+    }
+    b.atkT = 3.4 * fast;
+  } else if (mv === 'debris') {   // Burning Debris: flaming wreckage rains around every player and keeps burning
+    b.anim = 'roar'; b.rooted = 1.0;
+    for (const q of tg) for (let i = 0; i < 5; i++) {
+      const x = q.x + (i ? rnd(-6, 6) : 0), y = q.y + (i ? rnd(-6, 6) : 0);
+      if (G.arena.isWalk(x, y)) G.hazards.push({ kind: 'bossSlam', x, y, r: 2.3, t: 0, life: 1.3 + i * 0.16, dmg: 22 * dm, leave: { kind: 'magma', r: 1.8, life: 5, tick: 0 } });
+    }
+    b.atkT = 3.0 * fast;
+  } else if (mv === 'dive') {   // Hydrogen Blast: climbs, then dives onto a player's spot - a huge explosion and a shockwave
+    b.anim = 'cast'; b.rooted = 3.2;
+    setTimeout(() => { if (G && G.boss === b && !b.dead) b.anim = 'slam'; }, 1800);
+    const x = p.x, y = p.y, d = Math.hypot(x - b.x, y - b.y);
+    G.hazards.push({ kind: 'bossSlam', x, y, r: 6, t: 0, life: 2.6, dmg: 55 * dm, leave: { kind: 'magma', r: 3, life: 5, tick: 0 } });
+    if (d > 0.5) b.run = { kind: 'dive', a: Math.atan2(y - b.y, x - b.x), t: 0, tele: 1.0, dur: 1.55, spd: d / 1.55 };
+    setTimeout(() => { if (!G || b.dead || G.boss !== b) return; G.hazards.push({ kind: 'shock', x, y, r: 0, len: 20, w: 1.3, a: 0, t: 0, life: 1.6, dmg: 22 * dm }); shake(1.1); play('Explosion0*', { vol: 0.9, gap: 0 }); }, 2620);
+    play('BossBlastapopoulosFormRocks0*', { vol: 0.7, gap: 0 });
+    b.atkT = 5.0 * fast;
+  }
+}
+// a final boss is down: the run is won - portals open to fight on (more bosses) or leave with the victory
 function finalVictory(b) {
-  G.victory = true; G.finalFight = false;
+  G.victory = true; G.finalFight = false; G.finalJustWon = true; G.finalWins = (G.finalWins || 0) + 1; META.finalWin(b.def.id);
   for (const o of G.bloons) if (!o.dead) { o.dead = true; G.effects.push({ kind: 'pop', x: o.x, y: o.y, r: o.r, t: 0, life: 0.16, color: o.def.color }); }
-  G.eproj.length = 0; G.hazards = G.hazards.filter(h => !VOID_HZ.has(h.kind) && h.kind !== 'bossSlam');
-  for (const o of G.bloons) if (o.def.animal && !o.dead) o.dead = true;
-  for (let i = 0; i < 10; i++) setTimeout(() => G && G.effects.push({ kind: 'boom', x: b.x + rnd(-3, 3), y: b.y + rnd(-3, 3), r: rnd(2, 5), t: 0, life: 0.6, color: i % 2 ? '#36f0ff' : '#b04cff' }), i * 140);
+  G.eproj.length = 0; G.hazards = G.hazards.filter(h => !VOID_HZ.has(h.kind) && h.kind !== 'bossSlam' && h.kind !== 'magma' && h.kind !== 'chargeLine');
+  for (const q of G.pickups) if (q.kind === 'soul') q.vac = true;
+  for (let i = 0; i < 10; i++) setTimeout(() => G && G.effects.push({ kind: 'boom', x: b.x + rnd(-3, 3), y: b.y + rnd(-3, 3), r: rnd(2, 5), t: 0, life: 0.6, color: i % 2 ? b.def.color : '#ffe39a' }), i * 140);
   play(BOSS_SFX[b.def.id][1], { vol: 1 }); shake(1.4);
   G.effects.push({ kind: 'expl', x: b.x, y: b.y, r: b.r * 2, t: 0, life: 1.1 });
-  setTimeout(() => G && toast(`${b.def.name} IS DEFEATED — VICTORY!`, b.def.color), 500);
+  setTimeout(() => G && toast(`${b.def.name} IS DEFEATED — VICTORY!  Fight more bosses, or leave the run as the victor`, b.def.color), 500);
   setTimeout(() => { if (G && G.boss === b) G.boss = null; }, 2500);
-  setTimeout(() => {
-    if (!G || G.state === 'end') return;
-    if (NET.host) NET.sendEnd(true, true);
-    endRun(true);
-  }, 3800);
+  setTimeout(() => { if (G && G.state !== 'end') openBossPortals(); }, 2600);
+}
+// after a boss: CONTINUE + END RUN portals either side of the middle (or only the FINAL BOSS portal every 3rd boss)
+function openBossPortals() {
+  {
+    const P = G.player, mid = (G.spawnPortals || []).find(q => q.kind === 'moab');
+    // either side of the middle portal (falls back to around the player)
+    const side = (sx) => { if (!mid) return null; for (let d = 4.5; d < 9; d += 0.5) { const x = mid.x + sx * d, y = mid.y; if (G.arena.free(x, y, 1)) return [x, y]; } return null; };
+    const spots = [[-3.5, -2], [3.5, -2], [-4, 2], [4, 2], [0, -4], [0, 4]].map(([dx, dy]) => [P.x + dx, P.y + dy]).filter(([x, y]) => G.arena.free(x, y, 1));
+    const a = side(-1) || spots[0] || [P.x - 3, P.y], c = side(1) || spots.find(q => Math.hypot(q[0] - a[0], q[1] - a[1]) > 4) || [P.x + 3, P.y];
+    if (!G.finalJustWon && isFinalLoop()) {   // the 3rd boss (then every 3rd): only one way forward, the final boss portal in the middle
+      G.portals = [{ kind: 'final', x: mid ? mid.x : P.x, y: mid ? mid.y : P.y - 4, t: 0 }];
+      R3.loadSkin('x_reaver');   // start loading the final boss model now
+      toast('A FINAL PORTAL OPENS… who will answer the call?', '#36f0ff');
+    } else G.portals = [{ kind: 'continue', x: a[0], y: a[1], t: 0 }, { kind: 'end', x: c[0], y: c[1], t: 0 }];
+    play('BossPhayzeWarp', { vol: 0.8 });
+  }
 }
 function killBoss(b) {
   const fx0 = G.effects.length; try { killBoss0(b); } finally { for (let i = fx0; i < G.effects.length; i++) G.effects[i].enemy = true; }
@@ -2057,21 +2214,8 @@ function killBoss0(b) {
   for (const o of G.bloons) if (!o.dead) { o.dead = true; G.effects.push({ kind: 'pop', x: o.x, y: o.y, r: o.r, t: 0, life: 0.16, color: o.def.color }); }
   G.eproj.length = 0; G.hazards = G.hazards.filter(h => h.kind === 'spikes' || h.kind === 'glue');
   for (const q of G.pickups) if (q.kind === 'soul') q.vac = true;
-  setTimeout(() => G && toast(G.loop >= FINAL_AFTER_LOOP ? `${b.def.name} DEFEATED!  The final portal is opening…` : `${b.def.name} DEFEATED!  Stand in a portal and ${pressWord().toLowerCase()} ${btnName('interact')}`, '#ffe39a'), 600);
-  setTimeout(() => {
-    if (!G) return;
-    const P = G.player, mid = (G.spawnPortals || []).find(q => q.kind === 'moab');
-    // either side of the middle portal (falls back to around the player)
-    const side = (sx) => { if (!mid) return null; for (let d = 4.5; d < 9; d += 0.5) { const x = mid.x + sx * d, y = mid.y; if (G.arena.free(x, y, 1)) return [x, y]; } return null; };
-    const spots = [[-3.5, -2], [3.5, -2], [-4, 2], [4, 2], [0, -4], [0, 4]].map(([dx, dy]) => [P.x + dx, P.y + dy]).filter(([x, y]) => G.arena.free(x, y, 1));
-    const a = side(-1) || spots[0] || [P.x - 3, P.y], c = side(1) || spots.find(q => Math.hypot(q[0] - a[0], q[1] - a[1]) > 4) || [P.x + 3, P.y];
-    if (G.loop >= FINAL_AFTER_LOOP) {   // the 3rd boss: only one way forward, the final boss portal in the middle
-      G.portals = [{ kind: 'final', x: mid ? mid.x : P.x, y: mid ? mid.y : P.y - 4, t: 0 }];
-      R3.loadSkin('x_reaver');   // start loading the final boss model now
-      toast('A FINAL PORTAL OPENS… who will answer: the Void King or John?', '#36f0ff');
-    } else G.portals = [{ kind: 'continue', x: a[0], y: a[1], t: 0 }, { kind: 'end', x: c[0], y: c[1], t: 0 }];
-    play('BossPhayzeWarp', { vol: 0.8 });
-  }, 2600);
+  setTimeout(() => G && toast(isFinalLoop() ? `${b.def.name} DEFEATED!  The final portal is opening…` : `${b.def.name} DEFEATED!  Stand in a portal and ${pressWord().toLowerCase()} ${btnName('interact')}`, '#ffe39a'), 600);
+  setTimeout(() => G && openBossPortals(), 2600);
   for (let i = 0; i < 6; i++) setTimeout(() => G && G.effects.push({ kind: 'boom', x: b.x + rnd(-2, 2), y: b.y + rnd(-2, 2), r: rnd(2, 4), t: 0, life: 0.5, color: '#fff' }), i * 120);
   play(BOSS_SFX[b.def.id][1], { vol: 1 });
   G.effects.push({ kind: 'expl', x: b.x, y: b.y, r: b.r * 1.6, t: 0, life: 0.9 });
@@ -2109,7 +2253,7 @@ function hurtPlayer(dmg) {
   const p = G.player;
   if (p.inv > 0 || G.state !== 'play' || p.down) return;
   const d = Math.max(1, dmg - G.stats.armor);
-  p.hp -= d; p.inv = 0.45; p.hurtT = 0.25; G.tookDmg = true; if (INPUT === 'pad') padRumble(Math.min(1, 0.3 + d / Math.max(1, G.stats.maxhp) * 3), 140);
+  p.hp -= d; p.inv = 0.45; p.hurtT = 0.25; G.tookDmg = true; if (G.finalFight) G.finalHit = true; if (INPUT === 'pad') padRumble(Math.min(1, 0.3 + d / Math.max(1, G.stats.maxhp) * 3), 140);
   shake(0.25);
   G.texts.push({ x: p.x, y: p.y - 1, s: '-' + Math.round(d), t: 0, life: 0.7, hurt: true });
   play('ShieldDamaged0*', { vol: 0.55, gap: 0.12, key: 'hurt' });
@@ -2292,7 +2436,7 @@ function update(dt) {
       if (c.t > c.tele) { const v = 22 * dt; B.x += Math.cos(c.a) * v; B.y += Math.sin(c.a) * v; if (!A.isWalk(B.x, B.y)) { B.x -= Math.cos(c.a) * v; B.y -= Math.sin(c.a) * v; c.t = 99; } }
       if (c.t > c.tele + c.dur) B.charge = null;
     } else {
-      if (B.def.final) (B.def.id === 'john' ? johnAI : reaverAI)(B, dt); else bossAI(B, dt);
+      if (B.def.final) (FINAL_AI()[B.def.id] || reaverAI)(B, dt); else bossAI(B, dt);
       const tq = nearestPlayer(B.x, B.y), dx = tq.x - B.x, dy = tq.y - B.y, d = Math.hypot(dx, dy);
       if (d > 4 && !(B.rooted > 0)) {
         let [ux, uy] = A.flowDir(B.x, B.y); if (!ux && !uy) { ux = dx / d; uy = dy / d; }
@@ -2601,12 +2745,13 @@ function render(dt = 0.016) {
     }
     if (fin) {
       text('FINAL BOSS', q[0], q[1], 26 * u, '#36f0ff', 'center');
-      text(co ? 'Everyone must be ready · Void King or John?' : 'Void King or John? · win the run', q[0], q[1] + 22 * u, 14 * u, '#e8e0d0', 'center');
+      text(co ? 'Everyone must be ready · who will answer?' : (G.victory ? 'Another final boss awaits' : 'Defeat it to win the run'), q[0], q[1] + 22 * u, 14 * u, '#e8e0d0', 'center');
       if (pt.near) text(`${pressWord()} ${btnName('interact')} to ${co ? (NET.cont.has(NET.me.id) ? 'cancel ready' : 'ready up') : 'enter'}`, q[0], q[1] + 46 * u, 17 * u + Math.sin(G.t * 6) * u, '#fff', 'center');
       continue;
     }
-    text(cont ? 'CONTINUE' : co ? 'LEAVE RUN' : 'END RUN', q[0], q[1], 22 * u, cont ? '#7fd8ff' : '#ff8a7a', 'center');
-    text(cont ? (co ? `Everyone must be ready · Loop ${G.loop + 2}` : `${MAP_POOL.length > 1 ? 'New arena' : 'Next loop'} · Loop ${G.loop + 2} · stronger bloons`) : co ? 'Finish with your score · others keep playing' : 'Finish with your score', q[0], q[1] + 20 * u, 13 * u, '#e8e0d0', 'center');
+    const won = G.finalJustWon;   // a final boss just fell: fight on for more bosses, or leave as the victor
+    text(cont ? (won ? 'FIGHT MORE BOSSES' : 'CONTINUE') : co || won ? 'LEAVE RUN' : 'END RUN', q[0], q[1], 22 * u, cont ? '#7fd8ff' : won ? '#ffe39a' : '#ff8a7a', 'center');
+    text(cont ? (co ? `Everyone must be ready · Loop ${G.loop + 2}` : `${won ? 'Keep the run going' : MAP_POOL.length > 1 ? 'New arena' : 'Next loop'} · Loop ${G.loop + 2} · stronger bloons`) : won ? (co ? 'Leave with your VICTORY · others keep playing' : 'Leave with your VICTORY') : co ? 'Finish with your score · others keep playing' : 'Finish with your score', q[0], q[1] + 20 * u, 13 * u, '#e8e0d0', 'center');
     if (pt.near) text(`${pressWord()} ${btnName('interact')} to ${cont ? (co ? (NET.cont.has(NET.me.id) ? 'cancel ready' : 'ready up') : 'enter') : co ? 'leave the run' : 'end the run'}`, q[0], q[1] + 42 * u, 17 * u + Math.sin(G.t * 6) * u, '#ffe39a', 'center');
   }
   if (G.grace > 0 && G.state === 'play') {
@@ -2976,7 +3121,7 @@ function drawHUD() {
 }
 // BTD6-style boss health bar: portrait medallion, boss-themed tiled fill, skull tier pips
 const BOSS_TILE = { lych: 'btd_LychHealthBarTile', phayze: 'btd_PhayzeHealthBarTile', dreadbloon: 'btd_DreadbloonHealthbarLarge' };
-const BOSS_PORTRAIT = { reaver: 'ReaverPortrait', john: 'JohnPortrait', bloonarius: 'btd_BloonariusPortrait', lych: 'btd_LychPortrait', vortex: 'btd_VortexPortrait', dreadbloon: 'btd_DreadbloonPortrait', phayze: 'btd_PhayzePortrait', blastapopoulos: 'btd_BlastapopoulosPortrait' };
+const BOSS_PORTRAIT = { reaver: 'ReaverPortrait', john: 'JohnPortrait', zeppelin: 'ZeppelinPortrait', bloonarius: 'btd_BloonariusPortrait', lych: 'btd_LychPortrait', vortex: 'btd_VortexPortrait', dreadbloon: 'btd_DreadbloonPortrait', phayze: 'btd_PhayzePortrait', blastapopoulos: 'btd_BlastapopoulosPortrait' };
 function drawBossBar(B, u) {
   const bw = Math.min(W * 0.5, 820 * u), bh = 34 * u, bx = (W - bw) / 2 + 40 * u, by = 92 * u;
   const k = clamp(B.hp / B.maxhp, 0, 1);
@@ -3466,9 +3611,9 @@ function endRun(win, quit = false) {
   const eb = $('endbanner');
   eb.style.backgroundImage = `url("assets/ui/GameOver_Frame_01.png")`;
   $('endskull').style.display = win ? 'none' : 'block';
-  eb.textContent = G.victory ? 'VICTORY!' : win ? (quit ? 'RUN COMPLETE' : 'FALLEN IN GLORY') : quit ? 'RUN ABANDONED' : 'DEFEATED';
+  eb.textContent = G.victory && quit ? 'VICTORY!' : win ? (quit ? 'RUN COMPLETE' : 'FALLEN IN GLORY') : quit ? 'RUN ABANDONED' : 'DEFEATED';
   eb.style.color = win ? '#ffe39a' : '#ff7a7a';
-  const mm = Math.round((G.goldEarned / 20 + G.level * 4 + G.bossKills * 150 + G.t / 6 + (G.victory ? 1000 * (1 + G.chaosIdx) : 0)) * META.mmMult());
+  const mm = Math.round((G.goldEarned / 20 + G.level * 4 + G.bossKills * 150 + G.t / 6 + (G.victory ? 1000 * (1 + G.chaosIdx) * (G.finalWins || 1) : 0)) * META.mmMult());
   PROFILE.mm += mm; const hxRows = PROG.finish(win, quit); if (PROG.levelOf(G.ch.id) >= 10) META.ach('hero10'); saveProfile();
   renderStats($('endstats'), [['Monkey Money earned', '+' + mm + '  (total ' + Math.floor(PROFILE.mm) + ')'], ...hxRows, ['Bosses defeated', G.bossKills], ['Gold earned', '$' + Math.round(G.goldEarned).toLocaleString()], ...(rec ? [['Record', rec]] : [])]);
   renderBreakdown($('endbreak'));

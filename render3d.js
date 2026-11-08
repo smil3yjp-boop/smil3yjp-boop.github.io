@@ -550,7 +550,7 @@ const R3 = (() => {
     if (color && p.mesh.instanceColor !== undefined) p.mesh.setColorAt(p.n, color);
     p.n++;
   }
-  const ENEMY_HZ = /^(slime|magma|bossSlam|chargeLine|cyclone|vlaser|vrays|vzone|vblast|glacier|shock|orbit|crays)$/;
+  const ENEMY_HZ = /^(slime|magma|bossSlam|chargeLine|cyclone|vlaser|vrays|vzone|vblast|glacier|shock|orbit|crays|gale)$/;
   const IDQ = new THREE.Quaternion();
   const FLATQ = new THREE.Quaternion().setFromEuler(new THREE.Euler(-Math.PI / 2, 0, 0));
   let bloonMats = {};
@@ -874,6 +874,7 @@ const R3 = (() => {
       if (!m) {
         m = actor(SUM[0], SUM[1], SUM[2], SUM[3]) || actor(sm.kind === 'beast' ? 't_BeastHandler' : sm.kind === 'sentry' ? 't_EngineerMonkey' : 't_MonkeyAce', 1.3, 'max') || new THREE.Object3D(); m.userData.skey = SUM[0]; summonModels.set(sm, m); scene.add(m); m.rotation.order = 'YXZ'; sm.a0 = Math.random() * 7;
         if (m.userData.rig) m.userData.rig.play('place');
+        if (sm.kind === 'farm' || sm.kind === 'village') m.rotation.y = Math.PI;   // buildings: front (door, sign, $) toward the camera, not their back
       }
       const fly = sm.kind === 'rabbit' ? (sm.moving ? Math.abs(Math.sin(G.t * 11 + (sm.a0 || 0))) * 0.35 : 0) : sm.kind === 'drone' ? 1.9 + Math.sin(G.t * 4 + (sm.a0 || 0)) * 0.12 : sm.kind === 'heli' ? 2.2 + Math.sin(G.t * 3 + (sm.a || 0)) * 0.15 : sm.kind === 'ace' ? 3.2 : sm.bird ? 2.8 - (sm.dive || 0) * 1.9 + Math.sin(G.t * 2.4 + (sm.a0 || 0)) * 0.2 : 0;
       m.position.copy(w(sm.x, sm.y, fly));
@@ -967,6 +968,15 @@ const R3 = (() => {
         push('ring', w(h.x, h.y, 0.11), FLATQ, tmpS.set(Math.max(0.1, rr - h.w * 0.5), Math.max(0.1, rr - h.w * 0.5), 1), tmpC.setRGB(1, 0.4, 0.3).multiplyScalar(fade * 0.7));
         const n = Math.max(12, Math.round(rr * 2.2));
         for (let i = 0; i < n; i++) { const a = i * TAU_R / n, x = h.x + Math.cos(a) * rr, y = h.y + Math.sin(a) * rr; push('glow', w(x, y, 0.4), camQ, tmpS.setScalar(h.w * 1.3), tmpC.setRGB(1, 0.6, 0.35).multiplyScalar(fade * 0.7)); }
+      } else if (h.kind === 'gale') {   // Propeller Gale: a widening cone of wind streaks blowing away from the airship (faint while it spins up)
+        const on = h.t >= 0.5, ca = Math.cos(h.a), sa = Math.sin(h.a), fade = Math.min(1, (h.life - h.t) * 3);
+        for (let i = 0; i < 26; i++) {
+          const f = ((h.t * (on ? 1.6 : 0.5) + i * 0.381) % 1), along = h.r + (h.len - h.r) * f, half = (h.w / 2) * (0.25 + 0.75 * along / h.len), sd = Math.sin(i * 12.9898) * half;
+          const x = h.x + ca * along - sa * sd, y = h.y + sa * along + ca * sd;
+          push('glow', w(x, y, 0.6 + (i % 3) * 0.4), camQ, tmpS.set(1.4, 0.35, 1), tmpC.setRGB(0.75, 0.85, 0.95).multiplyScalar((on ? 0.55 : 0.2) * fade * (1 - f * 0.6)));
+        }
+        for (let i = 1; i <= 8; i++) { const along = h.len * i / 8, half = (h.w / 2) * (0.25 + 0.75 * along / h.len);
+          for (const sd of [-half, half]) push('discAdd', w(h.x + ca * along - sa * sd, h.y + sa * along + ca * sd, 0.07), FLATQ, tmpS.set(0.35, 0.35, 1), tmpC.setRGB(0.25, 0.3, 0.35).multiplyScalar(fade)); }
       } else if (h.kind === 'orbit') {   // Rotating Orbs: six balloons whirling around John
         const rad = h.len * Math.min(1, h.t / 0.6), fade = Math.min(1, (h.life - h.t) * 3);
         for (let k = 0; k < 6; k++) { const a = h.a + k * TAU_R / 6, x = h.x + Math.cos(a) * rad, y = h.y + Math.sin(a) * rad, c = tmpC.set(BALLOON_COLORS[k % BALLOON_COLORS.length]);
@@ -1074,6 +1084,19 @@ const R3 = (() => {
     });
     DIM = dim0;
   }
+  // the Hindenburg's burning hull: flames licking up along the top of the envelope, sparks and smoke drifting off
+  function zepFire(b, len) {
+    const m = big.get(b); if (!m) return;
+    const t = performance.now() / 1000, hd = m.userData.hd || 0, ca = Math.cos(hd), sa = Math.sin(hd), L = b.r * 2.9, dim0 = DIM; DIM = false;
+    for (let i = 0; i < 12; i++) {
+      const u = ((i * 0.618) % 1) - 0.5, ph = (t * 1.3 + i * 0.37) % 1, fl = 0.75 + 0.25 * Math.sin(t * 11 + i * 3.1);
+      const x = b.x + ca * u * L * 0.85 + (Math.sin(i * 7.7) * 0.5) * -sa, y = b.y + sa * u * L * 0.85 + (Math.sin(i * 7.7) * 0.5) * ca;
+      const h = 1.7 + L * 0.17 + ph * 1.3, s = (1.5 - ph) * 0.75 * fl;
+      push('glow', w(x, y, h), camera.quaternion, tmpS.set(s * 0.7, s * 1.3, 1), tmpC.setRGB(0.9, 0.32 - ph * 0.22, 0.04).multiplyScalar(0.75 - ph * 0.5));
+      if (i % 3 === 0) push('shadowFlame', w(x, y, h + 1.2 + ph * 1.5), camera.quaternion, tmpS.set(1.2 + ph, 1.6 + ph, 1), tmpC.setRGB(0.12, 0.1, 0.1));
+    }
+    DIM = dim0;
+  }
   function drawBig(b, G, dt) {
     if (b.def.final && !hasRig(b.def.model)) { loadSkin(b.def.model); return; }   // joined mid-fight: wait for the final boss model
     if (b.def.animal && !hasRig(b.def.rig)) { loadSkin('x_banimals'); return; }   // John's balloon animals
@@ -1082,7 +1105,7 @@ const R3 = (() => {
     if (!m || m.userData.key !== key) {
       if (m) scene.remove(m);
       const rk = b.def.final ? key : b.isBoss ? 'b_' + key : key;
-      m = (b.def.final ? rig(rk, b.r * 2.4, 'height') : rig(rk, len, 'len')) || model(key, len, 'len') || model('moab', len, 'len');
+      m = (b.def.air ? rig(rk, b.r * 2.9, 'len') : b.def.final ? rig(rk, b.r * 2.4, 'height') : rig(rk, len, 'len')) || model(key, len, 'len') || model('moab', len, 'len');
       if (!m) return;
       m.userData.key = key; big.set(b, m); scene.add(m);
       m.traverse(o => { if (o.material) { o.material = o.material.clone(); } });
@@ -1099,12 +1122,22 @@ const R3 = (() => {
     }
     if (rg) { if (b.anim) { rg.play(b.anim); b.anim = null; } rg.update(dt); }
     if (b.def.id === 'reaver') shadowFlames(m, b);
+    if (b.def.air) {   // the airship flies high, points the way it is moving (slow to turn) and burns once its 50% skull breaks
+      m.position.copy(w(b.x, b.y, 1.7));
+      if (m.userData.hd === undefined) m.userData.hd = Math.atan2(G.player.y - b.y, G.player.x - b.x);
+      if (m.userData.mv > 0.5 && m.userData.lx2 !== undefined) m.userData.hd = Math.atan2(b.y - m.userData.ly2, b.x - m.userData.lx2);
+      if (dt > 0) { m.userData.lx2 = (m.userData.lx2 ?? b.x) * 0.8 + b.x * 0.2; m.userData.ly2 = (m.userData.ly2 ?? b.y) * 0.8 + b.y * 0.2; }
+      let d = faceAngle(m.userData.hd) - m.rotation.y; d = Math.atan2(Math.sin(d), Math.cos(d));
+      m.rotation.y += d * Math.min(1, dt * 1.6);
+      if (b.hp / b.maxhp < 0.5 && !b.dead) zepFire(b, len);
+    } else {
     const grounded = b.def.final || b.def.animal, hover = grounded ? 0 : b.isBoss ? 0.4 : 0.8;
     m.position.copy(w(b.x, b.y, hover + (grounded ? 0 : Math.sin(b.wob) * 0.12)));
     const a = Math.atan2(G.player.y - b.y, G.player.x - b.x);
     const want = faceAngle(a);
     let d = want - m.rotation.y; d = Math.atan2(Math.sin(d), Math.cos(d));
     m.rotation.y += d * Math.min(1, dt * 3);
+    }
     const flash = b.hitT > 0 && (performance.now() / 70 | 0) % 2 ? 0.14 : 0;
     const fk = flash + (b.enraged ? 1 : 0);
     if (m.userData.flash !== fk) { m.userData.flash = fk; m.traverse(o => { if (o.material && o.material.emissive) { if (b.enraged) o.material.emissive.setRGB(0.22 + flash, 0.05 + flash, 0.34 + flash); else o.material.emissive.setScalar(flash); } }); }
