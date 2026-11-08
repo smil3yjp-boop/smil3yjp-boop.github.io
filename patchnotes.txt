@@ -8,7 +8,12 @@ v0.3.5 | Nov 6, 2026
 - The Void King: a new animated final boss that walks the arena burning with black shadow flames, with idle, walk, claw swipe, casting, laser, channel, arena blast and roar animations
 - The Void King fights with its attacks from Soulstone Survivors: Void Bolts, Meteor Area, Eye Laser (it charges, then fires a tracking beam), and a claw swipe up close
 - Each skull it loses sends a wave of bloons and unlocks a new Void King attack: 75% Rotating Rays, 50% Void Zones (the arena's quadrants light up in sequence), 25% Arena Blast (stay close to the boss or get hit)
-- Beating the Void King ends the run with VICTORY and a big Monkey Money bonus that grows with Chaos rank
+- Beating the final boss ends the run with VICTORY and a big Monkey Money bonus that grows with Chaos rank
+- NEW FINAL BOSS: JOHN, the Balloon Twister. The final portal now brings either the Void King or John
+- John is a fully animated clown (waddle, honk punch, throw, balloon twisting, jump-stomp, juggling and a belly laugh)
+- John twists balloon animals that chase you: balloon dogs and balloon giraffes in green, red, blue, yellow, pink and purple, and they pop in a burst of their colour
+- John fights with Soulstone's Sasquach moves: Frostbolts (icy balloons that slow you), Glacier Areas (icy circles that slow you and bite every 2 seconds) and ShockWaves (rings that roll out across the arena, dash through them)
+- Each skull John loses sends a big wave of balloon animals and unlocks a new move: 75% Rotating Orbs (six balloons whirl around him), 50% Glacier Areas, 25% candy-striped Rotating Rays and triple ShockWaves
 - The hero screen now shows each hero's ability: its icon, name, cooldown, button and what it does
 
 v0.3.4 | Nov 5, 2026

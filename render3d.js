@@ -274,7 +274,7 @@ const R3 = (() => {
   // ------------------------------------------------------------ animated rigs (heroes, towers, blimps, bosses)
   const RIGS = {}, rigInfo = {}, rigClips = {};
   const EYEPUSH = {};
-  const RIGYAW = { w_heli_4: Math.PI / 2, x_reaver: Math.PI };   // IFR heli is authored facing sideways; the Neon Reaver (glTF) faces +Z, BTD rigs face -Z   // IFR heli is authored facing sideways
+  const RIGYAW = { w_heli_4: Math.PI / 2, x_reaver: Math.PI, x_john: Math.PI, x_bdog: Math.PI, x_bgiraffe: Math.PI };   // IFR heli is authored facing sideways; the Neon Reaver (glTF) faces +Z, BTD rigs face -Z   // IFR heli is authored facing sideways
   // parts to leave off: Brickell skins come sitting in their ship, Red Sauda's shelf blades don't line up with her hands
   const RIGHIDE = {
     s_DreadPirateBrickell: /^(BodyLVL10|FlagPoleLV1|MineDispenser.*|FlagLVL1|PoleLVL1|.*Ship.*)$/i,
@@ -292,6 +292,8 @@ const R3 = (() => {
       const map = m.tex ? await makeTex(P.tex[m.tex]) : null;
       const c = m.color || [1, 1, 1, 1];
       P.mats[mk] = new THREE.MeshLambertMaterial({ map, color: new THREE.Color(c[0], c[1], c[2]), alphaTest: map && P.tex[m.tex].startsWith('data:image/png') ? 0.4 : 0 });
+      if (m.name === 'Balloon') P.mats[mk] = new THREE.MeshPhongMaterial({ color: 0xffffff, shininess: 90, specular: 0x777777 });   // balloon animals: shiny, tinted per animal
+      if (m.name === 'BalloonShine') P.mats[mk] = new THREE.MeshBasicMaterial({ color: 0xffffff });
       if (m.glow) { P.mats[mk].emissiveMap = await makeTex(P.tex[m.glow]); P.mats[mk].emissive = new THREE.Color(1, 1, 1); P.mats[mk].emissiveIntensity = 1.6; }   // neon parts that light up (Neon Reaver)
     }
     const buf = P.buf;
@@ -548,7 +550,7 @@ const R3 = (() => {
     if (color && p.mesh.instanceColor !== undefined) p.mesh.setColorAt(p.n, color);
     p.n++;
   }
-  const ENEMY_HZ = /^(slime|magma|bossSlam|chargeLine|cyclone|vlaser|vrays|vzone|vblast)$/;
+  const ENEMY_HZ = /^(slime|magma|bossSlam|chargeLine|cyclone|vlaser|vrays|vzone|vblast|glacier|shock|orbit|crays)$/;
   const IDQ = new THREE.Quaternion();
   const FLATQ = new THREE.Quaternion().setFromEuler(new THREE.Euler(-Math.PI / 2, 0, 0));
   let bloonMats = {};
@@ -952,11 +954,28 @@ const R3 = (() => {
           if (on) { push('glow', w(x, y, 1.6), camQ, tmpS.setScalar(h.w * 1.7 * fl), tmpC.setRGB(0.25, 0.95, 1)); push('glow', w(x, y, 1.6), camQ, tmpS.setScalar(h.w * 0.6), tmpC.setRGB(0.9, 1, 1)); push('discAdd', w(x, y, 0.07), FLATQ, tmpS.set(h.w * 0.6, h.w * 0.6, 1), tmpC.setRGB(0.15, 0.5, 0.6)); }
           else push('discAdd', w(x, y, 0.07), FLATQ, tmpS.set(h.w * 0.22, h.w * 0.22, 1), tmpC.setRGB(0.35 + 0.4 * k, 0.08, 0.5 + 0.4 * k)); }
         push('glow', w(h.x, h.y, 2.4), camQ, tmpS.setScalar(on ? 3.2 : 1 + 2 * h.t), on ? tmpC.setRGB(0.4, 1, 1) : tmpC.setRGB(0.7, 0.3, 1));
-      } else if (h.kind === 'vrays') {   // Rotating Rays: four beams sweeping around the boss (faint while they warn)
-        const on = h.t >= 1.2;
+      } else if (h.kind === 'glacier') {   // Glacier Area (Sasquach): icy circle with frost crystals; it bites every 2 s
+        const on = h.t >= 1, fade = Math.min(1, (h.life - h.t) * 2, h.t * 3), pul = 0.75 + 0.25 * Math.sin(h.t * 3);
+        push('discAdd', w(h.x, h.y, 0.06), FLATQ, tmpS.set(h.r, h.r, 1), tmpC.setRGB(0.12, 0.35, 0.5).multiplyScalar(fade * (on ? pul : 0.5)));
+        push('ring', w(h.x, h.y, 0.08), FLATQ, tmpS.set(h.r, h.r, 1), tmpC.setRGB(0.55, 0.9, 1).multiplyScalar(fade));
+        const tick = on ? 1 - ((h.t - 1) % 2) / 2 : 0;
+        if (on) push('ring', w(h.x, h.y, 0.09), FLATQ, tmpS.set(h.r * (1 - tick * 0.85), h.r * (1 - tick * 0.85), 1), tmpC.setRGB(0.7, 0.95, 1).multiplyScalar(fade * 0.8));
+        for (let i = 0; i < 10; i++) { const a = i * 0.628 + h.x, d = h.r * (0.25 + 0.65 * ((i * 0.37) % 1)); push('glow', w(h.x + Math.cos(a) * d, h.y + Math.sin(a) * d, 0.3 + 0.2 * Math.sin(h.t * 2 + i)), camQ, tmpS.set(0.5, 0.9, 1), tmpC.setRGB(0.6, 0.9, 1).multiplyScalar(fade * 0.8)); }
+      } else if (h.kind === 'shock') {   // ShockWave: a ring rolling outward
+        const rr = h.len * Math.min(1, h.t / h.life), fade = 1 - Math.max(0, h.t / h.life - 0.75) * 4;
+        push('ring', w(h.x, h.y, 0.1), FLATQ, tmpS.set(rr, rr, 1), tmpC.setRGB(1, 0.85, 0.6).multiplyScalar(fade));
+        push('ring', w(h.x, h.y, 0.11), FLATQ, tmpS.set(Math.max(0.1, rr - h.w * 0.5), Math.max(0.1, rr - h.w * 0.5), 1), tmpC.setRGB(1, 0.4, 0.3).multiplyScalar(fade * 0.7));
+        const n = Math.max(12, Math.round(rr * 2.2));
+        for (let i = 0; i < n; i++) { const a = i * TAU_R / n, x = h.x + Math.cos(a) * rr, y = h.y + Math.sin(a) * rr; push('glow', w(x, y, 0.4), camQ, tmpS.setScalar(h.w * 1.3), tmpC.setRGB(1, 0.6, 0.35).multiplyScalar(fade * 0.7)); }
+      } else if (h.kind === 'orbit') {   // Rotating Orbs: six balloons whirling around John
+        const rad = h.len * Math.min(1, h.t / 0.6), fade = Math.min(1, (h.life - h.t) * 3);
+        for (let k = 0; k < 6; k++) { const a = h.a + k * TAU_R / 6, x = h.x + Math.cos(a) * rad, y = h.y + Math.sin(a) * rad, c = tmpC.set(BALLOON_COLORS[k % BALLOON_COLORS.length]);
+          push('glow', w(x, y, 1.4), camQ, tmpS.setScalar(h.w * 3.2 * fade), c); push('glow', w(x, y, 1.4), camQ, tmpS.setScalar(h.w * 1.1 * fade), white); }
+      } else if (h.kind === 'vrays' || h.kind === 'crays') {   // Rotating Rays: four beams sweeping around the boss (faint while they warn); John's are candy-striped
+        const on = h.t >= 1.2, candy = h.kind === 'crays';
         for (let r = 0; r < 4; r++) { const a = h.a + r * Math.PI / 2, n = Math.ceil(h.len / 0.8);
           for (let i = 0; i <= n; i++) { const d = h.r + (h.len - h.r) * i / n, x = h.x + Math.cos(a) * d, y = h.y + Math.sin(a) * d;
-            if (on) { push('glow', w(x, y, 1.2), camQ, tmpS.setScalar(h.w * 1.6), tmpC.setRGB(0.55, 0.25, 1)); push('discAdd', w(x, y, 0.07), FLATQ, tmpS.set(h.w * 0.55, h.w * 0.55, 1), tmpC.setRGB(0.3, 0.12, 0.5)); }
+            if (on) { const cc = candy ? (i % 4 < 2 ? tmpC.setRGB(0.9, 0.06, 0.12) : tmpC.setRGB(0.55, 0.45, 0.45)) : tmpC.setRGB(0.55, 0.25, 1); push('glow', w(x, y, 1.2), camQ, tmpS.setScalar(h.w * (candy ? 1.25 : 1.6)), cc); push('discAdd', w(x, y, 0.07), FLATQ, tmpS.set(h.w * 0.55, h.w * 0.55, 1), candy ? tmpC2.setRGB(0.4, 0.1, 0.12) : tmpC2.setRGB(0.3, 0.12, 0.5)); }
             else if (i % 2 === 0) push('discAdd', w(x, y, 0.07), FLATQ, tmpS.set(h.w * 0.3, h.w * 0.3, 1), tmpC.setRGB(0.3, 0.1, 0.45).multiplyScalar(0.5 + 0.5 * Math.sin(h.t * 12))); } }
       } else if (h.kind === 'vzone') {   // Void Zone: a quadrant of the arena (dim while it warns, bright while it burns)
         if (h.t < 0) continue;
@@ -1056,7 +1075,8 @@ const R3 = (() => {
     DIM = dim0;
   }
   function drawBig(b, G, dt) {
-    if (b.def.final && !hasRig('x_reaver')) { loadSkin('x_reaver'); return; }   // joined mid-fight: wait for the Neon Reaver model
+    if (b.def.final && !hasRig(b.def.model)) { loadSkin(b.def.model); return; }   // joined mid-fight: wait for the final boss model
+    if (b.def.animal && !hasRig(b.def.rig)) { loadSkin('x_banimals'); return; }   // John's balloon animals
     const { key, len } = bigModelFor(b);
     let m = big.get(b);
     if (!m || m.userData.key !== key) {
@@ -1067,8 +1087,10 @@ const R3 = (() => {
       m.userData.key = key; big.set(b, m); scene.add(m);
       m.traverse(o => { if (o.material) { o.material = o.material.clone(); } });
       if (m.userData.rig && b.isBoss && !b.placed) { b.placed = true; m.userData.rig.play('place'); }
+      if (b.def.animal) { const col = BALLOON_COLORS[balloonTint(b)]; m.traverse(o => { if (o.material && o.material.isMeshPhongMaterial) o.material.color.set(col); }); }   // every balloon animal its own colour
     }
     const rg = m.userData.rig;
+    if (rg && b.def.animal && rg.setBase) rg.setBase('walk');
     if (rg && b.def.final && rg.setBase) {   // Neon Reaver: walks while it moves, idles (or channels) while it stands
       const mv = m.userData.lx !== undefined && dt > 0 ? Math.hypot(b.x - m.userData.lx, b.y - m.userData.ly) / dt : 0;
       m.userData.mv = (m.userData.mv || 0) * 0.85 + mv * 0.15;
@@ -1076,9 +1098,9 @@ const R3 = (() => {
       m.userData.lx = b.x; m.userData.ly = b.y;
     }
     if (rg) { if (b.anim) { rg.play(b.anim); b.anim = null; } rg.update(dt); }
-    if (b.def.final) shadowFlames(m, b);
-    const hover = b.def.final ? 0 : b.isBoss ? 0.4 : 0.8;
-    m.position.copy(w(b.x, b.y, hover + (b.def.final ? 0 : Math.sin(b.wob) * 0.12)));
+    if (b.def.id === 'reaver') shadowFlames(m, b);
+    const grounded = b.def.final || b.def.animal, hover = grounded ? 0 : b.isBoss ? 0.4 : 0.8;
+    m.position.copy(w(b.x, b.y, hover + (grounded ? 0 : Math.sin(b.wob) * 0.12)));
     const a = Math.atan2(G.player.y - b.y, G.player.x - b.x);
     const want = faceAngle(a);
     let d = want - m.rotation.y; d = Math.atan2(Math.sin(d), Math.cos(d));

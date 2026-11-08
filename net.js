@@ -5,7 +5,7 @@
 var NET = (() => {
   const BT = Object.keys(BLOONS);                       // bloon type <-> index
   const PK = ['soul', 'heart', 'chest', 'relic', 'banana'];
-  const HZ = ['slime', 'magma', 'bossSlam', 'chargeLine', 'cyclone', 'vlaser', 'vrays', 'vzone', 'vblast'];
+  const HZ = ['slime', 'magma', 'bossSlam', 'chargeLine', 'cyclone', 'vlaser', 'vrays', 'vzone', 'vblast', 'glacier', 'shock', 'orbit', 'crays'];
   const ENEMY_HZ = new Set(HZ);
   const PERSONAL_PK = new Set(['relic', 'banana']);
   const r2 = v => Math.round(v * 100) / 100, r1 = v => Math.round(v * 10) / 10;
@@ -93,7 +93,7 @@ var NET = (() => {
       case 'e': if (N.guest && from === N.runHost) onEvents(m); break;
       case 'mech': if (N.guest && from === N.runHost) onMech(m); break;
       case 'bk': if (N.guest && from === N.runHost) onBossKill(m); break;
-      case 'cont': if (N.guest && from === N.runHost) { N.cont.clear(); if (m.final) startFinalBoss(); else continueRun(m.map); } break;
+      case 'cont': if (N.guest && from === N.runHost) { N.cont.clear(); if (m.final) startFinalBoss(m.fb); else continueRun(m.map); } break;
       case 'end': if (N.inRun && from === N.runHost && G) { if (N.spec) stopSpectating('The run is over — you can join the next one!'); else { if (m.victory) G.victory = true; endRun(m.win, m.quit); } } break;
       case 'spec': if (N.specWant && !G && !N.inRun) { N.specWant = false; whenLoaded(() => { if (!G && !N.inRun) startSpectating(m, from); }); } break;
       case 'specreq': if (N.host && G && G.state !== 'end') send(from, { t: 'spec', map: G.mapIdx, chaos: G.chaosIdx, ids: [N.me.id, ...N.runIds] }); break;
@@ -180,7 +180,7 @@ var NET = (() => {
   }
   N.sendEnd = (win, victory) => send('*', { t: 'end', win: !!win, quit: false, victory: victory ? 1 : 0 });
   N.hostContinue = () => {
-    if (G.portals && G.portals.some(q => q.kind === 'final')) { N.cont.clear(); send('*', { t: 'cont', final: 1 }); startFinalBoss(); return; }
+    if (G.portals && G.portals.some(q => q.kind === 'final')) { N.cont.clear(); const fb = pick(FINAL_BOSSES).id; send('*', { t: 'cont', final: 1, fb }); startFinalBoss(fb); return; }
     const idx = pickMap(G.mapIdx);
     N.cont.clear(); send('*', { t: 'cont', map: idx }); continueRun(idx);
   };
@@ -309,7 +309,7 @@ var NET = (() => {
       bl: r2(G.blindT), bm: G.blindMax || 0, ts: r2(G.towerStunT), es: G.elitesSpawned, bd: G.bossDone ? 1 : 0, gr: r1(G.grace), pz: pausedBy(),
       po: G.portals ? G.portals.map(q => [q.kind, r2(q.x), r2(q.y), r2(q.t)]) : null,
       bo: B ? [B.def.id, r2(B.x), r2(B.y), r1(B.hp), r1(B.maxhp), r2(B.r), (B.shield || B.shieldT > 0) ? 1 : 0, B.phase, B.skulls.length, r2(G.bossIntro || 0), B.charge ? [r2(B.charge.a), r2(B.charge.t), B.charge.tele, B.charge.dur] : 0, r2(B.drainFx || 0), B.anim || 0, r2(B.spd), r2(B.atkT), r2(B.mechT ?? 8), B.blimpSkull, B.dashAtSpawn || 0, B.enraged ? 1 : 0] : null,
-      b, e: G.eproj.map(q => [r2(q.x), r2(q.y), r1(q.vx), r1(q.vy), r2(q.r), r1(q.dmg), r2(q.life)]),
+      b, e: G.eproj.map(q => [r2(q.x), r2(q.y), r1(q.vx), r1(q.vy), r2(q.r), r1(q.dmg), r2(q.life), q.slow ? r1(q.slow) : 0]),
       h: G.hazards.filter(h => ENEMY_HZ.has(h.kind)).map(h => [HZ.indexOf(h.kind), r2(h.x), r2(h.y), r2(h.r || 0), r2(h.t), r2(h.life), r1(h.dmg || 0), r2(h.a || 0), r2(h.len || 0), r2(h.w || 0)]),
       k: pk,
     };
@@ -451,7 +451,7 @@ var NET = (() => {
       b.base = { slowT: b.slowT, frozenT: b.frozenT, stunT: b.stunT, burnT: b.burnT, hexT: b.hexT || 0 };
     } else if (G.boss && !G.boss.dead) { G.boss.dead = true; setTimeout(() => { if (G && G.boss && G.boss.dead) G.boss = null; }, 2500); }
     // enemy shots, hazards, world pickups, portals
-    G.eproj = w.e.map(a => ({ x: a[0], y: a[1], vx: a[2], vy: a[3], r: a[4], dmg: a[5], life: a[6], net: true }));
+    G.eproj = w.e.map(a => ({ x: a[0], y: a[1], vx: a[2], vy: a[3], r: a[4], dmg: a[5], life: a[6], slow: a[7] || 0, net: true }));
     G.netHaz = w.h.map(a => ({ kind: HZ[a[0]], x: a[1], y: a[2], r: a[3], t: a[4], life: a[5], dmg: a[6], a: a[7], len: a[8], w: a[9], net: true }));
     const mine = G.pickups.filter(q => !q.net), old = new Map(G.pickups.filter(q => q.net).map(q => [q.pid, q]));
     const K = w.k, pk = [];
@@ -483,7 +483,7 @@ var NET = (() => {
     }
     for (const e of G.eproj) {
       e.x += e.vx * dt; e.y += e.vy * dt; e.life -= dt;
-      if (!p.down && Math.hypot(e.x - p.x, e.y - p.y) < e.r + p.r * 0.8) { hurtPlayer(e.dmg); e.life = 0; }
+      if (!p.down && Math.hypot(e.x - p.x, e.y - p.y) < e.r + p.r * 0.8) { hurtPlayer(e.dmg); if (e.slow) p.slowT = Math.max(p.slowT || 0, e.slow); e.life = 0; }
     }
     G.eproj = G.eproj.filter(e => e.life > 0);
     for (const h of G.netHaz || []) {
@@ -492,7 +492,7 @@ var NET = (() => {
       if (h.kind === 'slime') { if (Math.hypot(p.x - h.x, p.y - h.y) < h.r) p.slowT = 0.3; }
       else if (h.kind === 'magma') { h.tick = (h.tick || 0) - dt; if (h.tick <= 0 && Math.hypot(p.x - h.x, p.y - h.y) < h.r + p.r * 0.5) { h.tick = 0.5; hurtPlayer(8 * G.chaos.dmg); } }
       else if (h.kind === 'cyclone') cyclonePull(p, h, dt);
-      else if (VOID_HZ.has(h.kind)) voidHazHit(p, h);
+      else if (VOID_HZ.has(h.kind)) { h.dtp = dt; voidHazHit(p, h); }
       else if (h.kind === 'bossSlam' && h.t >= h.life && !h.done) { h.done = true; G.effects.push({ kind: 'boom', x: h.x, y: h.y, r: h.r, t: 0, life: 0.4, color: '#ff3030', net: true, enemy: true }); if (Math.hypot(p.x - h.x, p.y - h.y) < h.r + p.r * 0.5) hurtPlayer(h.dmg); }
     }
     for (const q of G.pickups) if (q.net && q.tx !== undefined) { q.x += (q.tx - q.x) * k; q.y += (q.ty - q.y) * k; q.t += dt; if (q.kind === 'chest') q.afford = q.free || G.gold >= chestCost(); }
