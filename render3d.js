@@ -274,7 +274,8 @@ const R3 = (() => {
   // ------------------------------------------------------------ animated rigs (heroes, towers, blimps, bosses)
   const RIGS = {}, rigInfo = {}, rigClips = {};
   const EYEPUSH = {};
-  const RIGYAW = { w_heli_4: Math.PI / 2, x_reaver: Math.PI, x_john: Math.PI, x_bdog: Math.PI, x_bgiraffe: Math.PI };   // IFR heli is authored facing sideways; the Neon Reaver (glTF) faces +Z, BTD rigs face -Z   // IFR heli is authored facing sideways
+  const RIGYAW = { w_heli_4: Math.PI / 2, x_reaver: Math.PI, x_john: Math.PI, x_bdog: Math.PI, x_bgiraffe: Math.PI,
+    t_Raptor2: Math.PI, t_Raptor3: Math.PI, t_TRex2: Math.PI, t_TRex3: Math.PI, t_Giga3: Math.PI, x_eagle2: Math.PI, x_condor2: Math.PI, x_pouakai2: Math.PI, x_pouakai3: Math.PI };   // Beast Handler animals exported facing backwards   // IFR heli is authored facing sideways; the Neon Reaver (glTF) faces +Z, BTD rigs face -Z   // IFR heli is authored facing sideways
   // parts to leave off: Brickell skins come sitting in their ship, Red Sauda's shelf blades don't line up with her hands
   const RIGHIDE = {
     s_DreadPirateBrickell: /^(BodyLVL10|FlagPoleLV1|MineDispenser.*|FlagLVL1|PoleLVL1|.*Ship.*)$/i,
@@ -595,9 +596,9 @@ const R3 = (() => {
     const da = instPool('discAdd', disc, new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, toneMapped: false }), 1200);
     da.mesh.setColorAt(0, new THREE.Color());
     // projectiles
-    const dart = new THREE.ConeGeometry(0.07, 0.75, 6); dart.rotateX(Math.PI / 2);
+    const dart = new THREE.ConeGeometry(0.07, 0.75, 6); dart.rotateX(-Math.PI / 2);   // tip forward (-Z)
     instPool('dart', dart, new THREE.MeshLambertMaterial({ color: 0x5a3c22 }), 600);
-    const tack = new THREE.ConeGeometry(0.06, 0.45, 5); tack.rotateX(Math.PI / 2);
+    const tack = new THREE.ConeGeometry(0.06, 0.45, 5); tack.rotateX(-Math.PI / 2);
     instPool('tack', tack, new THREE.MeshLambertMaterial({ color: 0xd8dde4 }), 600);
     const glaive = new THREE.TorusGeometry(0.32, 0.09, 6, 12); glaive.rotateX(Math.PI / 2);
     instPool('glaive', glaive, new THREE.MeshLambertMaterial({ color: 0xcfe0f0, emissive: 0x223344 }), 200);
@@ -611,7 +612,7 @@ const R3 = (() => {
     instPool('bullet', bullet, new THREE.MeshBasicMaterial({ color: 0xffe28a, toneMapped: false }), 600);
     for (const p of ['dart', 'tack', 'glaive', 'shuriken', 'bomb', 'torpedo']) pools[p].mesh.castShadow = true;
     // BTD6 projectile sprites, laid flat and pointed along the flight direction (image top = forward)
-    const pplane = new THREE.PlaneGeometry(1, 1); pplane.rotateX(-Math.PI / 2); pplane.rotateY(Math.PI);
+    const pplane = new THREE.PlaneGeometry(1, 1); pplane.rotateX(-Math.PI / 2);   // image top -> -Z, the way faceAngle() points things
     for (const [n, s] of Object.entries(window.BTD_PROJ || {})) {
       const t = new THREE.Texture(); t.colorSpace = THREE.SRGBColorSpace;
       const im = new Image(); im.onload = () => { t.image = im; t.needsUpdate = true; }; im.src = s.uri;
@@ -941,7 +942,7 @@ const R3 = (() => {
       if (h.kind === 'slime') { push('disc', w(h.x, h.y, 0.06), FLATQ, tmpS.set(h.r, h.r * 0.9, 1), tmpC.setRGB(0.3, 0.85, 0.15)); }
       else if (h.kind === 'magma') { push('discAdd', w(h.x, h.y, 0.07), FLATQ, tmpS.set(h.r, h.r, 1), tmpC.setRGB(0.9 * (1 - k * 0.6), 0.3 * (1 - k), 0.05)); }
       else if (h.kind === 'glue') { push('disc', w(h.x, h.y, 0.06), FLATQ, tmpS.set(h.r, h.r * 0.85, 1), h.fire ? tmpC.setRGB(1, 0.42, 0.1) : tmpC.setRGB(0.66, 0.9, 0.24)); if (h.fire && Math.random() < 0.3) push('glow', w(h.x + (Math.random() - .5) * h.r * 1.4, h.y + (Math.random() - .5) * h.r * 1.4, 0.5), camQ, tmpS.set(1.2, 1.2, 1), tmpC2.setRGB(1, 0.5, 0.1)); }
-      else if (h.kind === 'spikes') { for (let i = 0; i < 6; i++) { const aa = i * 2.4 + h.x, d = (i % 3) * 0.3 * h.r; tmpQ.setFromEuler(new THREE.Euler(-Math.PI / 2, 0, 0)); push('tack', w(h.x + Math.cos(aa) * d, h.y + Math.sin(aa) * d, 0.2), tmpQ, tmpS.set(1.2, 1.2, 1.2)); } }
+      else if (h.kind === 'spikes') { for (let i = 0; i < 6; i++) { const aa = i * 2.4 + h.x, d = (i % 3) * 0.3 * h.r; tmpQ.setFromEuler(new THREE.Euler(Math.PI / 2, 0, 0)); push('tack', w(h.x + Math.cos(aa) * d, h.y + Math.sin(aa) * d, 0.2), tmpQ, tmpS.set(1.2, 1.2, 1.2)); } }
       else if (h.kind === 'bossSlam' || h.kind === 'delayed') {
         const c = h.kind === 'bossSlam' ? tmpC.setRGB(1, 0.15, 0.15) : tmpC.setRGB(1, 0.65, 0.2);
         push('ring', w(h.x, h.y, 0.08), FLATQ, tmpS.set(h.r, h.r, 1), c);
