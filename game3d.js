@@ -1576,6 +1576,7 @@ function popBloon0(b, overflow) {
 function dropSoul(x, y, v) { G.pickups.push({ kind: 'soul', x, y, v, t: 0, vx: rnd(-2, 2), vy: rnd(-2, 2) }); }
 
 function spawnDirector(dt) {
+  if (G.dbgNoSpawn) { G.spawnBudget = 0; return; }   // debug panel: spawns paused
   if (G.boss && !G.boss.dead) { G.spawnBudget = 0; return; }   // boss fight: no new bloons (the boss still summons its own); leftovers must still be popped
   const t = G.t;
   const rate = (1.6 + t / 22 + Math.pow(t / 100, 1.6)) * G.chaos.rate * (1 + 0.3 * G.loop) * (1 + 0.35 * ((G.coopN || 1) - 1));
@@ -1613,13 +1614,13 @@ function checkMilestones() {
 
 
 // ---------------------------------------------------------------- boss (Soulstone-style telegraphed attacks)
-function spawnBoss() {
-  const def = BOSSES[(G.mapIdx + G.chaosIdx + G.loop) % BOSSES.length];
+function spawnBoss(force) {
+  const def = force || BOSSES[(G.mapIdx + G.chaosIdx + G.loop) % BOSSES.length];
   const pos = spawnPick(true) || G.arena.randomCellNear(G.player.x, G.player.y, 12, 18) || [G.player.x + 10, G.player.y];
   const hp = BOSS_HP_MULT * def.hp * G.chaos.hp * (1 + G.t / 600) * Math.pow(1.7, G.loop) * (1 + 0.6 * ((G.coopN || 1) - 1));
   G.boss = { isBoss: true, def, x: pos[0], y: pos[1], r: def.r, hp, maxhp: hp, spd: def.spd, dead: false, hitT: 0, slowT: 0, frozenT: 0, stunT: 0, burnT: 0, burnD: 0, atkT: 3, phase: 1, wob: 0, kx: 0, ky: 0, shield: false,
     skulls: [0.75, 0.5, 0.25], blimpSkull: rint(0, 2), dashAtSpawn: G.dashesUsed || 0 };
-  if (G.loop >= ENRAGE_LOOP) {
+  if (G.loop >= ENRAGE_LOOP && !G.dbgNoEnrage) {
     const B = G.boss; B.enraged = true; B.spd *= 1.2; B.enrT = 7;
     setTimeout(() => { if (G && G.boss === B && !B.dead) toast(`☠ ENRAGED ${def.name}: ${ENRAGED[def.id].move} — ${ENRAGED[def.id].desc.toLowerCase()}`, '#c070ff'); }, 3100);
   }
@@ -2256,7 +2257,7 @@ function moveCircle(o, dx, dy) {
 }
 function hurtPlayer(dmg) {
   const p = G.player;
-  if (p.inv > 0 || G.state !== 'play' || p.down) return;
+  if (p.inv > 0 || G.state !== 'play' || p.down || G.dbgGod) return;
   const d = Math.max(1, dmg - G.stats.armor);
   p.hp -= d; p.inv = 0.45; p.hurtT = 0.25; G.tookDmg = true; if (G.finalFight) G.finalHit = true; if (INPUT === 'pad') padRumble(Math.min(1, 0.3 + d / Math.max(1, G.stats.maxhp) * 3), 140);
   shake(0.25);
@@ -2441,7 +2442,8 @@ function update(dt) {
       if (c.t > c.tele) { const v = 22 * dt; B.x += Math.cos(c.a) * v; B.y += Math.sin(c.a) * v; if (!A.isWalk(B.x, B.y)) { B.x -= Math.cos(c.a) * v; B.y -= Math.sin(c.a) * v; c.t = 99; } }
       if (c.t > c.tele + c.dur) B.charge = null;
     } else {
-      if (B.def.final) (FINAL_AI()[B.def.id] || reaverAI)(B, dt); else bossAI(B, dt);
+      if (B.dummy) { B.rooted = 99; B.atkT = 99; B.hp = Math.max(B.hp, 1); }   // debug training dummy: never moves, attacks or dies
+      else if (B.def.final) (FINAL_AI()[B.def.id] || reaverAI)(B, dt); else bossAI(B, dt);
       const tq = nearestPlayer(B.x, B.y), dx = tq.x - B.x, dy = tq.y - B.y, d = Math.hypot(dx, dy);
       if (d > 4 && !(B.rooted > 0)) {
         let [ux, uy] = A.flowDir(B.x, B.y); if (!ux && !uy) { ux = dx / d; uy = dy / d; }
@@ -3618,15 +3620,15 @@ function endRun(win, quit = false) {
   $('endskull').style.display = win ? 'none' : 'block';
   eb.textContent = G.victory && quit ? 'VICTORY!' : win ? (quit ? 'RUN COMPLETE' : 'FALLEN IN GLORY') : quit ? 'RUN ABANDONED' : 'DEFEATED';
   eb.style.color = win ? '#ffe39a' : '#ff7a7a';
-  const mm = Math.round((G.goldEarned / 20 + G.level * 4 + G.bossKills * 150 + G.t / 6 + (G.victory ? 1000 * (1 + G.chaosIdx) * (G.finalWins || 1) : 0)) * META.mmMult());
-  PROFILE.mm += mm; const hxRows = PROG.finish(win, quit); if (PROG.levelOf(G.ch.id) >= 10) META.ach('hero10'); saveProfile();
+  const mm = G.debug ? 0 : Math.round((G.goldEarned / 20 + G.level * 4 + G.bossKills * 150 + G.t / 6 + (G.victory ? 1000 * (1 + G.chaosIdx) * (G.finalWins || 1) : 0)) * META.mmMult());
+  PROFILE.mm += mm; const hxRows = G.debug ? [['Debug run', 'no rewards or highscores']] : PROG.finish(win, quit); if (PROG.levelOf(G.ch.id) >= 10) META.ach('hero10'); saveProfile();
   renderStats($('endstats'), [['Monkey Money earned', '+' + mm + '  (total ' + Math.floor(PROFILE.mm) + ')'], ...hxRows, ['Bosses defeated', G.bossKills], ['Gold earned', '$' + Math.round(G.goldEarned).toLocaleString()], ...(rec ? [['Record', rec]] : [])]);
   renderBreakdown($('endbreak'));
   const runRec = runRecord(win, quit, mm);
   const coopEnd = NET.on || G.coop;   // left through End Run / Quit counts too
   if (coopEnd) META.ach('coop1');
   if (coopEnd) NET.shareFinal({ hero: G.ch.name, icon: (selectedSkin(G.ch) || {}).icon || HERO_ICON[G.ch.id], rows: [['Level', G.level], ['Damage dealt', Math.round(G.dmgDealt).toLocaleString()], ['Bloons popped', Object.values(G.runStats || {}).reduce((a, r) => a + (r.pops || 0), 0).toLocaleString()], ['Gold earned', '$' + Math.round(G.goldEarned).toLocaleString()], ['Chests opened', G.chests], ['Relics', (G.relics || []).length], ['Times downed', G.downs || 0], ['Revived teammates', G.revives || 0], ['Monkey Money', '+' + mm]], dmg: Math.round(G.dmgDealt), result: eb.textContent });
-  else if (!G.coop) setTimeout(() => askName(runRec), win ? 400 : 1100);   // co-op runs never go to the highscores
+  else if (!G.coop && !G.debug) setTimeout(() => askName(runRec), win ? 400 : 1100);   // co-op runs never go to the highscores
   setTimeout(() => show('end', true), win ? 200 : 900);
 }
 $('again').onclick = () => { show('end', false); G = null; R3.resetRun(); if (NET.inRun) NET.leaveRun(); buildMenu(); show('menu', true); startMenuMusic(); };
@@ -3913,7 +3915,7 @@ let last = performance.now();
 function frame(now) {
   const dt = Math.min(0.05, (now - last) / 1000); last = now;
   pollPad();
-  if (G && G.state === 'play' && !NET.worldHeld() && !NET.held()) update(dt);
+  if (G && G.state === 'play' && !NET.worldHeld() && !NET.held()) for (let i = 0, n = (G.debug && G.dbgSpeed) || 1; i < n && G && G.state === 'play'; i++) update(dt);   // debug: fast-forward in whole steps
   if (G && G.state !== 'loading') NET.tick(dt);
   if (G && G.state !== 'loading') {
     renderWorld(G.state === 'play' ? dt : 0);

@@ -585,7 +585,7 @@ const META = {
   },
   // a final boss fell (host and guests): per-boss, all three, two in a run, high Chaos, no hits taken in the fight
   finalWin(id) {
-    if (!G) return;
+    if (!G || G.debug) return;
     META.ach({ reaver: 'finalvk', john: 'finaljohn', zeppelin: 'finalzep' }[id]);
     PROFILE.finals = Object.assign({}, PROFILE.finals, { [id]: 1 }); saveProfile();
     if (['reaver', 'john', 'zeppelin'].every(k => PROFILE.finals[k])) META.ach('finalall');
@@ -597,6 +597,7 @@ const META = {
   ability() { if (G) { G.abilUses = (G.abilUses || 0) + 1; if (G.abilUses >= 20) META.ach('abil20'); } },
   mmMult() { return (1 + kLv('mm') * 0.15) * (window.PROG ? PROG.mmMult() : 1); },
   ach(id) {
+    if (typeof G !== 'undefined' && G && G.debug) return;   // debug runs earn nothing
     PROFILE.ach = PROFILE.ach || {};
     if (PROFILE.ach[id]) return;
     const a = ACH.find(x => x.id === id); if (!a) return;
