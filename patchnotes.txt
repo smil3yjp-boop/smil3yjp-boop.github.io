@@ -1,3 +1,6 @@
+v0.3.6 | Nov 11, 2026
+- DPS meter in the bottom right during runs: a bar for your hero, each tower and their effects showing damage per second and share of your damage. Click its header to switch between the last 10 seconds and the whole run. Turn it on/off in Settings > Gameplay (off by default on touch screens)
+
 v0.3.5 | Nov 6, 2026
 - All bloons now have double health, and bosses have 1.5x health
 - Removed the Banana Diet (health regen) card

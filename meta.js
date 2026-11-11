@@ -33,6 +33,7 @@ function moveAxis() {
 // ================================================================ which input you're using (keyboard/mouse, controller or touch) for on-screen prompts
 let INPUT = 'kb';
 const TOUCH_DEV = (window.matchMedia && matchMedia('(pointer: coarse)').matches) || (navigator.maxTouchPoints > 0 && 'ontouchstart' in window);
+if (SETTINGS.dpsMeter === undefined) SETTINGS.dpsMeter = !TOUCH_DEV;   // DPS meter: on by default except on touch screens (the buttons sit bottom right there)
 if (TOUCH_DEV) INPUT = 'touch';
 function setInput(m) { if (INPUT === m) return; INPUT = m; document.body.classList.toggle('padmode', m === 'pad'); document.body.classList.toggle('touchmode', m === 'touch'); }
 addEventListener('keydown', () => setInput('kb'), true);
@@ -639,7 +640,7 @@ function renderAch() {
 let rebinding = null;
 function renderSettings() {
   const tog = (id, label, desc) => `<div class="srow"><div><b>${label}</b><div class="sd">${desc}</div></div><button class="btn small tog${SETTINGS[id] ? ' on' : ''}" data-s="${id}">${SETTINGS[id] ? 'ON' : 'OFF'}</button></div>`;
-  $('setlist').innerHTML = `<h3>Sound</h3><div id="setaud" class="aud"></div><h3>Graphics</h3><div id="setgfx" class="chips"></div><div id="setfx"></div><h3>Crosshair</h3><div id="setxh"></div><h3>Gameplay</h3>` + tog('shake', 'Screen shake', 'Camera shake on explosions and hits') + tog('cbLabels', 'Colourblind bloon labels', 'Shows a letter on nearby bloons (R, B, G, Y, P… plus c/r/f for camo, regrow, fortified)') + tog('dmgNumbers', 'Damage numbers', 'Floating damage numbers on hits') +
+  $('setlist').innerHTML = `<h3>Sound</h3><div id="setaud" class="aud"></div><h3>Graphics</h3><div id="setgfx" class="chips"></div><div id="setfx"></div><h3>Crosshair</h3><div id="setxh"></div><h3>Gameplay</h3>` + tog('shake', 'Screen shake', 'Camera shake on explosions and hits') + tog('cbLabels', 'Colourblind bloon labels', 'Shows a letter on nearby bloons (R, B, G, Y, P… plus c/r/f for camo, regrow, fortified)') + tog('dmgNumbers', 'Damage numbers', 'Floating damage numbers on hits') + tog('dpsMeter', 'DPS meter', 'Bars bottom right showing the damage per second of your hero, each tower and effects (click its header: last 10 s / whole run)') +
     `<h3>Controls</h3>` + Object.keys(DEFAULT_KEYS).map(a => `<div class="srow"><div><b>${KEY_LABEL[a]}</b></div><button class="btn small key${rebinding === a ? ' on' : ''}" data-k="${a}">${rebinding === a ? 'Press a key…' : keyName(SETTINGS.keys[a])}</button></div>`).join('') +
     `<div class="srow"><div class="sd">Gamepad: left stick move · A/RB dash · X/LB ability · B portal · Y aim · Start pause. Touch: drag on the left to move, buttons on the right.</div><button class="btn small" id="keyreset">Reset keys</button></div>`;
   buildAudioUI($('setaud')); gfxChips($('setgfx')); fxSlider($('setfx')); xhSettings($('setxh'));
@@ -660,7 +661,7 @@ $('psetbtn').onclick = () => { renderSettings(); openPage('setpage'); };
 for (const id of ['knowpage', 'achpage', 'setpage']) { $(id).onclick = e => { if (e.target.id === id) show(id, false); }; $(id).querySelector('.pclose').onclick = () => { rebinding = null; show(id, false); }; }
 
 // ================================================================ patch notes (patchnotes.txt; "vX.Y.Z | date" headers, "- " bullets)
-const GAME_VERSION = 'v0.3.5';
+const GAME_VERSION = 'v0.3.6';
 (() => {
   const $p = id => document.getElementById(id);
   if ($p('pnver')) $p('pnver').textContent = GAME_VERSION;
