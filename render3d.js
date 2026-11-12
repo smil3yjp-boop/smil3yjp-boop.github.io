@@ -323,7 +323,7 @@ const R3 = (() => {
   }
   async function loadSkin(key) {
     if (RIGS[key]) return true;
-    try { if (!window.BSS_ASSETS || !window.BSS_ASSETS[key]) await loadScript('assets/skins/' + key + '.js'); await loadRigs(key); } catch (e) { console.warn('skin', key, e); }
+    try { if (!window.BSS_ASSETS || !window.BSS_ASSETS[key]) await loadScript('assets/skins/' + key + '.js?v=61'); await loadRigs(key); } catch (e) { console.warn('skin', key, e); }
     return !!RIGS[key];
   }
   function hasRig(name) { return !!RIGS[name]; }
